@@ -19,10 +19,11 @@ Requirements
 Build:
 
 - CMake version >= 3.1
-
-    mkdir build && cd build/
-	cmake -DCMAKE_INSTALL_PREFIX=<install-dir>  ..
-	make install
+```
+mkdir build && cd build/
+cmake -DCMAKE_INSTALL_PREFIX=<install-dir>  ..
+make install
+```
 
 
 Notes
