@@ -25,6 +25,10 @@ cmake -DCMAKE_INSTALL_PREFIX=<install-dir>  ..
 make install
 ```
 
+After make install, linking to the library (outside of cmake build) requires:
+- `<install-dir>/lib` is in your `LD_LIBRARY_PATH` environment variable,
+- `<install-dir>/include/func` is in your include flags, and
+- `-lfunc -lfunc_impls` are in your link flags
 
 Notes
 -----
