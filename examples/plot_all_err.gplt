@@ -1,0 +1,14 @@
+# Simple script for plotting output of "compute_max_err_of_tables"
+
+set log xy
+set ylabel "Relative Difference"
+set xlabel "h"
+set key bottom right
+set title "Maximum 'Relative difference' for different table implementations"
+plot "all_err.out" u 1:2 w lp title "linear interpolation", \
+     "" u 1:3 w lp title "quadratic interpolation", \
+     "" u 1:4 w lp title "cubic interpolation", \
+     "" u 1:5 w lp title "constant taylor", \
+     "" u 1:6 w lp title "linear taylor", \
+     "" u 1:7 w lp title "quadratic taylor", \
+     "" u 1:8 w lp title "cubic taylor"
