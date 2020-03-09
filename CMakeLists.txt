@@ -20,6 +20,12 @@ message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
 message(STATUS "Boost libs to link: ${Boost_LIBRARIES}")
 message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
 
+
+# Search for quadmath (fatal error if requested but not found)
+option(USE_QUADMATH "Use quadmath library" ON)
+find_package(Quadmath)
+
+
 # Primary source subdirectory
 add_subdirectory("src")
 

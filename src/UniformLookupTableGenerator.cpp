@@ -4,13 +4,19 @@
 
 #include <boost/math/tools/minima.hpp>
 #include <boost/math/tools/roots.hpp>
-#include <boost/multiprecision/float128.hpp>
 #include <boost/math/special_functions/next.hpp>
+
+// If quadmath is used, work in the boost::multiprecision namespace
+#ifdef USE_QUADMATH
+#include <boost/multiprecision/float128.hpp>
+using namespace boost::multiprecision;
+using errprecision = float128;
+#else
+using errprecision = double;
+#endif
 
 #include <limits>
 #include <iostream>
-
-using namespace boost::multiprecision;
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -22,11 +28,11 @@ struct UniformLookupTableGenerator::LookupTableErrorFunctor
 {
   LookupTableErrorFunctor(UniformLookupTable* impl) : m_impl(impl) {}
   /* operator() always returns a negative value */
-  float128 operator()(float128 const& x)
+  errprecision operator()(errprecision const& x)
   {
-    float128 f_value = float128((*(m_impl->function()))(double(x)));
-    float128 lut_value = float128((*m_impl)(double(x)));
-    return -float128(2.0) * fabs( (f_value - lut_value) ) /
+    errprecision f_value = static_cast<errprecision>((*(m_impl->function()))(double(x)));
+    errprecision lut_value = static_cast<errprecision>((*m_impl)(double(x)));
+    return -static_cast<errprecision>(2.0) * fabs( (f_value - lut_value) ) /
       (fabs(f_value)+fabs(lut_value));
   }
 
@@ -57,11 +63,11 @@ struct UniformLookupTableGenerator::OptimalStepSizeFunctor
 
     boost::uintmax_t max_it = 20;
 
-    float128 max_err = 0;
-    float128 xstar, err;
+    errprecision max_err = 0;
+    errprecision xstar, err;
 
     /* get number of binary bits in mantissa */
-    int bits = std::numeric_limits<float128>::digits;
+    int bits = std::numeric_limits<errprecision>::digits;
 
     double eps = std::numeric_limits<double>::epsilon();
 
@@ -74,11 +80,11 @@ struct UniformLookupTableGenerator::OptimalStepSizeFunctor
     for(unsigned ii=0; ii<impl->num_intervals()-1; ii++){
 
       std::pair<double,double> intEndPoints = impl->arg_bounds_of_interval(ii);
-      float128 x = float128(boost::math::float_next(intEndPoints.first));
-      float128 xtop = float128(boost::math::float_prior(intEndPoints.second));
+      errprecision x = static_cast<errprecision>(boost::math::float_next(intEndPoints.first));
+      errprecision xtop = static_cast<errprecision>(boost::math::float_prior(intEndPoints.second));
       if ( double(xtop) > m_parent.m_max )
 	break;
-      std::pair<float128, float128> r =
+      std::pair<errprecision, errprecision> r =
 	brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
       xstar = r.first; err = r.second;
       if( err < max_err ) {
