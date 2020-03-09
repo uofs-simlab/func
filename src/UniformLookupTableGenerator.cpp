@@ -136,7 +136,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_imp
   UniformLookupTableParameters par2;
   par2.minArg = m_min;
   par2.maxArg = m_max;
-  par2.stepSize = step1;
+  par2.stepSize = step2;
   
 
   std::unique_ptr<EvaluationImplementation> impl1 =
