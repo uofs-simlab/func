@@ -125,10 +125,10 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_ste
 std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_impl_size(std::string tableKey, unsigned long desiredSize)
 {
   /* Use 2 query points to get relationship */
-  const double step1 = 0.5;
   const unsigned long N1  = 2;
-  const double step2 = 0.1;
+  const double step1 = (m_max-m_min)/N1;
   const unsigned long N2  = 10;
+  const double step2 = (m_max-m_min)/N2;
   UniformLookupTableParameters par1;
   par1.minArg = m_min;
   par1.maxArg = m_max;
@@ -137,7 +137,6 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_imp
   par2.minArg = m_min;
   par2.maxArg = m_max;
   par2.stepSize = step2;
-  
 
   std::unique_ptr<EvaluationImplementation> impl1 =
    UniformLookupTableFactory::Create(tableKey, mp_func, par1);
