@@ -76,7 +76,7 @@ private:
     RNG for evaluations
     - Mersenne Twister
   */
-  int                                     m_seed;
+  unsigned int                            m_seed;
   std::mt19937                           *mp_generator;
   std::uniform_real_distribution<double> *mp_distribution;
   double                                 *mp_randomEvaluations;
@@ -93,7 +93,7 @@ private:
 
 public:
 
-  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, int seed = 2017);
+  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, unsigned int seed = 2017);
   ~ImplementationComparator();
 
   void run_timings(int nRuns = 1);

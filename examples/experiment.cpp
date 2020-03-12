@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
   double tableTol     = std::stod(argv[3]);
   int    nExperiments = std::stod(argv[4]);
   int    nEvals       = std::stoi(argv[5]);
-  int    seed         = std::stoi(argv[6]);
+  unsigned int seed   = std::stoi(argv[6]);
 
   MyFunction func;
   double stepSize;

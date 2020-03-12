@@ -10,7 +10,7 @@
 #include <limits>
 #include <cassert>
 
-ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nEvals, int seed) : m_nEvals(nEvals),  m_implementations(std::move(inImpl))
+ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nEvals, unsigned int seed) : m_nEvals(nEvals),  m_implementations(std::move(inImpl))
 {
   /*
      Allocate enough timer containers
