@@ -23,6 +23,7 @@ add_library(func SHARED
     UniformLookupTableGenerator.cpp
 )
 
+target_include_directories(func PUBLIC ${Boost_INCLUDE_DIR})
 target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} func_impls)
 if(USE_QUADMATH AND QUADMATH_FOUND)
   target_compile_definitions(func PUBLIC -DUSE_QUADMATH)
