@@ -50,7 +50,6 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
   if(mp_sampler==nullptr)
     mp_sampler = new StdRng<std::uniform_real_distribution<double>>
       (new std::uniform_real_distribution<double>(m_minArg, m_maxArg));
-
   mp_sampler->init(seed);
   mp_randomEvaluations = new table_type[m_nEvals];
 }

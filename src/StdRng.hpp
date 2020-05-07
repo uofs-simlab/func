@@ -1,10 +1,10 @@
 #include <iostream>
 #include <random>
 #include "RngInterface.hpp"
+
 #pragma once
 
-// TODO implement smart pointers
-// #include <memory>
+// An implementation of RngInterface for sampling from the distributions defined in std::random.
 template <class DistType>
 class StdRng : public RngInterface<> {
   std::unique_ptr<DistType> mp_distribution=nullptr;
