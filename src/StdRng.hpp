@@ -6,7 +6,8 @@
 
 // An implementation of RngInterface for sampling from the distributions defined in std::random.
 template <class DistType>
-class StdRng : public RngInterface<> {
+class StdRng : public RngInterface<> 
+{
   std::unique_ptr<DistType> mp_distribution=nullptr;
   unsigned int m_seed;
   std::unique_ptr<std::mt19937> mp_generator=nullptr;
@@ -20,7 +21,7 @@ class StdRng : public RngInterface<> {
       mp_generator.reset(new std::mt19937(seed));
     }
 
-    unsigned int seed(){return m_seed;}
+    unsigned int seed(){ return m_seed; }
 
     double getPt(){ return (*mp_distribution)(*mp_generator); }
     

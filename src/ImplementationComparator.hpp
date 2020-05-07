@@ -92,7 +92,7 @@ private:
 
 public:
 
-  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, unsigned int seed=2017, RngInterface<> *inRng=nullptr);
+  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, unsigned int seed = 2017, RngInterface<> *inRng = nullptr);
   ~ImplementationComparator();
 
   void run_timings(int nRuns = 1);
