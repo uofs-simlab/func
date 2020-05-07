@@ -64,10 +64,8 @@ void ImplementationComparator::draw_new_sample_points()
   /*
     Regenerate evaluation points.
   */
-  std::cout << "about to generate random points";
   for (int ii=0;ii<m_nEvals;++ii)
     mp_randomEvaluations[ii] = mp_sampler->getPt();
-  std::cout << "random points generated";
 }
 
 const double* ImplementationComparator:: sample_points()
