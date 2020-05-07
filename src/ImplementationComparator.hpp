@@ -77,9 +77,9 @@ private:
     RNG for evaluations
     - Mersenne Twister
   */
-  RngInterface<>             *mp_sampler;
-  double                     *mp_randomEvaluations;
-  int                         m_nEvals;
+  RngInterface<>            *mp_sampler;
+  double                    *mp_randomEvaluations;
+  int                        m_nEvals;
 
   struct TimingStatistics
   {

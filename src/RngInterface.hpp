@@ -7,6 +7,6 @@ class RngInterface{
     virtual void init(unsigned int seed)=0;
     virtual unsigned int seed()=0;
     virtual OutType getPt()=0;
-    virtual ~RngInterface(){};
+    virtual ~RngInterface(){}
 };
 

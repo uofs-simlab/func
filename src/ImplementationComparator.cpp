@@ -47,7 +47,7 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
   */
   mp_sampler=inRng;
   // if inRng was not provided, set mp_sampler to a uniform distribution on the table's endpoints
-  if(mp_sampler==nullptr){
+  if(mp_sampler==nullptr)
     mp_sampler = new StdRng<std::uniform_real_distribution<double>>
       (new std::uniform_real_distribution<double>(m_minArg, m_maxArg));
 
@@ -57,7 +57,6 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
 
 ImplementationComparator::~ImplementationComparator()
 {
-  delete   mp_sampler;
   delete[] mp_randomEvaluations;
 }
 
