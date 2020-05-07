@@ -8,6 +8,7 @@
 #pragma once
 #include "Timer.hpp"
 #include "EvaluationImplementation.hpp"
+#include "RngInterface.hpp"
 
 #include <memory>
 #include <vector>
@@ -76,11 +77,9 @@ private:
     RNG for evaluations
     - Mersenne Twister
   */
-  unsigned int                            m_seed;
-  std::mt19937                           *mp_generator;
-  std::uniform_real_distribution<double> *mp_distribution;
-  double                                 *mp_randomEvaluations;
-  int                                     m_nEvals;
+  RngInterface<>             *mp_sampler;
+  double                     *mp_randomEvaluations;
+  int                         m_nEvals;
 
   struct TimingStatistics
   {
@@ -93,7 +92,7 @@ private:
 
 public:
 
-  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, unsigned int seed = 2017);
+  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, unsigned int seed=2017, RngInterface<> *inRng=nullptr);
   ~ImplementationComparator();
 
   void run_timings(int nRuns = 1);

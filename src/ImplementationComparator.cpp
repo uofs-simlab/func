@@ -1,16 +1,17 @@
 /*
   Implementation of ImplementationComparator.
 */
-
 #include "ImplementationComparator.hpp"
-
+#include "RngInterface.hpp"
+#include "StdRng.hpp"
 #include "json.hpp"
 
 #include <iostream>
 #include <limits>
 #include <cassert>
 
-ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nEvals, unsigned int seed) : m_nEvals(nEvals),  m_implementations(std::move(inImpl))
+ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nEvals, unsigned int seed, RngInterface<> *inRng) : 
+  m_implementations(std::move(inImpl)), m_nEvals(nEvals)
 {
   /*
      Allocate enough timer containers
@@ -44,15 +45,19 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
   /*
     Generate random points in the table interval to evaluate
   */
-  mp_generator    = new std::mt19937 {seed};
-  mp_distribution = new std::uniform_real_distribution<table_type>(m_minArg, m_maxArg);
+  mp_sampler=inRng;
+  // if inRng was not provided, set mp_sampler to a uniform distribution on the table's endpoints
+  if(mp_sampler==nullptr){
+    mp_sampler = new StdRng<std::uniform_real_distribution<double>>
+      (new std::uniform_real_distribution<double>(m_minArg, m_maxArg));
+
+  mp_sampler->init(seed);
   mp_randomEvaluations = new table_type[m_nEvals];
 }
 
 ImplementationComparator::~ImplementationComparator()
 {
-  delete   mp_generator;
-  delete   mp_distribution;
+  delete   mp_sampler;
   delete[] mp_randomEvaluations;
 }
 
@@ -61,8 +66,10 @@ void ImplementationComparator::draw_new_sample_points()
   /*
     Regenerate evaluation points.
   */
+  std::cout << "about to generate random points";
   for (int ii=0;ii<m_nEvals;++ii)
-    mp_randomEvaluations[ii] = (*mp_distribution)(*mp_generator);
+    mp_randomEvaluations[ii] = mp_sampler->getPt();
+  std::cout << "random points generated";
 }
 
 const double* ImplementationComparator:: sample_points()
