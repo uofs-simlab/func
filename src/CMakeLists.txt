@@ -3,6 +3,7 @@
 add_library(func_impls SHARED
     EvaluationImplementation.cpp
     DirectEvaluation.cpp
+	ArgumentRecord.cpp
     table_types/UniformConstantTaylorTable.cpp
     table_types/UniformCubicHermiteTable.cpp
     table_types/UniformCubicPrecomputedInterpolationTable.cpp
