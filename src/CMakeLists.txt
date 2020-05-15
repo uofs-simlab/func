@@ -3,6 +3,7 @@
 add_library(func_impls SHARED
     EvaluationImplementation.cpp
     DirectEvaluation.cpp
+    ArgumentRecord.cpp
     table_types/UniformConstantTaylorTable.cpp
     table_types/UniformCubicHermiteTable.cpp
     table_types/UniformCubicPrecomputedInterpolationTable.cpp
@@ -23,10 +24,15 @@ add_library(func SHARED
     UniformLookupTableGenerator.cpp
 )
 
-target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} func_impls)
+target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} Boost::boost func_impls)
 if(USE_QUADMATH AND QUADMATH_FOUND)
   target_compile_definitions(func PUBLIC -DUSE_QUADMATH)
 endif()
+
+if(FUNC_RECORD)
+  target_compile_definitions(func PUBLIC -DFUNC_RECORD)
+  target_compile_definitions(func_impls PUBLIC -DFUNC_RECORD)
+ENDIF()
 
 # TODO: Create a simplified public header?
 set_target_properties(func PROPERTIES PUBLIC_HEADER "func.hpp;func_impls.hpp;EvaluationFunctor.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;ImplementationComparator.hpp;Timer.hpp;UniformLookupTableGenerator.hpp;table_types/UniformConstantTaylorTable.hpp;table_types/UniformCubicHermiteTable.hpp;table_types/UniformCubicPrecomputedInterpolationTable.hpp;table_types/UniformCubicTaylorTable.hpp;table_types/UniformLinearInterpolationTable.hpp;table_types/UniformLinearPrecomputedInterpolationTable.hpp;table_types/UniformLinearTaylorTable.hpp;table_types/UniformLookupTable.hpp;table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;table_types/UniformQuadraticTaylorTable.hpp;table_types/UniformTables.hpp")

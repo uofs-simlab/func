@@ -25,6 +25,9 @@ message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
 option(USE_QUADMATH "Use quadmath library" ON)
 find_package(Quadmath)
 
+# Add an option for for turning on argument recording
+option(FUNC_RECORD "Enable recording of arguments for DirectEvaluation" OFF)
+message(STATUS "Argument recording is set to ${FUNC_RECORD} for DirectEvaluation")
 
 # Primary source subdirectory
 add_subdirectory("src")
