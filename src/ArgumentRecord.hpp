@@ -1,19 +1,20 @@
 #pragma once
 #include <string> // to_string()
+#include <memory>
 
 // Store a histogram of each location a function has been sampled at
 class ArgumentRecord
 {
   unsigned int *mp_histogram;
   unsigned int m_histSize;
-  // min and max should always be the same as the table that contains the ArgumentRecord 
+  // min and max should always be the same as the table that contains the ArgumentRecord
   double m_min;
   double m_max;
   double m_peak;
-  
+
   public:
     ArgumentRecord(unsigned int histSize, double min, double max);
-    
+
     // place x in the histogram
     void record_arg(double x);
 
@@ -25,4 +26,3 @@ class ArgumentRecord
     void print_details_json(std::ostream& out);
     ~ArgumentRecord();
 };
-
