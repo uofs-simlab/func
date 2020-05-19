@@ -62,6 +62,10 @@ int main(int argc, char* argv[])
       "UniformLinearPrecomputedInterpolationTable",
       "UniformQuadraticPrecomputedInterpolationTable",
       "UniformCubicPrecomputedInterpolationTable",
+      "UniformArmadilloPrecomputedInterpolationTable<4>",
+      "UniformArmadilloPrecomputedInterpolationTable<5>",
+      "UniformArmadilloPrecomputedInterpolationTable<6>",
+      "UniformArmadilloPrecomputedInterpolationTable<7>",
       "UniformLinearTaylorTable",
       "UniformQuadraticTaylorTable",
       "UniformCubicTaylorTable"};
