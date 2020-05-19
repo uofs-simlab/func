@@ -4,6 +4,7 @@ add_library(func_impls SHARED
     EvaluationImplementation.cpp
     DirectEvaluation.cpp
     ArgumentRecord.cpp
+    table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
     table_types/UniformConstantTaylorTable.cpp
     table_types/UniformCubicHermiteTable.cpp
     table_types/UniformCubicPrecomputedInterpolationTable.cpp
@@ -13,7 +14,7 @@ add_library(func_impls SHARED
     table_types/UniformLinearTaylorTable.cpp
     table_types/UniformLookupTable.cpp
     table_types/UniformQuadraticPrecomputedInterpolationTable.cpp
-    table_types/UniformQuadraticTaylorTable.cpp
+    table_types/UniformQuadraticTaylorTable.cpp	
 )
 target_include_directories(func_impls PUBLIC ./ table_types)
 
@@ -24,6 +25,9 @@ add_library(func SHARED
     UniformLookupTableGenerator.cpp
 )
 
+# not sure if this could be made cleaner
+target_include_directories(func_impls PUBLIC ${ARMADILLO_INCLUDE_DIR})
+target_link_libraries(func_impls PUBLIC ${ARMADILLO_LIBRARIES})
 target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} Boost::boost func_impls)
 if(USE_QUADMATH AND QUADMATH_FOUND)
   target_compile_definitions(func PUBLIC -DUSE_QUADMATH)
@@ -35,7 +39,7 @@ if(FUNC_RECORD)
 ENDIF()
 
 # TODO: Create a simplified public header?
-set_target_properties(func PROPERTIES PUBLIC_HEADER "func.hpp;func_impls.hpp;EvaluationFunctor.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;ImplementationComparator.hpp;Timer.hpp;UniformLookupTableGenerator.hpp;table_types/UniformConstantTaylorTable.hpp;table_types/UniformCubicHermiteTable.hpp;table_types/UniformCubicPrecomputedInterpolationTable.hpp;table_types/UniformCubicTaylorTable.hpp;table_types/UniformLinearInterpolationTable.hpp;table_types/UniformLinearPrecomputedInterpolationTable.hpp;table_types/UniformLinearTaylorTable.hpp;table_types/UniformLookupTable.hpp;table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;table_types/UniformQuadraticTaylorTable.hpp;table_types/UniformTables.hpp")
+set_target_properties(func PROPERTIES PUBLIC_HEADER "func.hpp;func_impls.hpp;EvaluationFunctor.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;ImplementationComparator.hpp;Timer.hpp;UniformLookupTableGenerator.hpp;table_types/UniformArmadilloPrecomputedInterpolationTable.cpp;table_types/UniformConstantTaylorTable.hpp;table_types/UniformCubicHermiteTable.hpp;table_types/UniformCubicPrecomputedInterpolationTable.hpp;table_types/UniformCubicTaylorTable.hpp;table_types/UniformLinearInterpolationTable.hpp;table_types/UniformLinearPrecomputedInterpolationTable.hpp;table_types/UniformLinearTaylorTable.hpp;table_types/UniformLookupTable.hpp;table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;table_types/UniformQuadraticTaylorTable.hpp;table_types/UniformTables.hpp")
 
 install(TARGETS func func_impls
     LIBRARY DESTINATION lib

@@ -20,6 +20,13 @@ message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
 message(STATUS "Boost libs to link: ${Boost_LIBRARIES}")
 message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
 
+find_package(Armadillo COMPONENTS
+        # system
+        REQUIRED)
+
+message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
+message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
+message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
 
 # Search for quadmath (fatal error if requested but not found)
 option(USE_QUADMATH "Use quadmath library" ON)
