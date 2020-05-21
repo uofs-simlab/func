@@ -64,7 +64,6 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
     for (unsigned int k=0; k<N; k++)
       m_table[(M+N+1)*ii+M+1+k] = Q[k+1]; // ignore the first coef of Q b/c it's always 1.
   }
-  std::cout << m_name << std::endl;
 }
 
 template <unsigned int M, unsigned int N>
