@@ -97,7 +97,7 @@ public:
 #define REGISTER_ULUT(classname) \
 private: \
    static const UniformLookupTableRegistrar<classname> registrar;
-#define STR_EXPAND(x) #x
-#define STR(x) STR_EXPAND(x)
-#define REGISTER_ULUT_IMPL(classname) \
+#define STR_EXPAND(x...) #x
+#define STR(x...) STR_EXPAND(x)
+#define REGISTER_ULUT_IMPL(classname...) \
    const UniformLookupTableRegistrar<classname> classname::registrar(STR(classname));
