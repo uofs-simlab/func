@@ -13,13 +13,18 @@
 #pragma once
 
 #include "EvaluationImplementation.hpp"
-#include "ArgumentRecord.hpp"
 #include <cmath>
+
+#ifdef FUNC_RECORD
+#include "ArgumentRecord.hpp"
+#endif
 
 class DirectEvaluation final : public EvaluationImplementation
 {  
 private:
+  #ifdef FUNC_RECORD
   std::unique_ptr<ArgumentRecord> mp_recorder;
+  #endif
 public:
   DirectEvaluation(EvaluationFunctor<double,double> *func, double min = 0, double max = 1, unsigned int histSize = 10);
   double operator()(double x) override;
