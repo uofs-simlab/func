@@ -10,9 +10,15 @@
 
 #include "UniformCubicPrecomputedInterpolationTable.hpp"
 
+#include "UniformFailureProofCubicPITable.hpp"
+#include "UniformFailureProofLinearPITable.hpp"
+
 #include "UniformConstantTaylorTable.hpp"
 #include "UniformLinearTaylorTable.hpp"
 #include "UniformQuadraticTaylorTable.hpp"
 #include "UniformCubicTaylorTable.hpp"
 
 #include "UniformCubicHermiteTable.hpp"
+
+#include "UniformArmadilloPrecomputedInterpolationTable.hpp"
+#include "UniformPadeTable.hpp"
