@@ -28,6 +28,7 @@ class UniformFailureProofLinearPITable final : public UniformLookupTable
   #ifndef NDEBUG
   std::vector<double> m_args;
   #endif
+  __attribute__((aligned)) std::unique_ptr<polynomial<2,16>[]> m_table;
 public:
   UniformFailureProofLinearPITable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;

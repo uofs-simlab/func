@@ -17,11 +17,18 @@ struct UniformLookupTableParameters
   double stepSize = 1;
 };
 
+template <unsigned int NUM_COEFS, unsigned int ALIGN=64>
+struct alignas(ALIGN) polynomial{
+  double coefs[NUM_COEFS];
+};
+
 class UniformLookupTable : public EvaluationImplementation
 {
 protected:
 
-  std::unique_ptr<double[]> m_grid, m_table;  // pointers to grid and evaluation data
+  std::unique_ptr<double[]> m_grid;  // pointers to grid and evaluation data
+  // a LUT array needs to be provided by each implementation
+
   unsigned                  m_numIntervals;   // sizes of grid and evaluation data
   unsigned                  m_numTableEntries;
 

@@ -10,14 +10,14 @@ UniformLinearInterpolationTable::UniformLinearInterpolationTable(EvaluationFunct
   m_name = STR(IMPL_NAME);
   m_order = 2;
   m_numTableEntries = m_numIntervals;
-  m_dataSize = (unsigned) sizeof(double) * m_numTableEntries;
+  m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   /* Allocate and set table */
-  m_table.reset(new double[m_numTableEntries]);
+  m_table.reset(new polynomial<1,8>[m_numTableEntries]);
   for (int ii=0; ii<m_numTableEntries; ++ii) {
-    const double x    = m_minArg + ii*m_stepSize;
+    const double x = m_minArg + ii*m_stepSize;
     m_grid[ii]  = x;
-    m_table[ii] = (*mp_func)(x);
+    m_table[ii].coefs[0] = (*mp_func)(x);
   }
 }
 
@@ -29,8 +29,8 @@ double UniformLinearInterpolationTable::operator()(double x)
   unsigned x1  = (unsigned) dx;
   // value of table entries around x position
   dx -= x1;
-  double   y1  = m_table[x1];
-  double   y2  = m_table[x1+1];
+  double   y1  = m_table[x1].coefs[0];
+  double   y2  = m_table[x1+1].coefs[0];
   // linear interpolation
   return y1+dx*(y2-y1);
 }
