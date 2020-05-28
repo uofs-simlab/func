@@ -15,7 +15,7 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
   /* Base class default variables */
   m_name = "UniformPadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
   m_order = M+N+1;  
-  m_numTableEntries = (M+N+1)*(m_numIntervals+1);
+  m_numTableEntries = m_numIntervals+1;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   // assign the first 7 derivatives to the derivs array for easy enumeration

@@ -18,7 +18,7 @@ UniformArmadilloPrecomputedInterpolationTable<N>::UniformArmadilloPrecomputedInt
   /* Base class default variables */
   m_name = "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
   m_order = N+1;  // take N as the degree of the polynomial interpolant which is of order N+1
-  m_numTableEntries = (N+1)*(m_numIntervals+1);
+  m_numTableEntries = m_numIntervals+1;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
    
   /* build the vandermonde system for finding the interpolating polynomial's coefficients */
