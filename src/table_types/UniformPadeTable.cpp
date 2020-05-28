@@ -16,7 +16,7 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
   m_name = "UniformPadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
   m_order = M+N+1;  
   m_numTableEntries = (M+N+1)*(m_numIntervals+1);
-  m_dataSize = (unsigned) sizeof(double) * m_numTableEntries;
+  m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   // assign the first 7 derivatives to the derivs array for easy enumeration
   derivs[0]=&EvaluationFunctor<double,double>::deriv;
@@ -28,7 +28,7 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
   derivs[6]=&EvaluationFunctor<double,double>::deriv7;
 
   /* Allocate and set table */
-  m_table.reset(new double[m_numTableEntries]);
+  m_table.reset(new polynomial<M+N+1, M+N<4? 32:64>[m_numTableEntries]);
   for (int ii=0;ii<m_numIntervals;++ii) {
     const double x = m_minArg + ii*m_stepSize;
     // grid points
@@ -46,6 +46,7 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
 
     // find the coefficients of Q.
     arma::mat Q = arma::null(T.rows(M+1, M+N)); 
+    // Need to learn more about Pade approx. to see if this if statement is useful
     if(Q.n_cols > 1){ // Arma could throw an exception if Q isn't a vector but this is more descriptive
       throw "Pade table of order [" + std::to_string(M) + "/" + std::to_string(N) + "] does not exist.";
       return;
@@ -59,10 +60,10 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
 
     // move these coefs into m_table
     for (unsigned int k=0; k<M+1; k++)
-      m_table[(M+N+1)*ii+k] = P[k];
+      m_table[ii].coefs[k] = P[k];
 
     for (unsigned int k=0; k<N; k++)
-      m_table[(M+N+1)*ii+M+1+k] = Q[k+1]; // ignore the first coef of Q b/c it's always 1.
+      m_table[ii].coefs[M+1+k] = Q[k+1]; // ignore the first coef of Q b/c it's always 1.
   }
 }
 
@@ -73,18 +74,18 @@ double UniformPadeTable<M,N>::operator()(double x)
   double  dx  = (x-m_minArg);
   double  x1r = dx/m_stepSize+0.5;
   // index of previous table entry
-  unsigned x1 = (M+N+1)*((unsigned) x1r);
-  dx -= x1*m_stepSize/(M+N+1);
+  unsigned x1 = ((unsigned) x1r);
+  dx -= x1*m_stepSize;
   
   // general degree horners method, evaluated from the inside out.
-  double P = dx*m_table[x1+M];
+  double P = dx*m_table[x1].coefs[M];
   for (int k=M-1; k>0; k--)
-    P = dx*(m_table[x1+k] + P);
-  P = P+m_table[x1];
+    P = dx*(m_table[x1].coefs[k] + P);
+  P = P+m_table[x1].coefs[0];
 
-  double Q = dx*m_table[x1+M+N];
+  double Q = dx*m_table[x1].coefs[M+N];
   for (int k=N-1; k>0; k--)
-    Q = dx*(m_table[x1+M+k] + Q);
+    Q = dx*(m_table[x1].coefs[M+k] + Q);
   Q = 1+Q;  // the constant term in Q will always be 1
 
   return P/Q;

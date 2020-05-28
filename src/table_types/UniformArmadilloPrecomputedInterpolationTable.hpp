@@ -21,6 +21,7 @@ class UniformArmadilloPrecomputedInterpolationTable final : public UniformLookup
 {
   REGISTER_ULUT(UniformArmadilloPrecomputedInterpolationTable);
 
+  __attribute__((aligned)) std::unique_ptr<polynomial<N+1,64>[]> m_table;
 public:
   UniformArmadilloPrecomputedInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;

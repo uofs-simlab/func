@@ -20,6 +20,7 @@ class UniformQuadraticPrecomputedInterpolationTable final : public UniformLookup
 {
   REGISTER_ULUT(UniformQuadraticPrecomputedInterpolationTable);
 
+  __attribute__((aligned)) std::unique_ptr<polynomial<3,32>[]> m_table;
 public:
   UniformQuadraticPrecomputedInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;

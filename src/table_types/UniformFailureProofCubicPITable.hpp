@@ -27,6 +27,7 @@ class UniformFailureProofCubicPITable final : public UniformLookupTable
   #ifndef NDEBUG
   std::vector<double> m_args;
   #endif
+  __attribute__((aligned)) std::unique_ptr<polynomial<4,32>[]> m_table;
 public:
   UniformFailureProofCubicPITable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;
