@@ -9,7 +9,7 @@ UniformLinearTaylorTable::UniformLinearTaylorTable(EvaluationFunctor<double,doub
   /* Base class variables */
   m_name = STR(IMPL_NAME);
   m_order = 2;
-  m_numTableEntries = 2*m_numIntervals;
+  m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   /* Allocate and set table */

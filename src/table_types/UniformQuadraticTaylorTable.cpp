@@ -9,7 +9,7 @@ UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(EvaluationFunctor<doubl
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
   m_order = 3;
-  m_numTableEntries = m_numIntervals+1;
+  m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   /* Allocate and set table */

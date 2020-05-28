@@ -10,7 +10,7 @@ UniformCubicPrecomputedInterpolationTable::UniformCubicPrecomputedInterpolationT
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
   m_order = 4;
-  m_numTableEntries = 4*(m_numIntervals+1);
+  m_numTableEntries = m_numIntervals+1;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   /* Allocate and set table */
