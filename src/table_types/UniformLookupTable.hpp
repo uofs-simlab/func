@@ -17,7 +17,7 @@ struct UniformLookupTableParameters
   double stepSize = 1;
 };
 
-template <unsigned int NUM_COEFS, unsigned int ALIGN=64>
+template <unsigned int NUM_COEFS, std::size_t ALIGN=64>
 struct alignas(ALIGN) polynomial{
   double coefs[NUM_COEFS];
 };
