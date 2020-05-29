@@ -16,6 +16,7 @@ class UniformLinearTaylorTable final : public UniformLookupTable
 {
  REGISTER_ULUT(UniformLinearTaylorTable);
 
+  __attribute__((aligned)) std::unique_ptr<polynomial<2,16>[]> m_table;
 public:
   UniformLinearTaylorTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;

@@ -43,8 +43,9 @@ double DirectEvaluation::operator()(double x)
 
 void DirectEvaluation::print_details(std::ostream& out)
 {
-  out<< m_name << " " << m_minArg << " " << m_maxArg << " " << std::endl;
+  out<< m_name << " " << m_minArg << " " << m_maxArg;
   #ifdef FUNC_RECORD
+    out << endl;
     mp_recorder->print_details(out);
   #endif
 }

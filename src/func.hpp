@@ -2,3 +2,5 @@
 #include "func_impls.hpp"
 #include "UniformLookupTableGenerator.hpp"
 #include "ImplementationComparator.hpp"
+#include "RngInterface.hpp"
+#include "StdRng.hpp"

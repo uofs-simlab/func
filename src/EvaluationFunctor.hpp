@@ -22,4 +22,6 @@ public:
   virtual OUT_TYPE deriv3(IN_TYPE x){ NOT_DEFINED("3rd"); };
   virtual OUT_TYPE deriv4(IN_TYPE x){ NOT_DEFINED("4th"); };
   virtual OUT_TYPE deriv5(IN_TYPE x){ NOT_DEFINED("5th"); };
+  virtual OUT_TYPE deriv6(IN_TYPE x){ NOT_DEFINED("6th"); };
+  virtual OUT_TYPE deriv7(IN_TYPE x){ NOT_DEFINED("7th"); };
 };
