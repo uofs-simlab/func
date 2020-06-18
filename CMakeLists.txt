@@ -46,12 +46,30 @@ find_package(Quadmath)
 option(FUNC_RECORD "Enable recording of arguments for DirectEvaluation" OFF)
 message(STATUS "Argument recording is set to ${FUNC_RECORD} for DirectEvaluation")
 
-# Add an option for removing recording arguments outside table ranges for failure-proof tables
-option(NDEBUG "Disable recording arguments outside of failure-proof table ranges" OFF)
-message(STATUS "Recording arguments outside of failure-proof table ranges is set to ${NDEBUG}")
-
 # Primary source subdirectory
 add_subdirectory("src")
 
 # Examples subdirectory
 add_subdirectory("examples")
+
+
+# Summarize compilation flags for quick review on configuration
+macro(print_variable var)
+  message(STATUS "${var}: ${${var}}")
+endmacro()
+
+message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+message(STATUS "--- Compile and link flags ------------------")
+message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+string(TOLOWER "${CMAKE_BUILD_TYPE}" build_lower)
+if(build_lower MATCHES release)
+  print_variable(CMAKE_CXX_FLAGS_RELEASE)
+elseif(build_lower MATCHES debug)
+  print_variable(CMAKE_CXX_FLAGS_DEBUG)
+elseif(build_lower MATCHES relwithdebinfo)
+  print_variable(CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+elseif(build_lower MATCHES minsizerel)
+  print_variable(CMAKE_CXX_FLAGS_MINSIZEREL)
+endif()
+
+message(STATUS "---------------------------------------------")
