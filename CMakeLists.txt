@@ -1,7 +1,9 @@
 cmake_minimum_required (VERSION 3.1)
-# SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
-# options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release
-# RelWithDebInfo MinSizeRel.")
+
+# Default to "Release" build
+SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
+# options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) DEBUG RELEASE
+# RELWITHDEBINFO MINSIZEREL.")
 
 project(FunC)
 
