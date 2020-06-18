@@ -21,12 +21,20 @@ message(STATUS "Boost libs to link: ${Boost_LIBRARIES}")
 message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
 
 # Find Armadillo for the degree 4-7 polynomial interpolation and Pade tables
-option(USE_ARMADILLO "Use Armadillo library" ON)
+option(USE_ARMADILLO "Use Armadillo library" OFF)
+
 find_package(Armadillo COMPONENTS)
 
-message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
-message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
-message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
+if(ARMADILLO_FOUND)
+  if(NOT USE_ARMADILLO)
+    message(WARNING "Armadillo found but not requested.
+If you wish to use Armadillo (NEEDED FOR HIGHER ORDER AND PADE TABLES),
+ reconfigure with -DUSE_ARMADILLO=ON")
+  endif()
+  message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
+  message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
+  message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
+endif()
 
 # Search for quadmath (fatal error if requested but not found)
 option(USE_QUADMATH "Use quadmath library" ON)
