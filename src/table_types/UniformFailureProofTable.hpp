@@ -10,6 +10,7 @@
 
   Notes:
   - ownership of the original table is moved to this class upon construction
+  (not a problem since tables don't have move constructors for unique_ptr)
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
   - specify the NDEBUG flag to turn off argument recording for args outside
