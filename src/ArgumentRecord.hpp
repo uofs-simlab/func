@@ -7,7 +7,7 @@
 class ArgumentRecord
 {
   unsigned int *mp_histogram;
-  unique_ptr<std::mutex[]> mp_histogram_mutex;
+  std::unique_ptr<std::mutex[]> mp_histogram_mutex;
 
   unsigned int m_histSize;
   // min and max should always be the same as the table that contains the ArgumentRecord

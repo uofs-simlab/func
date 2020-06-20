@@ -33,7 +33,6 @@ if(ARMADILLO_FOUND)
 If you wish to use Armadillo (NEEDED FOR HIGHER ORDER AND PADE TABLES),
  reconfigure with -DUSE_ARMADILLO=ON")
   endif()
-  if(USE_ARMADILLO)
   message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
   message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
   message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
