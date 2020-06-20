@@ -1,5 +1,5 @@
 /*
-  Linear Interpolation LUT with uniform sampling (precomputed coefficients)
+  Cubic Interpolation LUT with uniform sampling (precomputed coefficients)
 
   Usage example:
     UniformCubicHermiteTable look(&function,0,10,0.0001);
@@ -17,6 +17,7 @@ class UniformCubicHermiteTable final : public UniformLookupTable
 {
   REGISTER_ULUT(UniformCubicHermiteTable);
 
+  __attribute__((aligned)) std::unique_ptr<polynomial<4,32>[]> m_table;
 public:
   UniformCubicHermiteTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;

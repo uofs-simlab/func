@@ -45,7 +45,7 @@ void DirectEvaluation::print_details(std::ostream& out)
 {
   out<< m_name << " " << m_minArg << " " << m_maxArg;
   #ifdef FUNC_RECORD
-    out << endl;
+    out << std::endl;
     mp_recorder->print_details(out);
   #endif
 }
