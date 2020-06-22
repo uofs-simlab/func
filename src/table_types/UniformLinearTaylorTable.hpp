@@ -18,6 +18,7 @@ class UniformLinearTaylorTable final : public UniformLookupTable
 
   __attribute__((aligned)) std::unique_ptr<polynomial<2,16>[]> m_table;
 public:
-  UniformLinearTaylorTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  template <typename T>
+  UniformLinearTaylorTable(EvaluationFunctor<T,T> *func, UniformLookupTableParameters par);
   double operator()(double x) override;
 };

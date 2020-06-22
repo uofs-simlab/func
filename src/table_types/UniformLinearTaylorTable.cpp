@@ -1,11 +1,16 @@
 /* Implementation of a Uniform Lookup table with linear interpolation */
 #include "UniformLinearTaylorTable.hpp"
+#include <boost/math/differentiation/autodiff.hpp>
 
 #define IMPL_NAME UniformLinearTaylorTable
 REGISTER_ULUT_IMPL(IMPL_NAME);
 
-UniformLinearTaylorTable::UniformLinearTaylorTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : UniformLookupTable(func, par)
+template <typename T>
+UniformLinearTaylorTable::UniformLinearTaylorTable(EvaluationFunctor<autodiff_fvar<double,1>,autodiff_fvar<double,1>> *func, UniformLookupTableParameters<T> par) : 
+  UniformLookupTable(func, par)
 {
+  using namespace boost::math::differentiation;
+
   /* Base class variables */
   m_name = STR(IMPL_NAME);
   m_order = 2;
@@ -15,10 +20,12 @@ UniformLinearTaylorTable::UniformLinearTaylorTable(EvaluationFunctor<double,doub
   /* Allocate and set table */
   m_table.reset(new polynomial<2,16>[m_numTableEntries]);
   for (int ii=0; ii<m_numIntervals; ++ii) {
-    const double x = (m_minArg + ii*m_stepSize);
-    m_grid[ii]      = x;
-    m_table[ii].coefs[0]   = (*mp_func)(x);
-    m_table[ii].coefs[1] = mp_func->deriv(x);
+    const double x = m_minArg + ii*m_stepSize;
+    m_grid[ii]     = x;
+    // get every derivative up to the first
+    auto const y = (*mp_func)(make_fvar<double,1>(x));
+    m_table[ii].coefs[0] = y.derivative(0);
+    m_table[ii].coefs[1] = y.derivative(1);
   }
 }
 
