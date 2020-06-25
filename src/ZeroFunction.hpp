@@ -2,19 +2,21 @@
 #include "EvaluationFunctor.hpp"
 #define FUNC(x) 0.0
 #define FUNCNAME "Zero"
-class ZeroFunction final : public EvaluationFunctor<double,double>
+
+template <typename T>
+class ZeroFunction final : public EvaluationFunctor<T,T>
 {
 public:
-  double operator()(double x) override { return FUNC(X); }
-  double deriv(double x) override
+  T operator()(T x) override { return FUNC(X); }
+  T deriv(T x) override
   {
     return 0.0;
   }
-  double deriv2(double x) override
+  T deriv2(T x) override
   {
     return 0.0;
   }
-  double deriv3(double x) override
+  T deriv3(T x) override
   {
     return 0.0;
   }
