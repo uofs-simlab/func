@@ -3,6 +3,7 @@
 */
 #pragma once
 #include "EvaluationImplementation.hpp"
+#include <boost/math/differentiation/autodiff.hpp>
 
 #include <memory>
 #include <map>
@@ -62,18 +63,56 @@ class UniformLookupTableFactory
 public:
   // Only ever hand out unique pointers
   static std::unique_ptr<UniformLookupTable> Create(std::string name,
-					       EvaluationFunctor<double,double> *f,
-					       UniformLookupTableParameters par);
+                          EvaluationFunctor<func_type,func_type> *f, // make this a data type with 8 functions in it
+                          UniformLookupTableParameters par)
+  {
+    // Create a UniformLookupTable
+    UniformLookupTable * instance = nullptr;
+
+    // find the name in the registry and call factory method.
+    auto it = get_registry().find(name);
+    if(it != get_registry().end()){
+      // find the index of the function in the function map
+      instance = it->second(f,par);
+    }
+
+    // wrap instance in a unique ptr and return (if created)
+    if(instance == nullptr)
+      throw "Table name not found in registry."; // TODO better exception
+    return std::unique_ptr<UniformLookupTable>(instance);
+
+  }
+
   // Actual registration function
   static void RegisterFactoryFunction(std::string name,
-        std::function<UniformLookupTable*(EvaluationFunctor<double,double>*,UniformLookupTableParameters)> classFactoryFunction);
+        std::function<UniformLookupTable*(EvaluationFunctor<func_type,func_type>*,UniformLookupTableParameters)> classFactoryFunction)
+  {
+    // register a derived class factory function
+    get_registry()[name] = classFactoryFunction;
+  }
+
   // Get all keys from the registry
-  static std::vector<std::string> get_registry_keys(void);
+  static std::vector<std::string> get_registry_keys(void)
+  {
+    // copy all keys from the registry map into a vector
+    std::vector<std::string> keys;
+    for (auto const& elem : get_registry() ) {
+      keys.push_back(elem.first);
+    }
+    return keys;
+  }
 
 private:
   // the actual registry is private to this class
   static std::map<std::string, std::function<UniformLookupTable*(
-			       EvaluationFunctor<double,double>*,UniformLookupTableParameters)>>& get_registry();
+			       EvaluationFunctor<func_type,func_type>*,UniformLookupTableParameters)>>& get_registry()
+  {
+    // Get the singleton instance of the registry map
+    static std::map<std::string, std::function<UniformLookupTable*(
+                     EvaluationFunctor<func_type,func_type>*,UniformLookupTableParameters)>> registry;
+    return registry;
+  }
+
   // Do NOT implement copy methods
   UniformLookupTableFactory(){};
   UniformLookupTableFactory(UniformLookupTableFactory const& copy);
@@ -81,18 +120,28 @@ private:
 };
 
 /*
-  Helper class for registering Uniform LUT implementations
+  Helper class for registering Uniform LUT implementations.
+  T is a class name and N is the number of differentiations T needs
+  in order to be built.
 
   NOTE: implementation defined in this header so that templates get
   instantiated in derived LUT class files
 */
-template<class T>
+template <class T, unsigned int N = 0>
 class UniformLookupTableRegistrar {
 public:
   UniformLookupTableRegistrar(std::string className)
   {
-    UniformLookupTableFactory::RegisterFactoryFunction(className,
-	    [](EvaluationFunctor<double,double> *f, UniformLookupTableParameters par) -> UniformLookupTable * { return new T(f, par);});
+    if(N==0){
+      UniformLookupTableFactory::RegisterFactoryFunction(className,
+          [](EvaluationFunctor<double,double> *f, UniformLookupTableParameters par) -> UniformLookupTable * { return new T(f, par);});
+    }else{
+      UniformLookupTableFactory::RegisterFactoryFunction(className,
+          [](EvaluationFunctor<autodiff_fvar<double,N>,autodiff_fvar<double,N>> *f, UniformLookupTableParameters par) 
+          -> UniformLookupTable * { return new T(f, par);});
+    }
+    // set num_derivs map
+    UniformLookupTableFactory::RegisterFactoryFunctionDerivs(className,...);
   }
 };
 
@@ -100,6 +149,8 @@ public:
    Macros for class registration:
    - REGISTER_ULUT goes inside class declaration in .hpp
    - REGISTER_ULUT_IMPL goes inside .cpp implementation
+   - *_DIFF are variants of these macros for registering the
+   differentiation tables (mind the order of args)
 */
 #define REGISTER_ULUT(classname) \
 private: \
@@ -108,3 +159,11 @@ private: \
 #define STR(x...) STR_EXPAND(x)
 #define REGISTER_ULUT_IMPL(classname...) \
    const UniformLookupTableRegistrar<classname> classname::registrar(STR(classname));
+
+#define REGISTER_ULUT_DIFF(order,classname) \
+private: \
+   static const UniformLookupTableRegistrar<classname,autodiff_fvar<double,order>> registrar;
+#define STR_EXPAND(x...) #x
+#define STR(x...) STR_EXPAND(x)
+#define REGISTER_ULUT_IMPL_DIFF(order,classname...) \
+   const UniformLookupTableRegistrar<classname,autodiff_fvar<double,order>> classname::registrar(STR(classname));

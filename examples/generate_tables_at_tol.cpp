@@ -18,7 +18,10 @@ int main()
 {
   using namespace std;
 
-  MyFunction func;
+  MyFunction<double> func;
+  MyFunction<fvar1> func;
+  MyFunction<fvar2> func;
+  MyFunction<fvar3> func;
 
   cout << "# Function: " << FUNCNAME << "\n";
   cout << "# Tol:      " << TOL << "\n";

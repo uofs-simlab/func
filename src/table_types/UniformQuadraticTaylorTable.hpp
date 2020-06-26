@@ -10,16 +10,14 @@
   - evaluate by using parentheses, just like a function
 */
 #pragma once
-#include "UniformLookupTable.hpp"
+#include "UniformAutoDiffTable.hpp"
 
-#include <memory>
-
-class UniformQuadraticTaylorTable final : public UniformLookupTable
+class UniformQuadraticTaylorTable final : public UniformAutoDiffTable<2>
 {
-  REGISTER_ULUT(UniformQuadraticTaylorTable);
+  REGISTER_ULUT_DIFF(2,UniformQuadraticTaylorTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<3,32>[]> m_table;
 public:
-  UniformQuadraticTaylorTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformQuadraticTaylorTable(EvaluationFunctor<autodiff_fvar<double,2>,autodiff_fvar<double,2>> *func, UniformLookupTableParameters par);
   double operator()(double x) override;
 };

@@ -3,13 +3,13 @@
 #include <boost/math/differentiation/autodiff.hpp>
 
 #define IMPL_NAME UniformLinearTaylorTable
-REGISTER_ULUT_IMPL(IMPL_NAME);
+REGISTER_ULUT_IMPL_DIFF(1,IMPL_NAME);
 
-template <typename T>
-UniformLinearTaylorTable::UniformLinearTaylorTable(EvaluationFunctor<autodiff_fvar<double,1>,autodiff_fvar<double,1>> *func, UniformLookupTableParameters<T> par) : 
-  UniformLookupTable(func, par)
+using boost::math::differentiation::make_fvar;
+
+UniformLinearTaylorTable::UniformLinearTaylorTable(EvaluationFunctor<autodiff_fvar<double,1>,autodiff_fvar<double,1>> *func, UniformLookupTableParameters par) : 
+  UniformAutoDiffTable(func, par)
 {
-  using namespace boost::math::differentiation;
 
   /* Base class variables */
   m_name = STR(IMPL_NAME);
@@ -23,7 +23,7 @@ UniformLinearTaylorTable::UniformLinearTaylorTable(EvaluationFunctor<autodiff_fv
     const double x = m_minArg + ii*m_stepSize;
     m_grid[ii]     = x;
     // get every derivative up to the first
-    auto const y = (*mp_func)(make_fvar<double,1>(x));
+    auto const y = (*mp_boost_func)(make_fvar<double,1>(x));
     m_table[ii].coefs[0] = y.derivative(0);
     m_table[ii].coefs[1] = y.derivative(1);
   }

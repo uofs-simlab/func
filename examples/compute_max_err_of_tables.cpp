@@ -14,7 +14,7 @@ int main()
 {
   using namespace std;
 
-  MyFunction func;
+  MyFunction<boost_fvar> func;
 
   /* Which implementations to use */
   std::vector<std::string> implNames {"UniformLinearInterpolationTable",

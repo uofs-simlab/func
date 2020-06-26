@@ -6,14 +6,14 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
-
+#include <boost/math/differentiation/autodiff.hpp>
 #include <memory>
 
 class UniformLookupTableGenerator
 {
 private:
+  FunctionHelper *mp_func;
 
-  EvaluationFunctor<double,double> *mp_func;
   double m_min;
   double m_max;
 
@@ -25,7 +25,11 @@ private:
 
 public:
 
-  UniformLookupTableGenerator(EvaluationFunctor<double,double> *func, double minArg, double maxArg);
+  //TODO make this less rigid. Can you specify args out of order w/ dummy names?
+  UniformLookupTableGenerator(FunctionHelper *func,
+      double minArg, double maxArg,
+      );
+
   ~UniformLookupTableGenerator();
   std::unique_ptr<UniformLookupTable> generate_by_step(std::string tableKey, double stepSize);
   std::unique_ptr<UniformLookupTable> generate_by_tol(std::string tableKey, double desiredTolerance);

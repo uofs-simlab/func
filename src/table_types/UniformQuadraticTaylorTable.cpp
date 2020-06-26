@@ -1,10 +1,13 @@
 /* Implementation of a Uniform Lookup table with linear interpolation */
 #include "UniformQuadraticTaylorTable.hpp"
 
-#define IMPL_NAME UniformQuadraticTaylorTable
-REGISTER_ULUT_IMPL(IMPL_NAME);
+using boost::math::differentiation::make_fvar;
 
-UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : UniformLookupTable(func, par)
+#define IMPL_NAME UniformQuadraticTaylorTable
+REGISTER_ULUT_IMPL_DIFF(2,IMPL_NAME);
+
+UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(EvaluationFunctor<autodiff_fvar<double,2>,autodiff_fvar<double,2>> *func, UniformLookupTableParameters par) :
+  UniformAutoDiffTable(func, par)
 {
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
@@ -17,9 +20,10 @@ UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(EvaluationFunctor<doubl
   for (int ii=0;ii<m_numIntervals;++ii) {
     double x = (m_minArg + ii*m_stepSize);
     m_grid[ii] = x;
-    m_table[ii].coefs[0] = (*func)(x);
-    m_table[ii].coefs[1] = func->deriv(x);
-    m_table[ii].coefs[2] = func->deriv2(x)/2;
+    auto const y = (*mp_boost_func)(make_fvar<double,2>(x));
+    m_table[ii].coefs[0] = y.derivative(0);
+    m_table[ii].coefs[1] = y.derivative(1);
+    m_table[ii].coefs[2] = y.derivative(2)/2;
   }
 }
 

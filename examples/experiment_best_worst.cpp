@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[3]);
   int    seed         = std::stoi(argv[4]);
 
-  ZeroFunction func;
+  ZeroFunction<boost_fvar> func;
   double stepSize;
 
   /* Which LUT implementations to use */

@@ -1,12 +1,13 @@
 /* Implementation of a UniformPrecomputed Lookup table with linear interpolation */
 #include "UniformCubicHermiteTable.hpp"
+#include <boost/math/differentiation/autodiff.hpp>
 
 #define IMPL_NAME UniformCubicHermiteTable
-REGISTER_ULUT_IMPL(IMPL_NAME);
+REGISTER_ULUT_IMPL_DIFF(1,IMPL_NAME);
 
-UniformCubicHermiteTable::UniformCubicHermiteTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : UniformLookupTable(func, par)
+UniformCubicHermiteTable::UniformCubicHermiteTable(EvaluationFunctor<autodiff_fvar<double,1>,autodiff_fvar<double,1>> *func, UniformLookupTableParameters par) :
+  UniformAutoDiffTable(func, par)
 {
-
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
   m_order = 4;

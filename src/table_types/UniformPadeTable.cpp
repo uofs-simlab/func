@@ -6,11 +6,11 @@
 // The registration looks terrible so it's at the bottom of the class
 
 static double const fact[] = {1,1,2,6,24,120,720,5040};
-double (EvaluationFunctor<double,double>::*derivs[7])(double);
+double (EvaluationFunctor<boost_fvar,boost_fvar>::*derivs[7])(double);
 
 template <unsigned int M, unsigned int N>
-UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : 
-  UniformLookupTable(func, par)
+UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<boost_fvar,boost_fvar> *func, UniformLookupTableParameters par) : 
+  UniformAutoDiffTable(func, par)
 {
   /* Base class default variables */
   m_name = "UniformPadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
@@ -19,13 +19,13 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   // assign the first 7 derivatives to the derivs array for easy enumeration
-  derivs[0]=&EvaluationFunctor<double,double>::deriv;
-  derivs[1]=&EvaluationFunctor<double,double>::deriv2;
-  derivs[2]=&EvaluationFunctor<double,double>::deriv3;
-  derivs[3]=&EvaluationFunctor<double,double>::deriv4;
-  derivs[4]=&EvaluationFunctor<double,double>::deriv5;
-  derivs[5]=&EvaluationFunctor<double,double>::deriv6;
-  derivs[6]=&EvaluationFunctor<double,double>::deriv7;
+  derivs[0]=&EvaluationFunctor<boost_fvar,boost_fvar>::deriv;
+  derivs[1]=&EvaluationFunctor<boost_fvar,boost_fvar>::deriv2;
+  derivs[2]=&EvaluationFunctor<boost_fvar,boost_fvar>::deriv3;
+  derivs[3]=&EvaluationFunctor<boost_fvar,boost_fvar>::deriv4;
+  derivs[4]=&EvaluationFunctor<boost_fvar,boost_fvar>::deriv5;
+  derivs[5]=&EvaluationFunctor<boost_fvar,boost_fvar>::deriv6;
+  derivs[6]=&EvaluationFunctor<boost_fvar,boost_fvar>::deriv7;
 
   /* Allocate and set table */
   m_table.reset(new polynomial<M+N+1, M+N<4? 32:64>[m_numTableEntries]);

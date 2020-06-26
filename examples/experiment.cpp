@@ -44,7 +44,8 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  MyFunction func;
+  MyFunction<boost_fvar> func;
+  MyFunction<double>     double_func;
   double stepSize;
 
   /* Check which implementations are available */
@@ -58,35 +59,44 @@ int main(int argc, char* argv[])
   std::vector<unique_ptr<EvaluationImplementation>> impls;
 
   /* Which LUT implementations to use */
-  std::vector<std::string> implNames {"UniformLinearInterpolationTable",
-      "UniformLinearPrecomputedInterpolationTable",
-      "UniformQuadraticPrecomputedInterpolationTable",
+  std::vector<std::string> implNames {
+      //"UniformCubicHermiteTable",
+      //"UniformLinearInterpolationTable",
+      //"UniformLinearPrecomputedInterpolationTable",
+      //"UniformQuadraticPrecomputedInterpolationTable",
       "UniformCubicPrecomputedInterpolationTable",
-      "UniformArmadilloPrecomputedInterpolationTable<4>",
-      "UniformArmadilloPrecomputedInterpolationTable<5>",
-      "UniformArmadilloPrecomputedInterpolationTable<6>",
-      "UniformArmadilloPrecomputedInterpolationTable<7>",
-      "UniformPadeTable<1,1>",
-      "UniformPadeTable<2,2>",
-      "UniformPadeTable<3,3>",
-      "UniformPadeTable<4,3>",
-      "UniformLinearTaylorTable",
-      "UniformQuadraticTaylorTable",
-      "UniformCubicTaylorTable"};
+      //"UniformArmadilloPrecomputedInterpolationTable<4>",
+      //"UniformArmadilloPrecomputedInterpolationTable<5>",
+      //"UniformArmadilloPrecomputedInterpolationTable<6>",
+      //"UniformArmadilloPrecomputedInterpolationTable<7>",
+      //"UniformPadeTable<1,1>",
+      //"UniformPadeTable<2,2>",
+      //"UniformPadeTable<3,3>",
+      //"UniformPadeTable<4,3>",
+      "UniformLinearTaylorTable"
+      //"UniformQuadraticTaylorTable",
+      //"UniformCubicTaylorTable"
+      };
 
   UniformLookupTableGenerator gen(&func, tableMin, tableMax);
+  cout << "foo1" << endl;
 
   /* add implementations to vector */
   // unique_ptr<EvaluationImplementation> test = make_unique<DirectEvaluation>(&func,tableMin,tableMax);
 
-  impls.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&func,tableMin,tableMax)));
+  impls.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&double_func,tableMin,tableMax)));
+  cout << "foo4" << endl;
   for (auto itName : implNames) {
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+    cout << "foo6" << endl;
   }
+  cout << "foo2" << endl;
 
   /* Run comparator */
   ImplementationComparator implCompare(impls, nEvals, seed);
+  cout << "foo3" << endl;
   implCompare.run_timings(nExperiments);
+  cout << "foo3" << endl;
 
   /* Summarize the results */
   cout << "# Function:  " << FUNCNAME << endl;

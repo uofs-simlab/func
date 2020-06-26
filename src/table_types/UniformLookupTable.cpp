@@ -43,46 +43,46 @@ void UniformLookupTable::print_details(std::ostream &out)
 /* ////////////////////////////////////////////////////////////////////////////
    Factory and registration management
 //////////////////////////////////////////////////////////////////////////// */
-std::unique_ptr<UniformLookupTable> UniformLookupTableFactory::Create(std::string name,
-						       EvaluationFunctor<double,double> *f,
-						       UniformLookupTableParameters par)
-{
-  // Create a UniformLookupTable
-  UniformLookupTable * instance = nullptr;
-
-  // find the name in the registry and call factory method.
-  auto it = get_registry().find(name);
-  if(it != get_registry().end())
-    instance = it->second(f,par);
-
-  // wrap instance in a unique ptr and return (if created)
-  if(instance == nullptr)
-    throw "Table name not found in registry."; // TODO better exception
-  return std::unique_ptr<UniformLookupTable>(instance);
-}
-
-std::vector<std::string> UniformLookupTableFactory::get_registry_keys()
-{
-  // copy all keys from the registry map into a vector
-  std::vector<std::string> keys;
-  for (auto const& elem : get_registry() ) {
-    keys.push_back(elem.first);
-  }
-  return keys;
-}
-
-void UniformLookupTableFactory::RegisterFactoryFunction(std::string name,
-std::function<UniformLookupTable*(EvaluationFunctor<double,double>*,UniformLookupTableParameters)> classFactoryFunction)
-{
-  // register a derived class factory function
-  get_registry()[name] = classFactoryFunction;
-}
-
-std::map<std::string, std::function<UniformLookupTable*(
-			       EvaluationFunctor<double,double>*,UniformLookupTableParameters)>>& UniformLookupTableFactory::get_registry()
-{
-  // Get the singleton instance of the registry map
-  static std::map<std::string, std::function<UniformLookupTable*(
-			       EvaluationFunctor<double,double>*,UniformLookupTableParameters)>> registry;
-  return registry;
-}
+//std::unique_ptr<UniformLookupTable> UniformLookupTableFactory::Create(std::string name,
+//						       EvaluationFunctor<double,double> *f,
+//						       UniformLookupTableParameters par)
+//{
+//  // Create a UniformLookupTable
+//  UniformLookupTable * instance = nullptr;
+//
+//  // find the name in the registry and call factory method.
+//  auto it = get_registry().find(name);
+//  if(it != get_registry().end())
+//    instance = it->second(f,par); // TODO fix?
+//
+//  // wrap instance in a unique ptr and return (if created)
+//  if(instance == nullptr)
+//    throw "Table name not found in registry."; // TODO better exception
+//  return std::unique_ptr<UniformLookupTable>(instance);
+//}
+//
+//std::vector<std::string> UniformLookupTableFactory::get_registry_keys()
+//{
+//  // copy all keys from the registry map into a vector
+//  std::vector<std::string> keys;
+//  for (auto const& elem : get_registry() ) {
+//    keys.push_back(elem.first);
+//  }
+//  return keys;
+//}
+//
+//void UniformLookupTableFactory::RegisterFactoryFunction(std::string name,
+//std::function<UniformLookupTable*(EvaluationFunctor<double,double>*,UniformLookupTableParameters)> classFactoryFunction)
+//{
+//  // register a derived class factory function
+//  get_registry()[name] = classFactoryFunction;
+//}
+//
+//std::map<std::string, std::function<UniformLookupTable*(
+//			       EvaluationFunctor<double,double>*,UniformLookupTableParameters)>>& UniformLookupTableFactory::get_registry()
+//{
+//  // Get the singleton instance of the registry map
+//  static std::map<std::string, std::function<UniformLookupTable*(
+//			       EvaluationFunctor<double,double>*,UniformLookupTableParameters)>> registry;
+//  return registry;
+//}

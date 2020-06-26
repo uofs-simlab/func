@@ -26,8 +26,8 @@ if(USE_ARMADILLO AND ARMADILLO_FOUND)
   list(APPEND func_impls_link_libs ${ARMADILLO_LIBRARIES})
 
   list(APPEND func_impls_src
-      table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
-      table_types/UniformPadeTable.cpp
+    #table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
+    #table_types/UniformPadeTable.cpp
   )
 endif()
 
@@ -40,7 +40,7 @@ target_include_directories(func_impls PUBLIC ${func_impls_include_dirs})
 add_library(func SHARED
     ImplementationComparator.cpp
     Timer.cpp
-    UniformLookupTableGenerator.cpp
+    #UniformLookupTableGenerator.cpp
 )
 
 target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} Boost::boost func_impls)

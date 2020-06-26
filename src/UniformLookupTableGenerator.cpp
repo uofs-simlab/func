@@ -112,7 +112,7 @@ private:
 /*
   UniformLookupTableGenerator functions
 */
-UniformLookupTableGenerator::UniformLookupTableGenerator(EvaluationFunctor<double,double> *func, double minArg, double maxArg) : mp_func(func), m_min(minArg), m_max(maxArg) {}
+UniformLookupTableGenerator::UniformLookupTableGenerator(EvaluationFunctor<boost_fvar,boost_fvar> *func, double minArg, double maxArg) : mp_func(func), m_min(minArg), m_max(maxArg) {}
 
 
 UniformLookupTableGenerator::~UniformLookupTableGenerator()
