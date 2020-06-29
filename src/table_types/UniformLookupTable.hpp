@@ -17,11 +17,18 @@ struct UniformLookupTableParameters
   double stepSize = 1;
 };
 
+template <unsigned int NUM_COEFS, std::size_t ALIGN=64>
+struct alignas(ALIGN) polynomial{
+  double coefs[NUM_COEFS];
+};
+
 class UniformLookupTable : public EvaluationImplementation
 {
 protected:
 
-  std::unique_ptr<double[]> m_grid, m_table;  // pointers to grid and evaluation data
+  std::unique_ptr<double[]> m_grid;  // pointers to grid and evaluation data
+  // a LUT array needs to be provided by each implementation
+
   unsigned                  m_numIntervals;   // sizes of grid and evaluation data
   unsigned                  m_numTableEntries;
 
@@ -32,7 +39,7 @@ protected:
 
 public:
 
-  UniformLookupTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformLookupTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   virtual ~UniformLookupTable(){};
 
   /* public access of protected data */
@@ -55,18 +62,18 @@ class UniformLookupTableFactory
 public:
   // Only ever hand out unique pointers
   static std::unique_ptr<UniformLookupTable> Create(std::string name,
-					       EvaluationFunctor<double,double> *f,
-					       UniformLookupTableParameters par);
+                          FunctionContainer *fc,
+                          UniformLookupTableParameters par);
   // Actual registration function
   static void RegisterFactoryFunction(std::string name,
-        std::function<UniformLookupTable*(EvaluationFunctor<double,double>*,UniformLookupTableParameters)> classFactoryFunction);
+        std::function<UniformLookupTable*(FunctionContainer*,UniformLookupTableParameters)> classFactoryFunction);
   // Get all keys from the registry
   static std::vector<std::string> get_registry_keys(void);
 
 private:
   // the actual registry is private to this class
   static std::map<std::string, std::function<UniformLookupTable*(
-			       EvaluationFunctor<double,double>*,UniformLookupTableParameters)>>& get_registry();
+			       FunctionContainer*,UniformLookupTableParameters)>>& get_registry();
   // Do NOT implement copy methods
   UniformLookupTableFactory(){};
   UniformLookupTableFactory(UniformLookupTableFactory const& copy);
@@ -74,18 +81,18 @@ private:
 };
 
 /*
-  Helper class for registering Uniform LUT implementations
+  Helper class for registering Uniform LUT implementations.
 
   NOTE: implementation defined in this header so that templates get
   instantiated in derived LUT class files
 */
-template<class T>
+template <class T>
 class UniformLookupTableRegistrar {
 public:
   UniformLookupTableRegistrar(std::string className)
   {
     UniformLookupTableFactory::RegisterFactoryFunction(className,
-	    [](EvaluationFunctor<double,double> *f, UniformLookupTableParameters par) -> UniformLookupTable * { return new T(f, par);});
+        [](FunctionContainer *fc, UniformLookupTableParameters par) -> UniformLookupTable * { return new T(fc, par);});
   }
 };
 

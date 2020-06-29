@@ -7,7 +7,9 @@ ArgumentRecord::ArgumentRecord(unsigned int histSize, double min, double max) :
 {
   /* variables needed for recording function arguments */
   this->mp_histogram=new unsigned int[histSize];
-  // init the array to zeros so we can easily add 1 to each entry
+  this->mp_histogram_mutex.reset(new std::mutex[histSize]);
+
+  // init the array to zeros so we can easily increment each entry
   std::fill(mp_histogram, mp_histogram+histSize, 0);
   this->m_peak=0;
 }
@@ -15,7 +17,11 @@ ArgumentRecord::ArgumentRecord(unsigned int histSize, double min, double max) :
 void ArgumentRecord::record_arg(double x)
 {
   unsigned int index = CALC_INDEX(x);
+  // lock only exists for the scope of this function
+  std::lock_guard<std::mutex> lock1(mp_histogram_mutex[index]);
   mp_histogram[index]++;
+
+  std::lock_guard<std::mutex> lock2(m_peak_mutex);
   unsigned int peak_index = CALC_INDEX(m_peak);
   if(mp_histogram[index]>mp_histogram[peak_index])
     m_peak=x;
@@ -68,4 +74,3 @@ ArgumentRecord::~ArgumentRecord()
 {
   delete mp_histogram;
 }
-

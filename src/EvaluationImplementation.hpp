@@ -27,6 +27,7 @@ protected:
 
 public:
 
+  // Every class inheriting from this one use a FunctionContainer as their first arg (aside from UniformFailureProofTable)
   EvaluationImplementation(EvaluationFunctor<double,double> *func = NULL, std::string name = "");
   virtual ~EvaluationImplementation(){};
 

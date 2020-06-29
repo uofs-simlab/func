@@ -6,8 +6,8 @@
 #include "ArgumentRecord.hpp"
 #endif
 
-DirectEvaluation::DirectEvaluation(EvaluationFunctor<double,double> *func, double min, double max, unsigned int histSize) : 
-  EvaluationImplementation(func, "DirectEvaluation")
+DirectEvaluation::DirectEvaluation(FunctionContainer *func_container, double min, double max, unsigned int histSize) : 
+  EvaluationImplementation(func_container->double_func, "DirectEvaluation")
 {
   /* Base class default variables */
   this->m_minArg = min; this->m_maxArg = max;
@@ -45,7 +45,7 @@ void DirectEvaluation::print_details(std::ostream& out)
 {
   out<< m_name << " " << m_minArg << " " << m_maxArg;
   #ifdef FUNC_RECORD
-    out << endl;
+    out << std::endl;
     mp_recorder->print_details(out);
   #endif
 }

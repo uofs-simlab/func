@@ -4,8 +4,8 @@
 #define IMPL_NAME UniformConstantTaylorTable
 REGISTER_ULUT_IMPL(IMPL_NAME);
 
-
-UniformConstantTaylorTable::UniformConstantTaylorTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : UniformLookupTable(func, par)
+UniformConstantTaylorTable::UniformConstantTaylorTable(FunctionContainer *func_container, UniformLookupTableParameters par) : 
+  UniformLookupTable(func_container, par)
 {
 
   /* Base class default variables */

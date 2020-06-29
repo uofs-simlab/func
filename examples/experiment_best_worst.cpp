@@ -43,7 +43,12 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[3]);
   int    seed         = std::stoi(argv[4]);
 
-  ZeroFunction func;
+  FunctionContainer func_container;
+  func_container.double_func = new ZeroFunction<double>;
+  func_container.fvar1_func  = new ZeroFunction<fvar1>;
+  func_container.fvar2_func  = new ZeroFunction<fvar2>;
+  func_container.fvar3_func  = new ZeroFunction<fvar3>;
+
   double stepSize;
 
   /* Which LUT implementations to use */
@@ -68,7 +73,7 @@ int main(int argc, char* argv[])
   std::cout << "\n# impls using ~ " << percentRam <<"% of RAM\n";
   cout << "# Function:  " << FUNCNAME << endl << endl;
 
-  UniformLookupTableGenerator gen(&func, 0, 1);
+  UniformLookupTableGenerator gen(&func_container, 0, 1);
 
   /* Fill in the implementations */
   std::vector<unique_ptr<EvaluationImplementation>> impls;
