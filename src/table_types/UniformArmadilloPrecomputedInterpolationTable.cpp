@@ -2,7 +2,7 @@
 #include "UniformArmadilloPrecomputedInterpolationTable.hpp"
 #include <armadillo>
 
-#define SOLVE_OPTS arma::solve_opts::refine
+#define SOLVE_OPTS arma::solve_opts::none
 
 // Template substitution happens way after the preprocessor does it's work so
 // we'll register all the available template values this way
@@ -12,8 +12,8 @@ template<>REGISTER_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable<6>);
 template<>REGISTER_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable<7>);
 
 template <unsigned int N>
-UniformArmadilloPrecomputedInterpolationTable<N>::UniformArmadilloPrecomputedInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : 
-  UniformLookupTable(func, par)
+UniformArmadilloPrecomputedInterpolationTable<N>::UniformArmadilloPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par) : 
+  UniformLookupTable(func_container, par)
 {
   /* Base class default variables */
   m_name = "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";

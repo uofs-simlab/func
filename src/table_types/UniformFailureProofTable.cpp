@@ -4,8 +4,8 @@
   #define RECORD_ARG(x)
   #define PRINT_ARGS(out)
 #else
-  #include <vector>
   #include <iostream>
+  #include <vector>
   #include <mutex>
 
   // make sure we don't swallow the semicolon
@@ -29,15 +29,15 @@
 #endif
 
 // copy everything from the given LUT
-UniformFailureProofTable::UniformFailureProofTable(std::unique_ptr<UniformLookupTable> LUT) : 
+UniformFailureProofTable::UniformFailureProofTable(std::unique_ptr<UniformLookupTable> LUT) :
   mp_LUT(std::move(LUT))
 {
-    mp_func    = mp_LUT->function();
-    m_minArg   = mp_LUT->min_arg();
-    m_maxArg   = mp_LUT->max_arg();
-    m_order    = mp_LUT->order();
-    m_name     = mp_LUT->name();
-    m_dataSize = mp_LUT->size();
+  mp_func    = mp_LUT->function();
+  m_minArg   = mp_LUT->min_arg();
+  m_maxArg   = mp_LUT->max_arg();
+  m_order    = mp_LUT->order();
+  m_name     = mp_LUT->name();
+  m_dataSize = mp_LUT->size();
 }
 
 double UniformFailureProofTable::operator()(double x)

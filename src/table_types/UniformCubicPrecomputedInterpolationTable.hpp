@@ -19,6 +19,6 @@ class UniformCubicPrecomputedInterpolationTable final : public UniformLookupTabl
 
   __attribute__((aligned)) std::unique_ptr<polynomial<4,32>[]> m_table;
 public:
-  UniformCubicPrecomputedInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformCubicPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
 };

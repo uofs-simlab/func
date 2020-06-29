@@ -18,6 +18,6 @@ class UniformLinearInterpolationTable final : public UniformLookupTable
 
   __attribute__((aligned)) std::unique_ptr<polynomial<1,8>[]> m_table;
 public:
-  UniformLinearInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformLinearInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
 };
