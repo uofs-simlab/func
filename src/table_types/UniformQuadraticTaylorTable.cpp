@@ -4,10 +4,10 @@
 using boost::math::differentiation::make_fvar;
 
 #define IMPL_NAME UniformQuadraticTaylorTable
-REGISTER_ULUT_IMPL_DIFF(2,IMPL_NAME);
+REGISTER_ULUT_IMPL(IMPL_NAME);
 
-UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(EvaluationFunctor<autodiff_fvar<double,2>,autodiff_fvar<double,2>> *func, UniformLookupTableParameters par) :
-  UniformAutoDiffTable(func, par)
+UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
+  UniformLookupTable(func_container, par)
 {
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
@@ -15,15 +15,18 @@ UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(EvaluationFunctor<autod
   m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
+  __IS_NULLPTR(func_container->fvar2_func);
+  mp_boost_func = func_container->fvar2_func;
+
   /* Allocate and set table */
   m_table.reset(new polynomial<3,32>[m_numTableEntries]);
   for (int ii=0;ii<m_numIntervals;++ii) {
     double x = (m_minArg + ii*m_stepSize);
     m_grid[ii] = x;
-    auto const y = (*mp_boost_func)(make_fvar<double,2>(x));
-    m_table[ii].coefs[0] = y.derivative(0);
-    m_table[ii].coefs[1] = y.derivative(1);
-    m_table[ii].coefs[2] = y.derivative(2)/2;
+    auto const derivs = (*mp_boost_func)(make_fvar<double,2>(x));
+    m_table[ii].coefs[0] = derivs.derivative(0);
+    m_table[ii].coefs[1] = derivs.derivative(1);
+    m_table[ii].coefs[2] = derivs.derivative(2)/2;
   }
 }
 

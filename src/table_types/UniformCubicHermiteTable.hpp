@@ -11,14 +11,16 @@
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
 */
-#include "UniformAutoDiffTable.hpp"
+#include "UniformLookupTable.hpp"
 
-class UniformCubicHermiteTable final : public UniformAutoDiffTable<1>
+class UniformCubicHermiteTable final : public UniformLookupTable
 {
-  REGISTER_ULUT_DIFF(1,UniformCubicHermiteTable);
+  REGISTER_ULUT(UniformCubicHermiteTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<4,32>[]> m_table;
+  EvaluationFunctor<fvar1,fvar1> *mp_boost_func;
 public:
-  UniformCubicHermiteTable(EvaluationFunctor<autodiff_fvar<double,1>,autodiff_fvar<double,1>> *func, UniformLookupTableParameters par);
+  UniformCubicHermiteTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
+  EvaluationFunctor<fvar1,fvar1> *boost_function(){ return mp_boost_func; }
 };
