@@ -13,6 +13,7 @@
 #pragma once
 
 #include "EvaluationImplementation.hpp"
+#include "FunctionContainer.hpp"
 #include <cmath>
 
 #ifdef FUNC_RECORD

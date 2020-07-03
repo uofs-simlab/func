@@ -22,9 +22,9 @@ class UniformPadeTable final : public UniformLookupTable
 
   // mind the lesser than sign                              -> |
   __attribute__((aligned)) std::unique_ptr<polynomial<M+N+1,M+N<4? 32:64>[]> m_table;
-  EvaluationFunctor<autodiff_fvar<double,M+N>,autodiff_fvar<double,M+N>> *mp_boost_func;
+  std::function<autodiff_fvar<double,M+N>(autodiff_fvar<double,M+N>)> mp_boost_func;
 public:
   UniformPadeTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
-  EvaluationFunctor<autodiff_fvar<double,M+N>,autodiff_fvar<double,M+N>> *boost_function(){ return mp_boost_func; }
+  std::function<autodiff_fvar<double,M+N>(autodiff_fvar<double,M+N>)> boost_function(){ return mp_boost_func; }
 };

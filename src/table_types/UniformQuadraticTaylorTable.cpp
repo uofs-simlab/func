@@ -15,7 +15,7 @@ UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(FunctionContainer *func
   m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  __IS_NULLPTR(func_container->fvar2_func);
+  __IS_NULL(func_container->fvar2_func);
   mp_boost_func = func_container->fvar2_func;
 
   /* Allocate and set table */
@@ -23,7 +23,7 @@ UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(FunctionContainer *func
   for (int ii=0;ii<m_numIntervals;++ii) {
     double x = (m_minArg + ii*m_stepSize);
     m_grid[ii] = x;
-    auto const derivs = (*mp_boost_func)(make_fvar<double,2>(x));
+    auto const derivs = (mp_boost_func)(make_fvar<double,2>(x));
     m_table[ii].coefs[0] = derivs.derivative(0);
     m_table[ii].coefs[1] = derivs.derivative(1);
     m_table[ii].coefs[2] = derivs.derivative(2)/2;

@@ -19,9 +19,9 @@ UniformLinearPrecomputedInterpolationTable::UniformLinearPrecomputedInterpolatio
   for (int ii=0;ii<m_numIntervals;++ii) {
     double x = m_minArg + ii*m_stepSize;
     m_grid[ii] = x;
-    m_table[ii].coefs[0] = (*mp_func)(x);
+    m_table[ii].coefs[0] = (mp_func)(x);
     x = m_minArg + (ii+1)*m_stepSize;
-    m_table[ii].coefs[1] = (*mp_func)(x) - m_table[ii].coefs[0];
+    m_table[ii].coefs[1] = (mp_func)(x) - m_table[ii].coefs[0];
   }
 }
 

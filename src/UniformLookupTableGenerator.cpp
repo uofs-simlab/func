@@ -30,7 +30,7 @@ struct UniformLookupTableGenerator::LookupTableErrorFunctor
   /* operator() always returns a negative value */
   errprecision operator()(errprecision const& x)
   {
-    errprecision f_value = static_cast<errprecision>((*(m_impl->function()))(double(x)));
+    errprecision f_value = static_cast<errprecision>((m_impl->function())(double(x)));
     errprecision lut_value = static_cast<errprecision>((*m_impl)(double(x)));
     return -static_cast<errprecision>(2.0) * fabs( (f_value - lut_value) ) /
       (fabs(f_value)+fabs(lut_value));
@@ -300,7 +300,7 @@ void UniformLookupTableGenerator::plot_implementation_at_step_size(std::string t
        x < impl->max_arg();
        x+=impl->step_size()/10 ) {
     std::cout << x << " " <<
-      (*(impl->function()))(x) << " " <<
+      (impl->function())(x) << " " <<
       (*impl)(x) << std::endl;
   }
 }

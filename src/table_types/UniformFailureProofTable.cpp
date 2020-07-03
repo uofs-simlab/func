@@ -45,7 +45,7 @@ double UniformFailureProofTable::operator()(double x)
   // check if x is in the range of the table
   if(x<m_minArg || x>m_maxArg){
     RECORD_ARG(x);
-    return (*mp_func)(x);
+    return mp_func(x);
   }
   return (*mp_LUT)(x);
 }

@@ -8,16 +8,15 @@
   - cleanup in destructor
 */
 #pragma once
-#include "EvaluationFunctor.hpp"
-
 #include <string>
 #include <iostream>
+#include <functional>
 
 class EvaluationImplementation
 {
 protected:
 
-  EvaluationFunctor<double,double> *mp_func;   // mathematical function to evaluate
+  std::function<double(double)> mp_func;   // mathematical function to evaluate
   double             m_minArg, m_maxArg; // bounds of evaluation
 
   unsigned           m_order;    // order of accuracy of implementation
@@ -28,7 +27,7 @@ protected:
 public:
 
   // Every class inheriting from this one use a FunctionContainer as their first arg (aside from UniformFailureProofTable)
-  EvaluationImplementation(EvaluationFunctor<double,double> *func = NULL, std::string name = "");
+  EvaluationImplementation(std::function<double(double)> func = NULL, std::string name = "");
   virtual ~EvaluationImplementation(){};
 
   virtual double operator()(double x) = 0;
@@ -43,5 +42,5 @@ public:
   unsigned order();
   unsigned size();
   std::string name();
-  EvaluationFunctor<double,double> *function();
+  std::function<double(double)> function();
 };

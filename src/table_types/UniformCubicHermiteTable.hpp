@@ -18,9 +18,9 @@ class UniformCubicHermiteTable final : public UniformLookupTable
   REGISTER_ULUT(UniformCubicHermiteTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<4,32>[]> m_table;
-  EvaluationFunctor<fvar1,fvar1> *mp_boost_func;
+  std::function<fvar1(fvar1)> mp_boost_func;
 public:
   UniformCubicHermiteTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
-  EvaluationFunctor<fvar1,fvar1> *boost_function(){ return mp_boost_func; }
+  std::function<fvar1(fvar1)> boost_function(){ return mp_boost_func; }
 };
