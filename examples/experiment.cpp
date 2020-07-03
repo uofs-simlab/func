@@ -44,9 +44,9 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  FunctionContainer func_container{new MyFunction<double>, new MyFunction<fvar1>,
-        new MyFunction<fvar2>, new MyFunction<fvar3>, new MyFunction<fvar4>,
-        new MyFunction<fvar5>, new MyFunction<fvar6>, new MyFunction<fvar7>};
+  FunctionContainer func_container{MyFunction<double>, MyFunction<fvar1>,
+        MyFunction<fvar2>, MyFunction<fvar3>, MyFunction<fvar4>,
+        MyFunction<fvar5>, MyFunction<fvar6>, MyFunction<fvar7>};
   double stepSize;
 
   /* Check which implementations are available */
@@ -61,44 +61,54 @@ int main(int argc, char* argv[])
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-      //"UniformLinearInterpolationTable",
-      //"UniformLinearPrecomputedInterpolationTable",
-      //"UniformQuadraticPrecomputedInterpolationTable",
-      //"UniformCubicPrecomputedInterpolationTable",
-      //"UniformArmadilloPrecomputedInterpolationTable<4>",
-      //"UniformArmadilloPrecomputedInterpolationTable<5>",
-      //"UniformArmadilloPrecomputedInterpolationTable<6>",
-      //"UniformArmadilloPrecomputedInterpolationTable<7>",
-      "UniformPadeTable<1,1>",
-      "UniformPadeTable<2,1>",
-      "UniformPadeTable<3,1>",
-      "UniformPadeTable<4,1>",
-      "UniformPadeTable<5,1>",
-      "UniformPadeTable<6,1>",
-      "UniformPadeTable<3,2>",
-      "UniformPadeTable<4,2>",
-      "UniformPadeTable<5,2>",
-      "UniformPadeTable<2,2>",
-      "UniformPadeTable<3,3>",
-      "UniformPadeTable<4,3>",
-      "UniformLinearTaylorTable",
-      "UniformQuadraticTaylorTable",
-      "UniformCubicTaylorTable",
-      "UniformCubicHermiteTable"
-      };
+    "UniformArmadilloPrecomputedInterpolationTable<4>",
+    "UniformArmadilloPrecomputedInterpolationTable<5>",
+    "UniformArmadilloPrecomputedInterpolationTable<6>",
+    "UniformArmadilloPrecomputedInterpolationTable<7>",
+    "UniformCubicHermiteTable",
+    "UniformCubicPrecomputedInterpolationTable",
+    "UniformCubicTaylorTable",
+    "UniformLinearInterpolationTable",
+    "UniformLinearPrecomputedInterpolationTable",
+    "UniformLinearTaylorTable",
+    "UniformQuadraticPrecomputedInterpolationTable",
+    "UniformQuadraticTaylorTable"
+  };
+
+  std::vector<std::string> padeNames {
+    "UniformPadeTable<1,1>",
+    "UniformPadeTable<2,1>",
+    "UniformPadeTable<3,1>",
+    "UniformPadeTable<4,1>",
+    "UniformPadeTable<5,1>",
+    "UniformPadeTable<6,1>",
+    "UniformPadeTable<2,2>",
+    "UniformPadeTable<3,2>",
+    "UniformPadeTable<4,2>",
+    "UniformPadeTable<5,2>",
+    "UniformPadeTable<3,3>",
+    "UniformPadeTable<4,3>",
+  };
 
   UniformLookupTableGenerator gen(&func_container, tableMin, tableMax);
 
   /* add implementations to vector */
   // unique_ptr<EvaluationImplementation> test = make_unique<DirectEvaluation>(&func,tableMin,tableMax);
 
+  Timer t;
   impls.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
-    impls.emplace_back(new UniformFailureProofTable(gen.generate_by_tol(itName,tableTol)));
+    impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
-
-  /* Run comparator */
-  ImplementationComparator implCompare(impls, nEvals, seed);
+  for (auto itName : padeNames) {
+    impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+  }
+  t.stop();
+  cout << "Time to build all tables" << t.duration() << endl;
+ 
+  vector<unique_ptr<EvaluationImplementation>> v;
+  v.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&func_container,tableMin,tableMax)));
+  ImplementationComparator implCompare(v, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
   /* Summarize the results */
