@@ -95,20 +95,25 @@ int main(int argc, char* argv[])
   /* add implementations to vector */
   // unique_ptr<EvaluationImplementation> test = make_unique<DirectEvaluation>(&func,tableMin,tableMax);
 
-  Timer t;
   impls.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
-  for (auto itName : padeNames) {
-    impls.emplace_back(gen.generate_by_tol(itName,tableTol));
-  }
-  t.stop();
-  cout << "Time to build all tables" << t.duration() << endl;
+  //for (auto itName : padeNames) {
+  //  impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+  //}
+  
+  //add a composite table
+  double mid = exp(7.7/13.0287)+1;
+  UniformLookupTableGenerator gen1(&func_container, tableMin, mid);
+  UniformLookupTableGenerator gen2(&func_container, mid, tableMax);
+  cout << "composite" << endl;
+
+  impls.emplace_back(unique_ptr<EvaluationImplementation>(
+        new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),
+          gen2.generate_by_tol(implNames[7],tableTol*(tableMax-mid)/(tableMax-tableMin))})));
  
-  vector<unique_ptr<EvaluationImplementation>> v;
-  v.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&func_container,tableMin,tableMax)));
-  ImplementationComparator implCompare(v, nEvals, seed);
+  ImplementationComparator implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
   /* Summarize the results */
