@@ -30,13 +30,11 @@
 
 // copy everything from the given LUT
 UniformFailureProofTable::UniformFailureProofTable(std::unique_ptr<UniformLookupTable> LUT) :
-  mp_LUT(std::move(LUT))
+  mp_LUT(std::move(LUT)), EvaluationImplementation(mp_LUT->function(), "FailureProof" + mp_LUT->name())
 {
-  mp_func    = mp_LUT->function();
   m_minArg   = mp_LUT->min_arg();
   m_maxArg   = mp_LUT->max_arg();
   m_order    = mp_LUT->order();
-  m_name     = mp_LUT->name();
   m_dataSize = mp_LUT->size();
 }
 
