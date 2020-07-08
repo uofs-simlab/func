@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+// base e
 #define FUNC(x) (7.7-13.0287*log(x))
 #define FUNCNAME "(7.7-13.0287*log(x))"
 
