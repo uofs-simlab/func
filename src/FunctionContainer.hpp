@@ -1,6 +1,7 @@
 /*
   A data structure used to pass mathematical functions to FunC tables.
 
+  Notes:
   - needed for passing functions to tables. Tables using boost's 
     automatic differentiation (such as Taylor, Hermite, and Pade) 
     take advantage of the fvar[1-9] functions.
@@ -8,6 +9,7 @@
   - copy and paste the following example code into a new file and use
     the command :%s/foo/new_name/g in vim or (TODO something else) in emacs 
     to rename the example to your own function.
+  - some of this class is illegible
 
   Example usage:
   #include FunctionContainer.hpp
@@ -48,21 +50,43 @@ typedef autodiff_fvar<double,7> fvar7;
     if(VAR == NULL)     \
       throw std::invalid_argument(#VAR " is NULL")
 
+// create a set of structs so we can specify 
+// FunctionContainer::get_nth_func's return type with an index
+template<unsigned int N>
+struct func_type{
+  using type = std::function<autodiff_fvar<double,N>(autodiff_fvar<double,N>)>;
+};
+// special case for N=0
+template<>
+struct func_type<0>{
+  using type = std::function<double(double)>;
+};
+
 class FunctionContainer
 {
-  // create a set of structs so we can specify function signatures
-  // (ie, number of differentiaions needed) with an index
-  template<unsigned int N>
-  struct func_type{
-    using type = std::function<autodiff_fvar<double,N>(autodiff_fvar<double,N>)>;
+private:
+  // 2 parter for providing a way to access each member function with a number.
+  // overload func_type 9 different ways to get a function that seemingly does different
+  // things based on its template value.
+  template<unsigned int N> typename func_type<N>::type get_nth_func(func_type<N>)
+  { 
+    throw std::out_of_range("Template value must be in 0<=N<=7");
   };
-  // special case for N=0
-  template<>
-  struct func_type<0>{
-    using type = std::function<double(double)>;
-  };
+  typename func_type<0>::type get_nth_func(func_type<0>) { return double_func; };
+  typename func_type<1>::type get_nth_func(func_type<1>) { return fvar1_func;  };
+  typename func_type<2>::type get_nth_func(func_type<2>) { return fvar2_func;  };
+  typename func_type<3>::type get_nth_func(func_type<3>) { return fvar3_func;  };
+  typename func_type<4>::type get_nth_func(func_type<4>) { return fvar4_func;  };
+  typename func_type<5>::type get_nth_func(func_type<5>) { return fvar5_func;  };
+  typename func_type<6>::type get_nth_func(func_type<6>) { return fvar6_func;  };
+  typename func_type<7>::type get_nth_func(func_type<7>) { return fvar7_func;  };
 
 public: 
+  // call as get_nth_func<N>() to get the member function that is differentiated N 
+  // times for each function call
+  template<unsigned int N>
+  typename func_type<N>::type get_nth_func(){ return get_nth_func(func_type<N>()); }
+
   std::function<double(double)> double_func;
   std::function<fvar1(fvar1)>   fvar1_func;
   std::function<fvar2(fvar2)>   fvar2_func;
@@ -71,23 +95,7 @@ public:
   std::function<fvar5(fvar5)>   fvar5_func;
   std::function<fvar6(fvar6)>   fvar6_func;
   std::function<fvar7(fvar7)>   fvar7_func;
-  
-  // provide a method for accessing each member function uniformly.
-  // Call as 'get_nth_func<N>()' for N derivatives to be calculated for 
-  // each function call
-  template<unsigned int N> typename func_type<N>::type get_nth_func() 
-  { 
-    throw std::out_of_range("Template value must be in 0<=N<=7");
-  };
-  template<> typename func_type<0>::type get_nth_func<0>() { return double_func; };
-  template<> typename func_type<1>::type get_nth_func<1>() { return fvar1_func;  };
-  template<> typename func_type<2>::type get_nth_func<2>() { return fvar2_func;  };
-  template<> typename func_type<3>::type get_nth_func<3>() { return fvar3_func;  };
-  template<> typename func_type<4>::type get_nth_func<4>() { return fvar4_func;  };
-  template<> typename func_type<5>::type get_nth_func<5>() { return fvar5_func;  };
-  template<> typename func_type<6>::type get_nth_func<6>() { return fvar6_func;  };
-  template<> typename func_type<7>::type get_nth_func<7>() { return fvar7_func;  };
-
+    
   // some constructors
   FunctionContainer(){}
  
