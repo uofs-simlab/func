@@ -13,6 +13,7 @@
 #pragma once
 
 #include "EvaluationImplementation.hpp"
+#include "FunctionContainer.hpp"
 #include <cmath>
 
 #ifdef FUNC_RECORD
@@ -26,7 +27,7 @@ private:
   std::unique_ptr<ArgumentRecord> mp_recorder;
   #endif
 public:
-  DirectEvaluation(EvaluationFunctor<double,double> *func, double min = 0, double max = 1, unsigned int histSize = 10);
+  DirectEvaluation(FunctionContainer *func_container, double min = 0, double max = 1, unsigned int histSize = 10);
   double operator()(double x) override;
   void print_details(std::ostream& out) override;
   void print_details_json(std::ostream& out);

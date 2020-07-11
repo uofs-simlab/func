@@ -17,7 +17,8 @@ class UniformLinearPrecomputedInterpolationTable final : public UniformLookupTab
 {
   REGISTER_ULUT(UniformLinearPrecomputedInterpolationTable);
 
+  __attribute__((aligned)) std::unique_ptr<polynomial<2,16>[]> m_table;
 public:
-  UniformLinearPrecomputedInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformLinearPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
 };

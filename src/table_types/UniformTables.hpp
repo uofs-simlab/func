@@ -5,13 +5,8 @@
 
 #include "UniformLinearInterpolationTable.hpp"
 #include "UniformLinearPrecomputedInterpolationTable.hpp"
-
 #include "UniformQuadraticPrecomputedInterpolationTable.hpp"
-
 #include "UniformCubicPrecomputedInterpolationTable.hpp"
-
-#include "UniformFailureProofCubicPITable.hpp"
-#include "UniformFailureProofLinearPITable.hpp"
 
 #include "UniformConstantTaylorTable.hpp"
 #include "UniformLinearTaylorTable.hpp"

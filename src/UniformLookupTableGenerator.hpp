@@ -6,14 +6,13 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
-
 #include <memory>
 
 class UniformLookupTableGenerator
 {
 private:
+  FunctionContainer *mp_func_container;
 
-  EvaluationFunctor<double,double> *mp_func;
   double m_min;
   double m_max;
 
@@ -24,8 +23,8 @@ private:
   struct OptimalStepSizeFunctor;
 
 public:
+  UniformLookupTableGenerator(FunctionContainer *func_container, double minArg, double maxArg);
 
-  UniformLookupTableGenerator(EvaluationFunctor<double,double> *func, double minArg, double maxArg);
   ~UniformLookupTableGenerator();
   std::unique_ptr<UniformLookupTable> generate_by_step(std::string tableKey, double stepSize);
   std::unique_ptr<UniformLookupTable> generate_by_tol(std::string tableKey, double desiredTolerance);
