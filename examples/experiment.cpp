@@ -103,11 +103,11 @@ int main(int argc, char* argv[])
   //  impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   //}
   
-  //add a composite table
+  //add a composite table. The generator doesn't converge with mid = the root 
+  //and also this is far too specific for this experiment.
   double mid = exp(7.7/13.0287)+1;
   UniformLookupTableGenerator gen1(&func_container, tableMin, mid);
   UniformLookupTableGenerator gen2(&func_container, mid, tableMax);
-  cout << "composite" << endl;
 
   impls.emplace_back(unique_ptr<EvaluationImplementation>(
         new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),

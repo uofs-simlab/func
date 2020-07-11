@@ -35,7 +35,7 @@ public:
   // call with CompositeLookupTable({EvaluationImplementation, ... });
   CompositeLookupTable(std::initializer_list<std::shared_ptr<UniformLookupTable>>);
 
-  // allow the user to skip the curly braces
+  // This can allow the user to skip the curly braces.
   // CompositeLookupTable(EvaluationImplementation, ...)
   //template <typename... SharedPtrToULUT>
   //CompositeLookupTable(SharedPtrToULUT... strings);

@@ -78,7 +78,7 @@ double CompositeLookupTable::operator()(double x)
 
 void CompositeLookupTable::print_details(std::ostream &out)
 {
-  out << m_name;
+  out << m_name << " ";
   for(auto lut : mv_LUT)
     lut->print_details(out);
 }
