@@ -17,14 +17,7 @@
   T foo(T x){ return x; }
 
   int main(){
-    FunctionContainer foo_container{foo<double>, foo<fvar1>,
-        foo<fvar2>, foo<fvar3>, foo<fvar4>, 
-        foo<fvar5>, foo<fvar6>, foo<fvar7>};
-    // or just
-    // FunctionContainer foo_container;
-    // foo_container.double_func = foo<double>;
-    // if you're not using any Taylor/Pade/Hermite tables
-    // (You'll get an exception if something needed is not set)
+    FunctionContainer foo_container{SET_F(foo)};
     return 0;
   }
 */
@@ -35,6 +28,7 @@
 
 // some typedefs
 using boost::math::differentiation::autodiff_fvar;
+// will these typedefs still work if we template this class?
 typedef autodiff_fvar<double,1> fvar1;
 typedef autodiff_fvar<double,2> fvar2;
 typedef autodiff_fvar<double,3> fvar3;
@@ -45,10 +39,13 @@ typedef autodiff_fvar<double,7> fvar7;
 
 /* Used by each table type to check if the required function
  * type has been provided.
- * TODO decide whether or not to make this null for -DNDEBUG */
+ * TODO decide whether or not to make this null op for -DNDEBUG */
 #define __IS_NULL(VAR) \
-    if(VAR == NULL)     \
-      throw std::invalid_argument(#VAR " is NULL")
+  if(VAR == NULL)      \
+    throw std::invalid_argument(#VAR " is NULL")
+
+#define SET_F(F) \
+  F<double>, F<fvar1>,F<fvar2>, F<fvar3>, F<fvar4>, F<fvar5>, F<fvar6>, F<fvar7>
 
 // create a set of structs so we can specify 
 // FunctionContainer::get_nth_func's return type with an index
