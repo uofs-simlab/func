@@ -2,10 +2,10 @@
   A wrapper for several FunC lookup tables.
 
   Usage example:
-    CompositeLookupTable failsafe(unique_ptr<UniformLookupTable>(
+    CompositeLookupTable comp_table(unique_ptr<UniformLookupTable>(
       new UniformCubicPrecomputedInterpolationTable(&function,0,10,0.0001))
     );
-    double val = failsafe(0.87354);
+    double val = comp_table(0.87354);
 
   Notes:
   - Takes in a variable number of previously constructed lookup tables 
