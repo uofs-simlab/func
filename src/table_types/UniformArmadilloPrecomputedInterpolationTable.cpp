@@ -1,5 +1,6 @@
 /* Implementation of a UniformPrecomputed Lookup table with linear interpolation */
 #include "UniformArmadilloPrecomputedInterpolationTable.hpp"
+#define ARMA_USE_CXX11
 #include <armadillo>
 
 #define SOLVE_OPTS arma::solve_opts::none

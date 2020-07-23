@@ -71,6 +71,9 @@ double CompositeLookupTable::binarySearch(double x, int i, int min_idx, int max_
 }
 
 // TODO template or enum specifying binary vs linear search
+// Also add a buffer zone even for binary search where linear
+// search is used if x is within 2*(smallest interval) from 
+// most recently used table
 double CompositeLookupTable::operator()(double x)
 {
   return binarySearch(x, mostRecentlyUsed_idx,0,mv_LUT.size()-1);

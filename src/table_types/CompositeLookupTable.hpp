@@ -1,5 +1,12 @@
 /*
-  A wrapper for several FunC lookup tables.
+  A wrapper for several FunC lookup tables. Good for approximating piecewise
+  functions, and automatic table generation of discontinuous functions
+  given all their singularities. Can also be used as a naive non-uniform 
+  lookup table. The hash for this table is O(logn) or O(n) depending on
+  certain parameters, where n is the number of FunC LUTs.
+
+  TODO move special points to be specific to this class and decide how
+  they'll affect table generation.
 
   Usage example:
     CompositeLookupTable comp_table(unique_ptr<UniformLookupTable>(
@@ -39,6 +46,8 @@ public:
   // CompositeLookupTable(EvaluationImplementation, ...)
   //template <typename... SharedPtrToULUT>
   //CompositeLookupTable(SharedPtrToULUT... strings);
+  // Ideal future constructor:
+  // CompositeLookupTable(FunctionContainer *func_container, double min, double max, SpecialPoint ... points);
   ~CompositeLookupTable();
 
   // function to return all "holes" in the domain

@@ -4,6 +4,7 @@
 #pragma once
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
+#include "TransferFunction.hpp"
 
 #include <memory>
 #include <map>
@@ -16,6 +17,7 @@ struct UniformLookupTableParameters
   double minArg = 0;
   double maxArg = 1;
   double stepSize = 1;
+  TransferFunction *transferFunction;
 };
 
 template <unsigned int NUM_COEFS, std::size_t ALIGN=64>

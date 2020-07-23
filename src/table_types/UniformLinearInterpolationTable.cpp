@@ -10,7 +10,7 @@ UniformLinearInterpolationTable::UniformLinearInterpolationTable(FunctionContain
   /* Base class variables */
   m_name = STR(IMPL_NAME);
   m_order = 2;
-  m_numTableEntries = m_numIntervals; // should this be m_numIntervals+1?
+  m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   /* Allocate and set table */
