@@ -1,4 +1,6 @@
-/* interface for a class that builds FunC transfer function pairs
+/* 
+   More like a TransferFunctionGenerator...
+   Interface for a class that builds FunC transfer function pairs
    g and g^{-1}. Used by the NonUniformLookupTables to map a 
    uniform grid in [0,1] to a non-uniform grid in [0,1]. 
    g must satisfy the following conditions
@@ -20,7 +22,7 @@ class TransferFunction
     /* --- Member variables --- */
     double m_minArg, m_maxArg;
     std::pair<std::function<double(double)>,std::function<double(double)>> mp_g_and_g_inv;
-    std::function<double(double)> m_base_function; // might want autodiff functionality here?
+    std::function<double(double)> m_base_function;
 
   public:
     // build the function pair

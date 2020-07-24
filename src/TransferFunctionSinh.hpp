@@ -16,9 +16,16 @@
 
 class TransferFunctionSinh : public TransferFunction
 {
+  /* --- More member vars --- */
+  std::function<double(double)> m_f_prime;
+  std::function<fvar1(fvar1)> m_boost_func;
+  unsigned int m_numCoefs;
+  arma::vec m_poly_coefs; // TODO make this an __attribute__((aligned)) std::unique_ptr<double[]>
+  double m_c; // scaling factor for g
+
   /* --- Private Functions for approximating g^{-1} --- */
   /* Approximate g^{-1} using inverse polynomial interpolation */
-  std::function<double(double)> inverse_poly_coefs(unsigned int N, 
+  arma::vec inverse_poly_coefs(unsigned int N, 
       std::function<double(double)> g, std::function<double(double)> gp);
 
   /* --- Private Helper functions --- */
