@@ -3,6 +3,10 @@
 */
 #pragma once
 
+#include "CompositeLookupTable.hpp"
+#include "UniformFailureProofTable.hpp"
+
+#include "NonUniformLinearInterpolationTable.hpp"
 #include "UniformLinearInterpolationTable.hpp"
 #include "UniformLinearPrecomputedInterpolationTable.hpp"
 #include "UniformQuadraticPrecomputedInterpolationTable.hpp"
