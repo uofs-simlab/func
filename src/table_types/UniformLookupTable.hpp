@@ -17,7 +17,7 @@ struct UniformLookupTableParameters
   double minArg = 0;
   double maxArg = 1;
   double stepSize = 1;
-  TransferFunction *transferFunction;
+  std::shared_ptr<TransferFunction> transferFunction;
 };
 
 template <unsigned int NUM_COEFS, std::size_t ALIGN=64>
