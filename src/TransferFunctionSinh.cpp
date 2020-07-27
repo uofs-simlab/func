@@ -51,14 +51,12 @@ TransferFunctionSinh::TransferFunctionSinh(FunctionContainer *fc, double a, doub
    * This is the experimental part, and so it has been made modular.
    * Want g^{-1} evals to be quick so we currently approx it with
    * some type of inverse polynomial interpolation. */
-  // g_inv = newtons_g_inv();
-  // g_inv = inverse_poly_interp(8, g, g_prime);
+  g_inv = newtons_g_inv();
+  // g_inv = inverse_poly_interp(4, g, g_prime);
   // g_inv = inverse_poly_interior_slopes_interp(8, g, g_prime);
-  g_inv = inverse_hermite_interp(8, g, g_prime);
+  // g_inv = inverse_hermite_interp(8, g, g_prime);
   //
-  // TODO cycle through ways to approx. g until we find the best fit
-
-  m_function_pair = std::make_pair(g, g_inv);
+  // TODO cycle through ways to approx. g_inv until we find the best fit
 }
 
 /* approximate g_inv with its inverse polynomial interpolant */
@@ -191,8 +189,6 @@ std::function<double(double)> TransferFunctionSinh::inverse_hermite_interp(
     A(M+1,i) = i*A(M-1,i-1);
   }
 
-  A.print();
-
   // generate solution vector
   arma::vec y = arma::ones(num_coefs);
   y.rows(0,M-1) = gspace(M, g, gp);
@@ -293,12 +289,14 @@ std::function<double(double)> TransferFunctionSinh::newtons_g_inv()
   };
 }
 
-void TransferFunctionSinh::print_details(std::ostream& out){ 
-  out << "arcsinh transfer function approximating g_inv with";
+void TransferFunctionSinh::print_details(std::ostream& out)
+{
+  out << "arcsinh transfer function approximating g_inv with ";
   out << m_method_of_approx;
 }
 
-void TransferFunctionSinh::print_debugging_details(std::ostream& out){
+void TransferFunctionSinh::print_debugging_details(std::ostream& out)
+{
   print_details(out);
   out << std::endl;
   for(int i=0; i<m_num_coefs; i++)

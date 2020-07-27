@@ -25,7 +25,6 @@ class TransferFunction
   protected:
     /* --- Member variables --- */
     double m_minArg, m_maxArg;
-    std::pair<std::function<double(double)>,std::function<double(double)>> m_function_pair;
     std::function<double(double)> m_base_function;
 
     /* simplest example of a usable g, but since it doesn't distribute points
@@ -46,7 +45,6 @@ class TransferFunction
     std::function<double(double)> g_inv;
 
     // public access to private vars
-    std::pair<std::function<double(double)>,std::function<double(double)>> function_pair(){ return m_function_pair; }
     std::pair<double,double> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_maxArg); }
     std::function<double(double)> function(){ return m_base_function; }
 };
