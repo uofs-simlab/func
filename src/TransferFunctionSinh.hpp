@@ -11,6 +11,7 @@
   Experimental atm.
   - TODO quantify the conditioning of any given implementation of g^{-1}
   - TODO check the monotonicity of g_inv and that g_inv(1)=1
+  - TODO if g'=0 where we need 1/g' then swap out that method as well
   - TODO If an implementation of g_inv is bad then swap it for something else.
   if they're all bad, alter the original g.
   - TODO decide on pros/cons of certain options.

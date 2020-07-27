@@ -51,9 +51,12 @@ TransferFunctionSinh::TransferFunctionSinh(FunctionContainer *fc, double a, doub
    * This is the experimental part, and so it has been made modular.
    * Want g^{-1} evals to be quick so we currently approx it with
    * some type of inverse polynomial interpolation. */
-  g_inv = newtons_g_inv();
+  // g_inv = newtons_g_inv();
+  // g_inv = inverse_poly_interp(8, g, g_prime);
+  // g_inv = inverse_poly_interior_slopes_interp(8, g, g_prime);
+  g_inv = inverse_hermite_interp(8, g, g_prime);
+  //
   // TODO cycle through ways to approx. g until we find the best fit
-  // g_inv = inverse_poly_coefs(8, g, g_prime);
 
   m_function_pair = std::make_pair(g, g_inv);
 }
@@ -65,18 +68,19 @@ std::function<double(double)> TransferFunctionSinh::inverse_poly_interp(unsigned
   using arma::span;
   // generate vandermonde system
   if(num_coefs < 2)
-    throw std::invalid_argument("TransferFunctionSinh's template value is less"
-      " than 2 but inverse_poly_coefs() can only produce 2"
-      " or more polynomial coefficients");
+    throw std::invalid_argument("inverse_poly_coefs() must"
+      " produce at least 2 polynomial coefficients");
   m_method_of_approx = std::string("inverse polynomial interpolation");
   arma::mat A = arma::ones(num_coefs,num_coefs);
 
   A(span(0,num_coefs-1), 1)=arma::linspace(0,1,num_coefs);
   for(unsigned int i=2; i<num_coefs; i++)
-    A(span(0,num_coefs),i) = A(span(0,num_coefs),i-1) % A(span(0,num_coefs),1);
+    A(span(0,num_coefs-1),i) = A(span(0,num_coefs-1),i-1) % A(span(0,num_coefs-1),1);
 
   // generate solution vector
   arma::vec y = arma::ones(num_coefs);
+  // note: gspace returns a vector of length num_coefs whos points are all
+  // between 0 and 1
   y.rows(0,num_coefs-1) = gspace(num_coefs, g, gp);
 
   y = arma::solve(A,y);
@@ -121,7 +125,7 @@ std::function<double(double)> TransferFunctionSinh::inverse_poly_interior_slopes
 
   A(span(0,M-1), 1)=arma::linspace(0,1,M);
   for(unsigned int i=2; i<num_coefs; i++)
-    A(span(0,M),i) = A(span(0,M),i-1) % A(span(0,M),1);
+    A(span(0,M-1),i) = A(span(0,M-1),i-1) % A(span(0,M-1),1);
 
   // set the bottom half to derivative values
   A(span(M,num_coefs-1),0) = arma::zeros(M-2,1);
@@ -179,21 +183,22 @@ std::function<double(double)> TransferFunctionSinh::inverse_hermite_interp(
   for(unsigned int i=2; i<num_coefs; i++)
     A(span(0,M-1),i) = A(span(0,M-1),i-1) % A(span(0,M-1),1);
 
-  // set the bottom half to derivative values
-  A(span(M,num_coefs-1),0) = arma::zeros(M-2,1);
-  for(unsigned int i=1; i<num_coefs; i++)
-    A(span(M),i) = i*A(0,i-1);
-    A(span(M+1),i) = i*A(M-1,i-1);
+  // set the bottom half to derivative values.
+  // TODO avoid the for loop
+  A(span(M,num_coefs-1),0) = arma::zeros(2,1);
+  for(unsigned int i=1; i<num_coefs; i++){
+    A(M,i) = i*A(0,i-1);
+    A(M+1,i) = i*A(M-1,i-1);
+  }
+
+  A.print();
 
   // generate solution vector
   arma::vec y = arma::ones(num_coefs);
   y.rows(0,M-1) = gspace(M, g, gp);
   // using 1/g'(x_i) as an approximation for the slopes of the inverse functions
-  for(int i=1; i<M-1; i++){
-    y[M-1+i] = 1.0/gp(y[i]); // requires f(y[i])\neq\pm\infy
-  }
-  A.print();
-  y.print();
+  y[M] = 1.0/gp(y[0]); // requires f(y[i])\neq\pm\infy
+  y[M+1] = 1.0/gp(y[M-1]); // requires f(y[i])\neq\pm\infy
 
   y = arma::solve(A,y);
 
@@ -289,13 +294,13 @@ std::function<double(double)> TransferFunctionSinh::newtons_g_inv()
 }
 
 void TransferFunctionSinh::print_details(std::ostream& out){ 
-  // TODO print method of approximating g_inv
   out << "arcsinh transfer function approximating g_inv with";
   out << m_method_of_approx;
 }
 
 void TransferFunctionSinh::print_debugging_details(std::ostream& out){
   print_details(out);
+  out << std::endl;
   for(int i=0; i<m_num_coefs; i++)
-    out << m_polynomial_coefs << std::endl;
+    out << m_polynomial_coefs[i] << std::endl;
 }
