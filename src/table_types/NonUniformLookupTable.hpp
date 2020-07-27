@@ -14,12 +14,10 @@ struct NonUniformLookupTableParameters : public UniformLookupTableParameters
 class NonUniformLookupTable : public UniformLookupTable
 {
 protected:
-  TransferFunction *m_transferFunction;
-  std::function<double(double)> m_g, m_g_inv;
+  std::shared_ptr<TransferFunction> m_transferFunction;
 public:
   // set the transfer function
   NonUniformLookupTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
-    UniformLookupTable(func_container, par), m_transferFunction(par.transferFunction),
-    m_g(m_transferFunction->function_pair().first), m_g_inv(m_transferFunction->function_pair().second) {}
+    UniformLookupTable(func_container, par), m_transferFunction(par.transferFunction) {}
   virtual ~NonUniformLookupTable(){};
 };
