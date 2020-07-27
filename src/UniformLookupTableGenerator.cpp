@@ -85,13 +85,13 @@ struct UniformLookupTableGenerator::OptimalStepSizeFunctor
       errprecision x = static_cast<errprecision>(boost::math::float_next(intEndPoints.first));
       errprecision xtop = static_cast<errprecision>(boost::math::float_prior(intEndPoints.second));
       if ( double(xtop) > m_parent.m_max )
-	break;
+        break;
       std::pair<errprecision, errprecision> r =
-	brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
+        brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
       xstar = r.first; err = r.second;
       if( err < max_err ) {
-	index = ii+1;
-	max_err = err;
+        index = ii+1;
+        max_err = err;
       }
     }
 

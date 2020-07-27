@@ -54,7 +54,7 @@ TransferFunctionSinh::TransferFunctionSinh(FunctionContainer *fc, double a, doub
   g_inv = newtons_g_inv();
   // g_inv = inverse_poly_interp(4, g, g_prime);
   // g_inv = inverse_poly_interior_slopes_interp(8, g, g_prime);
-  // g_inv = inverse_hermite_interp(8, g, g_prime);
+  // g_inv = inverse_hermite_interp(5, g, g_prime);
   //
   // TODO cycle through ways to approx. g_inv until we find the best fit
 }
@@ -167,8 +167,8 @@ std::function<double(double)> TransferFunctionSinh::inverse_hermite_interp(
 {
   using arma::span;
   // generate vandermonde system
-  // assert the user is asking for an even number of coefficients
-  if((num_coefs < 4) || ((num_coefs % 2) != 0))
+  // assert the user is asking for at least 4 coefs
+  if(num_coefs < 4)
       throw std::invalid_argument("num_coefs is too small"
       " or it is odd but inverse_poly_interior_slopes_coefs() can only"
       " produce an even number of polynomial coefficients");
@@ -217,6 +217,40 @@ std::function<double(double)> TransferFunctionSinh::inverse_hermite_interp(
   };
 }
 
+/* verrry expensive version of g^{-1} that is just Newton's method 
+ * or bisection if things go south */
+std::function<double(double)> TransferFunctionSinh::newtons_g_inv()
+{
+  return [this](double z) -> double {
+    using boost::math::tools::eps_tolerance;
+    using boost::math::tools::toms748_solve;
+
+    const unsigned int MAX_NEWTON_IT = 20;
+    boost::uintmax_t const MAX_BISECTION = 54;
+
+    // Find what g maps to x
+    double x = z;
+    double x0;
+    unsigned int NEWTON_IT = 0;
+    // Use Newton's method if we can get away with it. o.w. resort to bisection
+    do{
+      NEWTON_IT += 1;
+      x0 = x;
+      if(g_prime == NULL || g_prime(x) == 0.0 || x < 0.0 || x > 1.0 || NEWTON_IT > MAX_NEWTON_IT){
+        // if g prime is undefined, do a hard switch to bisection
+        boost::uintmax_t MAX_IT = MAX_BISECTION;
+        x0 = x = toms748_solve(
+            [this, &z](double h) -> double { return g(h) - z; }, // shift g
+            0.0, 1.0, -z, 1.0-z, eps_tolerance<double>(), MAX_IT).first;
+      }else{
+        x = x-(g(x)-z)/g_prime(x);
+      }
+    }while(abs(x0-x) > tol);
+
+    return x;
+  };
+}
+
 /* fill a vector with N linearly spaced points with respect to g in [0,1].
  * assumes g is monotone on [0,1], g(0)=0, and g(1)=1 */
 arma::vec TransferFunctionSinh::gspace(unsigned int N,
@@ -253,40 +287,6 @@ arma::vec TransferFunctionSinh::gspace(unsigned int N,
   }
   v[N-1] = 1.0;
   return v;
-}
-
-/* verrry expensive version of g^{-1} that is just Newton's method 
- * or bisection if things go south */
-std::function<double(double)> TransferFunctionSinh::newtons_g_inv()
-{
-  return [this](double z) -> double {
-    using boost::math::tools::eps_tolerance;
-    using boost::math::tools::toms748_solve;
-
-    const unsigned int MAX_NEWTON_IT = 20;
-    boost::uintmax_t const MAX_BISECTION = 54;
-
-    // Find what g maps to x
-    double x = z;
-    double x0;
-    unsigned int NEWTON_IT = 0;
-    // Use Newton's method if we can get away with it. o.w. resort to bisection
-    do{
-      NEWTON_IT += 1;
-      x0 = x;
-      if(g_prime == NULL || g_prime(x) == 0.0 || x < 0.0 || x > 1.0 || NEWTON_IT > MAX_NEWTON_IT){
-        // if g prime is undefined, do a hard switch to bisection
-        boost::uintmax_t MAX_IT = MAX_BISECTION;
-        x0 = x = toms748_solve(
-            [this, &z](double h) -> double { return g(h) - z; }, // shift g
-            0.0, 1.0, -z, 1.0-z, eps_tolerance<double>(), MAX_IT).first;
-      }else{
-        x = x-(g(x)-z)/g_prime(x);
-      }
-    }while(abs(x0-x) > tol);
-
-    return x;
-  };
 }
 
 void TransferFunctionSinh::print_details(std::ostream& out)

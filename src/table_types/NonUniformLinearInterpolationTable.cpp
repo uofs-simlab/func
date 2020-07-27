@@ -15,6 +15,7 @@ NonUniformLinearInterpolationTable::NonUniformLinearInterpolationTable(FunctionC
   
   /* Allocate and set table */
   m_table.reset(new polynomial<1,8>[m_numTableEntries]);
+  //std::cout << "NULIT has " << m_numTableEntries << std::endl;
   for (int ii=0; ii<m_numTableEntries; ++ii) {
     const double x = m_minArg + m_transferFunction->g(ii/(double)(m_numTableEntries-1))*(m_maxArg-m_minArg);
     m_grid[ii]  = x;
@@ -24,8 +25,11 @@ NonUniformLinearInterpolationTable::NonUniformLinearInterpolationTable(FunctionC
 
 double NonUniformLinearInterpolationTable::operator()(double x)
 {
-  // TODO simplify I hope
-  double x_idx = (unsigned) (m_numTableEntries-1)*m_transferFunction->g_inv((x-m_minArg)/(m_maxArg-m_minArg));
+  // TODO simplify
+  unsigned x_idx = (unsigned) (m_numTableEntries-1)*m_transferFunction->g_inv((x-m_minArg)/(m_maxArg-m_minArg));
+  if(x < m_grid[x_idx] || m_grid[x_idx+1] < x)
+    std::cerr << "The hash thinks " << x << " is in [" << m_grid[x_idx] << "," << m_grid[x_idx+1] << ")" << std::endl;
+
   double h     = m_grid[x_idx+1] - m_grid[x_idx];
   double dx    = (x - m_grid[x_idx])/h;
 
