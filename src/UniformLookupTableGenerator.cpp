@@ -1,5 +1,6 @@
 /* Implementation of UniformLookupTableGenerator */
 #include "UniformLookupTableGenerator.hpp"
+#include "TransferFunctionSinh.hpp"
 // #include "UniformTables.hpp"
 
 #include <boost/math/tools/minima.hpp>
@@ -59,6 +60,7 @@ struct UniformLookupTableGenerator::OptimalStepSizeFunctor
     par.minArg = m_parent.m_min;
 		par.maxArg = m_parent.m_max;
 		par.stepSize = stepSize;
+    par.transferFunction = m_parent.mp_transfer_function;
     auto impl = UniformLookupTableFactory::Create(m_tableKey, m_parent.mp_func_container, par);
 
     boost::uintmax_t max_it = 20;
@@ -112,8 +114,15 @@ private:
 /*
   UniformLookupTableGenerator functions
 */
-UniformLookupTableGenerator::UniformLookupTableGenerator(FunctionContainer *func_container, double minArg, double maxArg) : 
-  mp_func_container(func_container), m_min(minArg), m_max(maxArg) {}
+UniformLookupTableGenerator::UniformLookupTableGenerator(FunctionContainer *func_container,
+    double minArg, double maxArg, std::shared_ptr<TransferFunction> transferFunction) :
+  mp_func_container(func_container), m_min(minArg), m_max(maxArg) 
+  {
+    if(transferFunction == nullptr)
+      mp_transfer_function.reset(new TransferFunctionSinh(mp_func_container,m_min,m_max));
+    else
+      mp_transfer_function = transferFunction;
+  }
 
 
 UniformLookupTableGenerator::~UniformLookupTableGenerator()
@@ -126,6 +135,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_ste
   par.minArg = m_min; 
   par.maxArg = m_max; 
   par.stepSize = stepSize;
+  par.transferFunction = mp_transfer_function;
   return UniformLookupTableFactory::Create(tableKey, mp_func_container, par);
 }
 
@@ -140,10 +150,12 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_imp
   par1.minArg = m_min;
   par1.maxArg = m_max;
   par1.stepSize = step1;
+  par1.transferFunction = mp_transfer_function;
   UniformLookupTableParameters par2;
   par2.minArg = m_min;
   par2.maxArg = m_max;
   par2.stepSize = step2;
+  par2.transferFunction = mp_transfer_function;
 
   std::unique_ptr<EvaluationImplementation> impl1 =
    UniformLookupTableFactory::Create(tableKey, mp_func_container, par1);
@@ -170,6 +182,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_tol
   par.minArg = m_min;
   par.maxArg = m_max;
   par.stepSize =  (m_max-m_min)/1000.0;
+  par.transferFunction = mp_transfer_function;
   /* generate a first approximation for the implementation */
   auto impl =
     UniformLookupTableFactory::Create(tableKey, mp_func_container, par);
@@ -292,6 +305,7 @@ void UniformLookupTableGenerator::plot_implementation_at_step_size(std::string t
   par.minArg = m_min;
   par.maxArg = m_max; 
   par.stepSize = stepSize;
+  par.transferFunction = mp_transfer_function;
   auto impl =
     UniformLookupTableFactory::Create(tableKey, mp_func_container, par);
 

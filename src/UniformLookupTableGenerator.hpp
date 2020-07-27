@@ -6,6 +6,7 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "TransferFunction.hpp"
 #include <memory>
 
 class UniformLookupTableGenerator
@@ -13,6 +14,7 @@ class UniformLookupTableGenerator
 private:
   FunctionContainer *mp_func_container;
 
+  std::shared_ptr<TransferFunction> mp_transfer_function;
   double m_min;
   double m_max;
 
@@ -23,7 +25,8 @@ private:
   struct OptimalStepSizeFunctor;
 
 public:
-  UniformLookupTableGenerator(FunctionContainer *func_container, double minArg, double maxArg);
+  UniformLookupTableGenerator(FunctionContainer *func_container,
+      double minArg, double maxArg, std::shared_ptr<TransferFunction> transferFunction = nullptr);
 
   ~UniformLookupTableGenerator();
   std::unique_ptr<UniformLookupTable> generate_by_step(std::string tableKey, double stepSize);
