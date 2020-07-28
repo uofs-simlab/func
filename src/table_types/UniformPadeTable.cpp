@@ -55,29 +55,83 @@ UniformPadeTable<M,N>::UniformPadeTable(FunctionContainer *func_container, Unifo
     // this is a bit of a mess of math/logic. We just need to know if any roots
     // exist within \pm(m_stepSize/2) of (m_minArg + ii*m_stepSize)
     // with a special case at the table's endpoints
+    auto Q_is_negative = [this, &Q, &ii](double x) -> bool {
+      // Tell us if this point is within this subinterval's range
+      if(((ii == 0 && x < 0.0) || (ii == m_numIntervals - 1 && x > 0.0)))
+        return false;
+
+      // compute Q(x)
+      double sum = x*Q[N];
+      for (int k=N-1; k>0; k--)
+        sum = x*(Q[k] + sum);
+      sum += 1;
+      // Tell us if this point is negative
+      return sum < 0.0;
+    };
+
+    //for(unsigned int k=N; k>0; k--){
+    //  // check if Q is negative at the subinterval endpoints
+    //  bool Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
+    //  // Check if Q is negative at any of its vertexes
+    //  if(!Q_has_root)
+    //    switch(k){
+    //      case 1:
+    //        break;
+    //      case 2:
+    //        Q_has_root  = Q_is_negative(-Q[1]/(2.0*Q[2]));
+    //        break;
+    //      case 3:
+    //        double desc = Q[2]*Q[2]-3*Q[1]*Q[3];
+    //        Q_has_root  = desc > 0.0 && (Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3])) || Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3])));
+    //        break;
+    //    }
+    //  // switch to the [M,N-1] pade approximant on this table interval
+    //  if(Q_has_root){
+    //    if(k == 1){
+    //      Q = arma::zeros(N+1);
+    //      Q[0] = 1.0;
+    //      P = T(arma::span(0,M),0);
+    //    }else{
+    //      Q[k] = 0.0;
+    //      Q.rows(0,k-1) = arma::null(T(arma::span(M+1, M+k-1), arma::span(0,k-1));
+    //      Q = Q/Q[0];
+    //      P = T(arma::span(0,M-2),arma::span(0,k-1))*Q;
+    //    }
+    //  }else // Q is free to go if it has no roots here
+    //    break;
+    //}
+
+    bool Q_has_root = false;
+    double desc = 0.0;
     switch(N){
       case 3 :
-        //if(){
-        //  if(){
-        //    // switch to the [M,N-1] pade approximant on this interval
-        //  }
-        //}
+        Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
+        desc = Q[2]*Q[2]-3*Q[1]*Q[3];
+        Q_has_root = Q_has_root || (desc > 0.0 && 
+            (Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3])) || Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3]))));
+        if(Q_has_root){
+          Q[3] = 0.0;
+          Q.rows(0,2) = arma::null(T(arma::span(M+1, M+2), arma::span(0,2)));
+          Q = Q/Q[0];
+          P = T.rows(0,M)*Q;
+        }else
+          break;
       case 2 :
-        //if()
-        //  if()
-        //      // switch to the [M,N-1] pade approximant on this interval
+        Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
+        Q_has_root = Q_has_root || Q_is_negative(-Q[1]/(2.0*Q[2]));
+        if(Q_has_root){
+          Q[2] = 0.0;
+          Q.rows(0,1) = arma::null(T(arma::span(M+1, M+1), arma::span(0,1)));
+          Q = Q/Q[0];
+          P = T.rows(0,M)*Q;
+        }else
+          break;
       case 1 :
-        // Q's root is x=-1/Q[1]
-        if((Q[1] != 0.0) && ((Q[1] <= -2.0/m_stepSize) || (Q[1] > 2.0/m_stepSize))){
-          // check that the root is within this interval
-          // x can't be negative at the left endpoint
-          // and can't be positive at the right endpoint
-          if(((ii > 0) || (Q[1] < 0.0)) && ((ii < m_numIntervals-1) || (0.0 < Q[1]))){
-            // resort to the usual Taylor series approximation
-            Q = arma::zeros(N+1);
-            Q[0] = 1.0;
-            P = T(arma::span(0,M),0);
-          }
+        Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
+        if(Q_has_root){
+          Q = arma::zeros(N+1);
+          Q[0] = 1.0;
+          P = T(arma::span(0,M),0);
         }
     }
 
