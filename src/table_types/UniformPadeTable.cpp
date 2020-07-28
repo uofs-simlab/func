@@ -3,6 +3,7 @@
 #include <armadillo>
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
 
 // The registration looks terrible so it's at the bottom of the class
 using boost::math::differentiation::make_fvar;
@@ -41,17 +42,44 @@ UniformPadeTable<M,N>::UniformPadeTable(FunctionContainer *func_container, Unifo
 
     // find the coefficients of Q.
     arma::mat Q = arma::null(T.rows(M+1, M+N));
-    // TODO check if this is useful
-    if(Q.n_cols > 1){ // Arma could throw an exception if Q isn't a vector but this is more descriptive TODO better exception
-      throw std::domain_error("Pade table of order [" + std::to_string(M) + "/" + std::to_string(N) + "] does not exist.");
-      return;
-    }
 
     // scale Q such that its first entry equals 1.
     Q=Q/Q[0];
+    if(!std::isfinite(Q[1]))
+      std::cerr << "Q = " << Q << std::endl << std::endl;
 
     // find the coefficients of P
     arma::vec P = T.rows(0,M)*Q;
+
+    // check if the roots of Q lie in this interval
+    // this is a bit of a mess of math/logic. We just need to know if any roots
+    // exist within \pm(m_stepSize/2) of (m_minArg + ii*m_stepSize)
+    // with a special case at the table's endpoints
+    switch(N){
+      case 3 :
+        //if(){
+        //  if(){
+        //    // switch to the [M,N-1] pade approximant on this interval
+        //  }
+        //}
+      case 2 :
+        //if()
+        //  if()
+        //      // switch to the [M,N-1] pade approximant on this interval
+      case 1 :
+        // Q's root is x=-1/Q[1]
+        if((Q[1] != 0.0) && ((Q[1] <= -2.0/m_stepSize) || (Q[1] > 2.0/m_stepSize))){
+          // check that the root is within this interval
+          // x can't be negative at the left endpoint
+          // and can't be positive at the right endpoint
+          if(((ii > 0) || (Q[1] < 0.0)) && ((ii < m_numIntervals-1) || (0.0 < Q[1]))){
+            // resort to the usual Taylor series approximation
+            Q = arma::zeros(N+1);
+            Q[0] = 1.0;
+            P = T(arma::span(0,M),0);
+          }
+        }
+    }
 
     // move these coefs into m_table
     for (unsigned int k=0; k<M+1; k++)
@@ -82,7 +110,6 @@ double UniformPadeTable<M,N>::operator()(double x)
   for (int k=N-1; k>0; k--)
     Q = dx*(m_table[x1].coefs[M+k] + Q);
   Q = 1+Q;  // the constant term in Q will always be 1
-
   return P/Q;
 }
 

@@ -5,11 +5,7 @@
 #pragma once
 #include "FunctionContainer.hpp"
 #include "UniformLookupTable.hpp"
-
-struct NonUniformLookupTableParameters : public UniformLookupTableParameters
-{
-  // add a transfer function as a parameter
-};
+#include <exception>
 
 class NonUniformLookupTable : public UniformLookupTable
 {
@@ -18,6 +14,10 @@ protected:
 public:
   // set the transfer function
   NonUniformLookupTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
-    UniformLookupTable(func_container, par), m_transferFunction(par.transferFunction) {}
+    UniformLookupTable(func_container, par), m_transferFunction(par.transferFunction)
+  {
+    if(m_transferFunction == nullptr)
+      throw std::invalid_argument("NonUniformLookupTable needs a transfer function");
+  }
   virtual ~NonUniformLookupTable(){};
 };
