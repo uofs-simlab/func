@@ -14,4 +14,5 @@ class SpecialPoint
 public:
   SpecialPoint(double x, double y, DiscontType dt, LimitType lt) : m_point(std::make_pair(x,y)), m_discType(dt), m_limType(lt) {}
   SpecialPoint(std::pair<double,double> pt, DiscontType dt, LimitType lt) : m_point(pt), m_discType(dt), m_limType(lt) {}
+  std::pair<double,double> point(){ return m_point; }
 };
