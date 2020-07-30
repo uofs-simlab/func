@@ -77,9 +77,9 @@ private:
     RNG for evaluations
     - Mersenne Twister
   */
-  RngInterface<>            *mp_sampler;
-  double                    *mp_randomEvaluations;
-  int                        m_nEvals;
+  RngInterface<double> *mp_sampler;
+  double               *mp_randomEvaluations;
+  int                   m_nEvals;
 
   struct TimingStatistics
   {
@@ -92,7 +92,7 @@ private:
 
 public:
 
-  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, unsigned int seed = 2017, RngInterface<> *inRng = nullptr);
+  ImplementationComparator(ImplContainer &inImpl, int nEvals = 100000, unsigned int seed = 2017, RngInterface<double> *inRng = NULL);
   ~ImplementationComparator();
 
   void run_timings(int nRuns = 1);

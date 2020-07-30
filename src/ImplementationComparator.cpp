@@ -10,8 +10,8 @@
 #include <limits>
 #include <cassert>
 
-ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nEvals, unsigned int seed, RngInterface<> *inRng) : 
-  m_implementations(std::move(inImpl)), m_nEvals(nEvals)
+ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nEvals, unsigned int seed, RngInterface<double> *inRng) :
+  m_implementations(std::move(inImpl)), m_nEvals(nEvals), mp_sampler(inRng)
 {
   /*
      Allocate enough timer containers
@@ -43,13 +43,12 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
   }
 
   /*
-    Generate random points in the table interval to evaluate
+    Prepare to generate random points in the table interval to evaluate.
+    If an RngInterface was not provided, set mp_sampler to a uniform real
+    distribution on the table's endpoints 
   */
-  mp_sampler=inRng;
-  // if inRng was not provided, set mp_sampler to a uniform distribution on the table's endpoints
-  if(mp_sampler==nullptr)
-    mp_sampler = new StdRng<std::uniform_real_distribution<double>>
-      (new std::uniform_real_distribution<double>(m_minArg, m_maxArg));
+  if(mp_sampler == NULL)
+    mp_sampler = new StdRng<double>(m_minArg, m_maxArg);
   mp_sampler->init(seed);
   mp_randomEvaluations = new table_type[m_nEvals];
 }
@@ -65,7 +64,7 @@ void ImplementationComparator::draw_new_sample_points()
     Regenerate evaluation points.
   */
   for (int ii=0;ii<m_nEvals;++ii)
-    mp_randomEvaluations[ii] = mp_sampler->getPt();
+    mp_randomEvaluations[ii] = mp_sampler->get_point();
 }
 
 const double* ImplementationComparator:: sample_points()
