@@ -26,34 +26,49 @@
 #pragma once
 #include "EvaluationImplementation.hpp"
 #include "UniformLookupTable.hpp"
-#include <vector> // store LUTs & discontinuities
+#include "SpecialPoint.hpp"
+#include <vector> // store LUTs, names, special points
 #include <memory> // shared_ptr
 #include <utility> // std::pair
 
-class CompositeLookupTable final : public EvaluationImplementation {
+template <typename IN_TYPE, typename OUT_TYPE>
+class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
+  // collection of FunC lookup tables used to sample from
+  std::vector<std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
 
-  std::vector<std::shared_ptr<UniformLookupTable>> mv_LUT;
-  std::vector<std::pair<double,double>> mv_discontinuities;
+  // names of each lookup table used
+  std::vector<std::string>  mv_LUT_names;
+
+  // describe function behaviour at the endpoints
+  std::vector<SpecialPoint> mv_special_points;
+
+  // index of the last table sampled from
   unsigned int mostRecentlyUsed_idx;
+  IN_TYPE smallest_interval;
 
   // find which table to sample from
-  double binarySearch(double, int i, int min_idx, int max_idx);
-public:
-  // call with CompositeLookupTable({EvaluationImplementation, ... });
-  CompositeLookupTable(std::initializer_list<std::shared_ptr<UniformLookupTable>>);
+  OUT_TYPE binarySearch(IN_TYPE, int, int min_idx, int max_idx);
+  OUT_TYPE linearSearch(IN_TYPE, int, bool is_left);
 
-  // This can allow the user to skip the curly braces.
-  // CompositeLookupTable(EvaluationImplementation, ...)
-  //template <typename... SharedPtrToULUT>
-  //CompositeLookupTable(SharedPtrToULUT... strings);
-  // Ideal future constructor:
-  // CompositeLookupTable(FunctionContainer *func_container, double min, double max, SpecialPoint ... points);
+  // Private constructor does all the work but needs to be called with all the 
+  // special points in curly braces which is a bit awkward
+  CompositeLookupTable(FunctionContainer *func_container, double global_tol, std::initializer_list<SpecialPoint>);
+
+public:
+  // public constructors. Build this table with a global tolerance and a collection of special points
+  template <typename... SPECIAL_POINTS>
+  CompositeLookupTable(FunctionContainer *func_container, double global_tol, SPECIAL_POINTS ... points);
+
+  // or with a vector of n table names, a vector of n step sizes, and a vector of n+1 special points.
+  CompositeLookupTable(FunctionContainer *func_container, std::vector<std::string> names,
+      std::vector<IN_TYPE> stepSizes, std::vector<SpecialPoint> special_points);
+
   ~CompositeLookupTable();
 
-  // function to return all "holes" in the domain
-  std::vector<std::pair<double,double>> discontinuities(){ return mv_discontinuities; }
+  // return the vector of special points in the domain
+  std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points(){ return mv_special_points; };
 
-  double operator()(double) override;
+  OUT_TYPE operator()(IN_TYPE x) override;
 
   void print_details(std::ostream &out) override;
 };
