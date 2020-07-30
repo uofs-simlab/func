@@ -5,7 +5,7 @@
   - needed for passing functions to tables. Tables using boost's 
     automatic differentiation (such as Taylor, Hermite, and Pade) 
     take advantage of the fvar[1-9] functions.
-  - easy (though obtuse) to use if mathematical functions are templated
+  - easy to use if your mathematical function is easy to template
   - copy and paste the following example code into a new file and use
     the command :%s/foo/new_name/g in vim or (TODO something else) in emacs 
     to rename the example to your own function.
@@ -18,6 +18,10 @@
 
   int main(){
     FunctionContainer foo_container{SET_F(foo)};
+    // or if it's inconvenient to template your function
+    FunctionContainer foo_container2 {foo<double>};
+    // you just can't use any of the lookup tables that need 
+    // automatic differentiation (FunC will throw an exception if you do)
     return 0;
   }
 */
@@ -45,7 +49,7 @@ typedef autodiff_fvar<double,7> fvar7;
     throw std::invalid_argument(#VAR " is NULL")
 
 #define SET_F(F) \
-  F<double>, F<fvar1>,F<fvar2>, F<fvar3>, F<fvar4>, F<fvar5>, F<fvar6>, F<fvar7>
+  F<double>, F<fvar1>, F<fvar2>, F<fvar3>, F<fvar4>, F<fvar5>, F<fvar6>, F<fvar7>
 
 // create a set of structs so we can specify 
 // FunctionContainer::get_nth_func's return type with an index
@@ -95,6 +99,9 @@ public:
     
   // some constructors
   FunctionContainer(){}
+
+  FunctionContainer(std::function<double(double)> func) :
+    double_func(func) {};
  
   FunctionContainer(std::function<double(double)> func,
       std::function<fvar1(fvar1)> func1, std::function<fvar2(fvar2)> func2,
