@@ -44,7 +44,6 @@ target_include_directories(func_impls PUBLIC ${func_impls_include_dirs})
 # FunC library
 add_library(func SHARED
     ImplementationComparator.cpp
-    Timer.cpp
     UniformLookupTableGenerator.cpp
 )
 
