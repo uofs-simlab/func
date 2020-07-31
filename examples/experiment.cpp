@@ -44,20 +44,19 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  FunctionContainer func_container{MyFunction<double>, MyFunction<fvar1>,
-        MyFunction<fvar2>, MyFunction<fvar3>, MyFunction<fvar4>,
-        MyFunction<fvar5>, MyFunction<fvar6>, MyFunction<fvar7>};
+  FunctionContainer<double> func_container{SET_F(MyFunction,double)};
+
   double stepSize;
 
   /* Check which implementations are available */
   std::cout << "# Registered uniform tables: \n#  ";
-  for (auto it : UniformLookupTableFactory::get_registry_keys() ) {
+  for (auto it : UniformLookupTableFactory<double>::get_registry_keys() ) {
     std::cout << it << "\n#  ";
   }
   std::cout << "\n";
 
   /* Fill in the implementations */
-  std::vector<unique_ptr<EvaluationImplementation>> impls;
+  std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
@@ -71,6 +70,7 @@ int main(int argc, char* argv[])
     "UniformLinearInterpolationTable",
     "UniformLinearPrecomputedInterpolationTable",
     "UniformLinearTaylorTable",
+    "NonUniformLinearInterpolationTable",
     "UniformQuadraticPrecomputedInterpolationTable",
     "UniformQuadraticTaylorTable"
   };
@@ -90,12 +90,12 @@ int main(int argc, char* argv[])
     "UniformPadeTable<4,3>",
   };
 
-  UniformLookupTableGenerator gen(&func_container, tableMin, tableMax);
+  UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
 
   /* add implementations to vector */
   // unique_ptr<EvaluationImplementation> test = make_unique<DirectEvaluation>(&func,tableMin,tableMax);
 
-  impls.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&func_container,tableMin,tableMax)));
+  impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
@@ -105,15 +105,15 @@ int main(int argc, char* argv[])
   
   //add a composite table. The generator doesn't converge with mid = the root 
   //and also this is far too specific for this experiment.
-  double mid = exp(7.7/13.0287)+1;
-  UniformLookupTableGenerator gen1(&func_container, tableMin, mid);
-  UniformLookupTableGenerator gen2(&func_container, mid, tableMax);
+  //double mid = exp(7.7/13.0287)+1;
+  //UniformLookupTableGenerator gen1(&func_container, tableMin, mid);
+  //UniformLookupTableGenerator gen2(&func_container, mid, tableMax);
 
-  impls.emplace_back(unique_ptr<EvaluationImplementation>(
-        new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),
-          gen2.generate_by_tol(implNames[7],tableTol*(tableMax-mid)/(tableMax-tableMin))})));
+  //impls.emplace_back(unique_ptr<EvaluationImplementation>(
+  //      new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),
+  //        gen2.generate_by_tol(implNames[7],tableTol*(tableMax-mid)/(tableMax-tableMin))})));
  
-  ImplementationComparator implCompare(impls, nEvals, seed);
+  ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
   /* Summarize the results */
