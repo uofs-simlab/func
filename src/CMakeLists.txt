@@ -3,21 +3,18 @@
 # Create lists for func_impls source files, libs to link with, and include
 # dir in case the user doesn't have Armadillo installed
 list(APPEND func_impls_src
-    EvaluationImplementation.cpp
     ArgumentRecord.cpp
-    DirectEvaluation.cpp
-    table_types/UniformFailureProofTable.cpp
+    #table_types/UniformLookupTable.cpp
     table_types/CompositeLookupTable.cpp
-    table_types/UniformConstantTaylorTable.cpp
-    table_types/UniformCubicHermiteTable.cpp
-    table_types/UniformCubicPrecomputedInterpolationTable.cpp
-    table_types/UniformCubicTaylorTable.cpp
-    table_types/UniformLinearInterpolationTable.cpp
-    table_types/UniformLinearPrecomputedInterpolationTable.cpp
-    table_types/UniformLinearTaylorTable.cpp
-    table_types/UniformLookupTable.cpp
-    table_types/UniformQuadraticPrecomputedInterpolationTable.cpp
-    table_types/UniformQuadraticTaylorTable.cpp
+    #table_types/UniformConstantTaylorTable.cpp
+    #table_types/UniformCubicHermiteTable.cpp
+    #table_types/UniformCubicPrecomputedInterpolationTable.cpp
+    #table_types/UniformCubicTaylorTable.cpp
+    #table_types/UniformLinearInterpolationTable.cpp
+    #table_types/UniformLinearPrecomputedInterpolationTable.cpp
+    #table_types/UniformLinearTaylorTable.cpp
+    #table_types/UniformQuadraticPrecomputedInterpolationTable.cpp
+    #table_types/UniformQuadraticTaylorTable.cpp
 )
 list(APPEND func_impls_include_dirs ./ table_types)
 
@@ -27,12 +24,12 @@ if(USE_ARMADILLO AND ARMADILLO_FOUND)
   list(APPEND func_impls_link_libs ${ARMADILLO_LIBRARIES})
 
   list(APPEND func_impls_src
-    table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
-    table_types/UniformPadeTable.cpp
+    #table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
+    #table_types/UniformPadeTable.cpp
     # currently every transfer function requires armadillo, and so every
     # nonuniform LUT requires arma as well.
     TransferFunctionSinh.cpp
-    table_types/NonUniformLinearInterpolationTable.cpp
+    #table_types/NonUniformLinearInterpolationTable.cpp
   )
 endif()
 
@@ -64,24 +61,26 @@ FunctionContainer.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;\
 ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
 TransferFunction.hpp;TransferFunctionSinh.hpp;\
 UniformLookupTableGenerator.hpp;SpecialPoint.hpp;\
-table_types/UniformTables.hpp;\
-table_types/CompositeLookupTable.hpp;\
-table_types/NonUniformLinearInterpolationTable.hpp;\
-table_types/NonUniformLookupTable.hpp;\
-table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;\
-table_types/UniformConstantTaylorTable.hpp;\
-table_types/UniformCubicHermiteTable.hpp;\
-table_types/UniformCubicPrecomputedInterpolationTable.hpp;\
-table_types/UniformCubicTaylorTable.hpp;\
-table_types/UniformFailureProofTable.hpp;\
-table_types/UniformLinearInterpolationTable.hpp;\
-table_types/UniformLinearPrecomputedInterpolationTable.hpp;\
-table_types/UniformLinearTaylorTable.hpp;\
 table_types/UniformLookupTable.hpp;\
-table_types/UniformPadeTable.hpp;\
-table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;\
-table_types/UniformQuadraticTaylorTable.hpp\
+table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;\
 ")
+#table_types/TableIncludes.hpp;\
+#table_types/CompositeLookupTable.hpp;\
+#table_types/FailureProofTable.hpp;\
+#table_types/NonUniformLinearInterpolationTable.hpp;\
+#table_types/NonUniformLookupTable.hpp;\
+#table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;\
+#table_types/UniformConstantTaylorTable.hpp;\
+#table_types/UniformCubicHermiteTable.hpp;\
+#table_types/UniformCubicPrecomputedInterpolationTable.hpp;\
+#table_types/UniformCubicTaylorTable.hpp;\
+#table_types/UniformLinearInterpolationTable.hpp;\
+#table_types/UniformLinearPrecomputedInterpolationTable.hpp;\
+#table_types/UniformLinearTaylorTable.hpp;\
+#table_types/UniformPadeTable.hpp;\
+#table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;\
+#table_types/UniformQuadraticTaylorTable.hpp\
+
 
 install(TARGETS func func_impls
     LIBRARY DESTINATION lib
