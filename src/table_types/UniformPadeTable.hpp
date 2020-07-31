@@ -15,16 +15,16 @@
 */
 #include "UniformLookupTable.hpp"
 
-template <unsigned int M, unsigned int N> 
-class UniformPadeTable final : public UniformLookupTable
+template <typename IN_TYPE, typename OUT_TYPE, unsigned int M, unsigned int N> 
+class UniformPadeTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   REGISTER_ULUT(UniformPadeTable);
 
-  // mind the lesser than sign                              -> |
-  __attribute__((aligned)) std::unique_ptr<polynomial<M+N+1,M+N<4? 32:64>[]> m_table;
-  std::function<autodiff_fvar<double,M+N>(autodiff_fvar<double,M+N>)> mp_boost_func;
+  // mind the lesser than sign                                         -> |
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE, M+N+1, M+N<4 ? 32:64>[]> m_table;
+  std::function<fvar<OUT_TYPE,M+N>(fvar<OUT_TYPE,M+N>)> mp_boost_func;
 public:
   UniformPadeTable(FunctionContainer *func_container, UniformLookupTableParameters par);
-  double operator()(double x) override;
-  std::function<autodiff_fvar<double,M+N>(autodiff_fvar<double,M+N>)> boost_function(){ return mp_boost_func; }
+  OUT_TYPE operator()(IN_TYPE x) override;
+  std::function<fvar<OUT_TYPE,M+N>(fvar<OUT_TYPE,M+N>)> boost_function(){ return mp_boost_func; }
 };

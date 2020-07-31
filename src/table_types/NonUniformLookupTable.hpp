@@ -7,13 +7,14 @@
 #include "UniformLookupTable.hpp"
 #include <exception>
 
-class NonUniformLookupTable : public UniformLookupTable
+template <typename IN_TYPE, typename OUT_TYPE>
+class NonUniformLookupTable : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
 protected:
-  std::shared_ptr<TransferFunction> m_transferFunction;
+  std::shared_ptr<TransferFunction<IN_TYPE>> m_transferFunction;
 public:
   // set the transfer function
-  NonUniformLookupTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
+  NonUniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
     UniformLookupTable(func_container, par), m_transferFunction(par.transferFunction)
   {
     if(m_transferFunction == nullptr)

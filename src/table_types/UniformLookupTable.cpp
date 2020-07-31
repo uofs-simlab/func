@@ -5,8 +5,9 @@
 #include <iostream>
 #include <stdexcept>
 
+template <typename IN_TYPE, typename OUT_TYPE>
 UniformLookupTable::UniformLookupTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
-  EvaluationImplementation(func_container->double_func, "uniform_lookup_table")
+  EvaluationImplementation(func_container->standard_func, "uniform_lookup_table")
 {
 
   /* Base class variables */
@@ -27,15 +28,17 @@ UniformLookupTable::UniformLookupTable(FunctionContainer *func_container, Unifor
   m_tableMaxArg = m_maxArg;
   if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
     m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
-  m_grid.reset(new double[m_numIntervals]);
+  m_grid.reset(new IN_TYPE[m_numIntervals]);
 
 }
 
-std::pair<double,double> UniformLookupTable::arg_bounds_of_interval(unsigned intervalNumber)
+template <typename IN_TYPE, typename OUT_TYPE>
+std::pair<IN_TYPE,IN_TYPE> UniformLookupTable::arg_bounds_of_interval(unsigned intervalNumber)
 {
   return std::make_pair(m_grid[intervalNumber],m_grid[intervalNumber+1]);
 }
 
+template <typename IN_TYPE, typename OUT_TYPE>
 void UniformLookupTable::print_details(std::ostream &out)
 {
   out << m_name << " " << m_minArg << " " << m_maxArg << " "
@@ -45,6 +48,7 @@ void UniformLookupTable::print_details(std::ostream &out)
 /* ////////////////////////////////////////////////////////////////////////////
    Factory and registration management
 //////////////////////////////////////////////////////////////////////////// */
+template <typename IN_TYPE, typename OUT_TYPE>
 std::unique_ptr<UniformLookupTable> UniformLookupTableFactory::Create(std::string name,
                               FunctionContainer *fc,
                               UniformLookupTableParameters par)
@@ -63,6 +67,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableFactory::Create(std::strin
   return std::unique_ptr<UniformLookupTable>(instance);
 }
 
+template <typename IN_TYPE, typename OUT_TYPE>
 std::vector<std::string> UniformLookupTableFactory::get_registry_keys()
 {
   // copy all keys from the registry map into a vector
@@ -73,6 +78,7 @@ std::vector<std::string> UniformLookupTableFactory::get_registry_keys()
   return keys;
 }
 
+template <typename IN_TYPE, typename OUT_TYPE>
 void UniformLookupTableFactory::RegisterFactoryFunction(std::string name,
 std::function<UniformLookupTable*(FunctionContainer*,UniformLookupTableParameters)> classFactoryFunction)
 {
@@ -80,6 +86,7 @@ std::function<UniformLookupTable*(FunctionContainer*,UniformLookupTableParameter
   get_registry()[name] = classFactoryFunction;
 }
 
+template <typename IN_TYPE, typename OUT_TYPE>
 std::map<std::string, std::function<UniformLookupTable*(
 			       FunctionContainer*,UniformLookupTableParameters)>>& UniformLookupTableFactory::get_registry()
 {
@@ -88,3 +95,5 @@ std::map<std::string, std::function<UniformLookupTable*(
 			       FunctionContainer*,UniformLookupTableParameters)>> registry;
   return registry;
 }
+
+template class UniformLookupTable;

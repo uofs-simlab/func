@@ -1,20 +1,22 @@
 /* 
   An implementation of RngInterface, intended to be used with the 
-  generators/ distributions defined in std::random, but it should
-  be compatible with every generator constructed with a single 
-  unsigned int seed (eg. linear_congruential_engine,
-  subtract_with_carry_engine, mersenne_twister_engine) and every
-  probability distribution compatible with those generators.
+  generators/ distributions defined in std::random.
+  Notes:
+  - Will take ownership if given a probability distribution
+  - Will build its own probability distribution corresponding to
+  DIST_TYPE if given the correct constructor args.
+  - Builds its own number generator when init(seed) is called
 
   Usage example:
     // uniform_real_distribution<double> generated from std::mt19937 
     // within the range 0.0 to 1.0
-    StdRng<double> rng(0.0,1.0);
-    rng->init(2020);
-    rng->get_point();
+    StdRng<double> rng(0.0,1.0); // build a std::uniform_real_distribution<double>
+    rng->init(2020);             // build a std::mt19937
+    rng->get_point();            // return a random number
 
-    // or if you want to get fancy, a normal distribution with mean 0.0
-    // and standard deviation 1.0, using points generated from minstd_rand0
+    // or if you want to get fancy with something faster, a normal distribution
+    // with mean 0.0 and standard deviation 1.0,
+    // using points generated from minstd_rand0
     StdRng<float,std::normal_distribution<float>,minstd_rand0> rng2(0.0,1.0));
  */
 #pragma once
@@ -28,7 +30,7 @@ template <typename POINT_TYPE,
 class StdRng : public RngInterface<POINT_TYPE>
 {
   std::unique_ptr<DIST_TYPE> mp_distribution;
-  std::unique_ptr<RNG_TYPE> mp_generator;
+  std::unique_ptr<RNG_TYPE>  mp_generator;
   unsigned int m_seed;
 
   public:

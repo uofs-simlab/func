@@ -12,12 +12,14 @@
 #pragma once
 #include "NonUniformLookupTable.hpp"
 
-class NonUniformLinearInterpolationTable final : public NonUniformLookupTable
+template <typename IN_TYPE, typename OUT_TYPE>
+class NonUniformLinearInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   REGISTER_ULUT(NonUniformLinearInterpolationTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<1,8>[]> m_table;
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1,8>[]> m_table;
 public:
-  NonUniformLinearInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
-  double operator()(double x) override;
+  NonUniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+      UniformLookupTableParameters<IN_TYPE> par);
+  OUT_TYPE operator()(IN_TYPE x) override;
 };

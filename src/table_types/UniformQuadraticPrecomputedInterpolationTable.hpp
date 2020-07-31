@@ -14,12 +14,13 @@
 #pragma once
 #include "UniformLookupTable.hpp"
 
-class UniformQuadraticPrecomputedInterpolationTable final : public UniformLookupTable
+template <typename IN_TYPE, typename OUT_TYPE>
+class UniformQuadraticPrecomputedInterpolationTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   REGISTER_ULUT(UniformQuadraticPrecomputedInterpolationTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<3,32>[]> m_table;
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,3,32>[]> m_table;
 public:
   UniformQuadraticPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
-  double operator()(double x) override;
+  OUT_TYPE operator()(IN_TYPE x) override;
 };

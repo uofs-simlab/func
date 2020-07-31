@@ -8,7 +8,7 @@
 using boost::math::differentiation::autodiff_fvar;
 
 template <unsigned int N>
-class UniformAutoDiffTable : public UniformLookupTable
+class UniformAutoDiffTable : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
 protected:
   EvaluationFunctor<autodiff_fvar<double,N>, autodiff_fvar<double,N>> *mp_boost_func;

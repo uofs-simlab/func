@@ -70,7 +70,5 @@ void ArgumentRecord::print_details(std::ostream& out)
   out<< mp_histogram[CALC_INDEX(m_peak)] << " evaluations." << std::endl;
 }
 
-ArgumentRecord::~ArgumentRecord()
-{
-  delete mp_histogram;
-}
+// free up the space used by the histogram
+ArgumentRecord::~ArgumentRecord(){ delete mp_histogram; }

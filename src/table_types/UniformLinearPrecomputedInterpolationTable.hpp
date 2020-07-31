@@ -13,12 +13,13 @@
 */
 #include "UniformLookupTable.hpp"
 
-class UniformLinearPrecomputedInterpolationTable final : public UniformLookupTable
+template <typename IN_TYPE, typename OUT_TYPE>
+class UniformLinearPrecomputedInterpolationTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   REGISTER_ULUT(UniformLinearPrecomputedInterpolationTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<2,16>[]> m_table;
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,2,16>[]> m_table;
 public:
-  UniformLinearPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
-  double operator()(double x) override;
+  UniformLinearPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par);
+  OUT_TYPE operator()(IN_TYPE x) override;
 };

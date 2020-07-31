@@ -5,10 +5,13 @@
 // TODO template or enum specifying binary vs linear search
 
 // currently doesn't support nonuniform lookup tables
-CompositeLookupTable::CompositeLookupTable(FunctionContainer *func_container, 
-    std::vector<std::string> names, std::vector<double> stepSizes,
-    std::vector<SpecialPoint> special_points) : 
-  EvaluationImplementation(func_container->double_func, "CompositeLookupTable"),
+template <typename IN_TYPE, typename OUT_TYPE>
+CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
+    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, 
+    std::vector<std::string> names,
+    std::vector<IN_TYPE> stepSizes,
+    std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points) :
+  EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "CompositeLookupTable"),
   mv_LUT_names(names), mv_special_points(special_points)
 {
   // check if names, stepSizes, and special_points are the right sizes
@@ -29,40 +32,51 @@ CompositeLookupTable::CompositeLookupTable(FunctionContainer *func_container,
           + std::to_string(i+1) + "].point().first");
 
   // naive initial smallest interval
-  smallest_interval = std::numeric_limits<double>::max();
+  smallest_interval = std::numeric_limits<IN_TYPE>::max();
   mostRecentlyUsed_idx = names.size()/2;
-  m_dataSize = 0;
-  m_order = 0;
+  this->m_dataSize = 0;
+  this->m_order = 0;
 
   // actually build the given tables and update cumulative member vars
   for(unsigned int i=0; i<names.size(); i++){
     // build a table from 
-    UniformLookupTableParameters par;
+    UniformLookupTableParameters<IN_TYPE> par;
     par.minArg = mv_special_points[i].point().first;
     par.maxArg = mv_special_points[i+1].point().first;
     par.stepSize = stepSizes[i];
-    mv_LUT.push_back(UniformLookupTableFactory::Create(mv_LUT_names[i], func_container, par));
+    mv_LUT.push_back(UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(mv_LUT_names[i], func_container, par));
 
     // update the smallest interval and data size
     if(par.maxArg - par.minArg < smallest_interval)
       smallest_interval = par.maxArg - par.minArg;
-    m_dataSize += mv_LUT[i]->size();
+    this->m_dataSize += mv_LUT[i]->size();
   }
 
   // set the global min/max
-  m_minArg = mv_LUT.front()->min_arg();
-  m_maxArg = mv_LUT.back()->max_arg();
+  this->m_minArg = mv_LUT.front()->min_arg();
+  this->m_maxArg = mv_LUT.back()->max_arg();
 }
 
 // in order to get this working we'll need UniformLookupTableGenerator
-CompositeLookupTable::CompositeLookupTable(FunctionContainer *func_container, double global_tol, std::initializer_list<SpecialPoint>){}
+template <typename IN_TYPE, typename OUT_TYPE>
+CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
+    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+    double global_tol,
+    std::initializer_list<SpecialPoint<IN_TYPE,OUT_TYPE>>)
+{}
 
 // Call the above constructor with an initializer list of special points
-template <typename... SPECIAL_POINTS>
-CompositeLookupTable::CompositeLookupTable(FunctionContainer *func_container, double global_tol, SPECIAL_POINTS ... points) :
-  CompositeLookupTable(func_container,global_tol,{points ...}) {}
+template <typename IN_TYPE, typename OUT_TYPE>
+template <typename ... SPECIAL_POINTS>
+CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
+    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+    double global_tol,
+    SPECIAL_POINTS ... points) :
+  CompositeLookupTable(func_container,global_tol,{points ...})
+{}
 
-double CompositeLookupTable::binarySearch(double x, int i, int min_idx, int max_idx)
+template <typename IN_TYPE, typename OUT_TYPE>
+OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::binarySearch(IN_TYPE x, int i, int min_idx, int max_idx)
 {
   // Binary search for the correct interval starting with i (most
   // recently used table index). Best for seemly random table evaluations.
@@ -81,7 +95,8 @@ double CompositeLookupTable::binarySearch(double x, int i, int min_idx, int max_
   return (*mv_LUT[i])(x);
 }
 
-double CompositeLookupTable::linearSearch(double x, int i, bool is_left)
+template <typename IN_TYPE, typename OUT_TYPE>
+OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::linearSearch(IN_TYPE x, int i, bool is_left)
 {
   // Assuming this function is called with all the correct parameters and 
   // mv_LUT[i] is defined
@@ -95,10 +110,11 @@ double CompositeLookupTable::linearSearch(double x, int i, bool is_left)
   return (*mv_LUT[i])(x);
 }
 
-double CompositeLookupTable::operator()(double x)
+template <typename IN_TYPE, typename OUT_TYPE>
+OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::operator()(IN_TYPE x)
 {
   // If x is close, use a linear search. Otherwise, use a binary search
-  std::shared_ptr<UniformLookupTable> recentTable = mv_LUT[mostRecentlyUsed_idx];
+  std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> recentTable = mv_LUT[mostRecentlyUsed_idx];
 
   if(x < recentTable->min_arg() - 2*smallest_interval){
     // x is far away, do binary search on the left
@@ -121,11 +137,13 @@ double CompositeLookupTable::operator()(double x)
       mostRecentlyUsed_idx, mv_LUT.size()-1);
 }
 
-void CompositeLookupTable::print_details(std::ostream &out)
+template <typename IN_TYPE, typename OUT_TYPE>
+void CompositeLookupTable<IN_TYPE, OUT_TYPE>::print_details(std::ostream &out)
 {
-  out << m_name << " ";
+  out << this->m_name << " ";
   for(auto lut : mv_LUT)
     lut->print_details(out);
 }
 
-CompositeLookupTable::~CompositeLookupTable(){}
+template class CompositeLookupTable<double,double>;
+template class CompositeLookupTable<float,float>;

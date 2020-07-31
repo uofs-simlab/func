@@ -1,5 +1,6 @@
-/* Abstract interface for interfacing with random distributions */
-
+/*
+  Abstract interface for interfacing with random distributions
+*/
 #pragma once
 template <typename POINT_TYPE>
 class RngInterface{

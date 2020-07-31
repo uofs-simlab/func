@@ -31,6 +31,24 @@
 #include <memory> // shared_ptr
 #include <utility> // std::pair
 
+/* A subclass used to define function behaviour at table endpoints and breakpoints */
+template <typename IN_TYPE, typename OUT_TYPE>
+class SpecialPoint
+{
+  std::pair<IN_TYPE,OUT_TYPE> m_point; // x,y coordinate
+
+  // specify why this point is special
+  enum DiscontType { None=-1, Discont=0, FirstDiscont=1, SecondDiscont=2, ThirdDiscont=3 };
+  enum LimitType { Equals, Approaches, Inf };
+  DiscontType m_discType;
+  LimitType m_limType;
+
+public:
+  SpecialPoint(IN_TYPE x, OUT_TYPE y, DiscontType dt, LimitType lt) : m_point(std::make_pair(x,y)), m_discType(dt), m_limType(lt) {}
+  SpecialPoint(std::pair<IN_TYPE,OUT_TYPE> pt, DiscontType dt, LimitType lt) : m_point(pt), m_discType(dt), m_limType(lt) {}
+  std::pair<IN_TYPE,OUT_TYPE> point(){ return m_point; }
+};
+
 template <typename IN_TYPE, typename OUT_TYPE>
 class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
   // collection of FunC lookup tables used to sample from
@@ -40,7 +58,7 @@ class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_T
   std::vector<std::string>  mv_LUT_names;
 
   // describe function behaviour at the endpoints
-  std::vector<SpecialPoint> mv_special_points;
+  std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> mv_special_points;
 
   // index of the last table sampled from
   unsigned int mostRecentlyUsed_idx;
@@ -52,18 +70,20 @@ class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_T
 
   // Private constructor does all the work but needs to be called with all the 
   // special points in curly braces which is a bit awkward
-  CompositeLookupTable(FunctionContainer *func_container, double global_tol, std::initializer_list<SpecialPoint>);
+  CompositeLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, double global_tol,
+      std::initializer_list<SpecialPoint<IN_TYPE,OUT_TYPE>>);
 
 public:
   // public constructors. Build this table with a global tolerance and a collection of special points
   template <typename... SPECIAL_POINTS>
-  CompositeLookupTable(FunctionContainer *func_container, double global_tol, SPECIAL_POINTS ... points);
+  CompositeLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, double global_tol, SPECIAL_POINTS ... points);
 
-  // or with a vector of n table names, a vector of n step sizes, and a vector of n+1 special points.
-  CompositeLookupTable(FunctionContainer *func_container, std::vector<std::string> names,
-      std::vector<IN_TYPE> stepSizes, std::vector<SpecialPoint> special_points);
+  // or with a vector of n table names, a vector of n step sizes, and a vector of n+1 special points. Order
+  // determines which tables are used on which subintervals
+  CompositeLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::vector<std::string> names,
+      std::vector<IN_TYPE> stepSizes, std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points);
 
-  ~CompositeLookupTable();
+  ~CompositeLookupTable(){}
 
   // return the vector of special points in the domain
   std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points(){ return mv_special_points; };
@@ -71,4 +91,5 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override;
 
   void print_details(std::ostream &out) override;
+  // Add a way to print details about each subinterval
 };

@@ -15,8 +15,8 @@ UniformQuadraticTaylorTable::UniformQuadraticTaylorTable(FunctionContainer *func
   m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  __IS_NULL(func_container->fvar2_func);
-  mp_boost_func = func_container->fvar2_func;
+  __IS_NULL(func_container->autodiff2_func);
+  mp_boost_func = func_container->autodiff2_func;
 
   /* Allocate and set table */
   m_table.reset(new polynomial<3,32>[m_numTableEntries]);

@@ -12,14 +12,16 @@
 #pragma once
 #include "UniformLookupTable.hpp"
 
-class UniformQuadraticTaylorTable final : public UniformLookupTable
+template <typename IN_TYPE, typename OUT_TYPE>
+class UniformQuadraticTaylorTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   REGISTER_ULUT(UniformQuadraticTaylorTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<3,32>[]> m_table;
-  std::function<fvar2(fvar2)> mp_boost_func;
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,3,32>[]> m_table;
+  std::function<fvar<OUT_TYPE,2>(fvar<IN_TYPE,2>)> mp_boost_func;
 public:
-  UniformQuadraticTaylorTable(FunctionContainer *func_container, UniformLookupTableParameters par);
-  double operator()(double x) override;
-  std::function<fvar2(fvar2)> boost_function(){ return mp_boost_func; }
+  UniformQuadraticTaylorTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+      UniformLookupTableParameters<IN_TYPE> par);
+  OUT_TYPE operator()(IN_TYPE x) override;
+  std::function<fvar<OUT_TYPE,2>(fvar<IN_TYPE,2>)> boost_function(){ return mp_boost_func; }
 };

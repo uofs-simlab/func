@@ -13,14 +13,15 @@
 */
 #include "UniformLookupTable.hpp"
 
-class UniformCubicHermiteTable final : public UniformLookupTable
+template <typename IN_TYPE, typename OUT_TYPE>
+class UniformCubicHermiteTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   REGISTER_ULUT(UniformCubicHermiteTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<4,32>[]> m_table;
-  std::function<fvar1(fvar1)> mp_boost_func;
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,4,32>[]> m_table;
+  std::function<fvar<OUT_TYPE,1>(fvar<IN_TYPE,1>)> mp_boost_func;
 public:
-  UniformCubicHermiteTable(FunctionContainer *func_container, UniformLookupTableParameters par);
-  double operator()(double x) override;
-  std::function<fvar1(fvar1)> boost_function(){ return mp_boost_func; }
+  UniformCubicHermiteTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par);
+  OUT_TYPE operator()(IN_TYPE x) override;
+  std::function<fvar<OUT_TYPE,1>(fvar<OUT_TYPE,1>)> boost_function(){ return mp_boost_func; }
 };

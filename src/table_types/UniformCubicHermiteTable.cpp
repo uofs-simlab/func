@@ -15,8 +15,8 @@ UniformCubicHermiteTable::UniformCubicHermiteTable(FunctionContainer *func_conta
   m_numTableEntries = m_numIntervals+1;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  __IS_NULL(func_container->fvar1_func);
-  mp_boost_func = func_container->fvar1_func;
+  __IS_NULL(func_container->autodiff1_func);
+  mp_boost_func = func_container->autodiff1_func;
 
   /* Allocate and set table */
   m_table.reset(new polynomial<4,32>[m_numTableEntries]);

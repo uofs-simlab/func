@@ -15,8 +15,8 @@ UniformLinearTaylorTable::UniformLinearTaylorTable(FunctionContainer *func_conta
   m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  __IS_NULL(func_container->fvar1_func);
-  mp_boost_func = func_container->fvar1_func;
+  __IS_NULL(func_container->autodiff1_func);
+  mp_boost_func = func_container->autodiff1_func;
 
   /* Allocate and set table */
   m_table.reset(new polynomial<2,16>[m_numTableEntries]);

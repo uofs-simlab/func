@@ -15,8 +15,8 @@ UniformCubicTaylorTable::UniformCubicTaylorTable(FunctionContainer *func_contain
   m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  __IS_NULL(func_container->fvar3_func);
-  mp_boost_func = func_container->fvar3_func;
+  __IS_NULL(func_container->autodiff3_func);
+  mp_boost_func = func_container->autodiff3_func;
 
   /* Allocate and set table */
   m_table.reset(new polynomial<4,32>[m_numTableEntries]);

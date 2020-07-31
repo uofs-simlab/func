@@ -7,7 +7,6 @@ REGISTER_ULUT_IMPL(IMPL_NAME);
 UniformLinearPrecomputedInterpolationTable::UniformLinearPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
   UniformLookupTable(func_container, par)
 {
-
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
   m_order = 2;

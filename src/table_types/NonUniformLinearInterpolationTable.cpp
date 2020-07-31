@@ -27,8 +27,8 @@ double NonUniformLinearInterpolationTable::operator()(double x)
 {
   // TODO simplify
   unsigned x_idx = (unsigned) (m_numTableEntries-1)*m_transferFunction->g_inv((x-m_minArg)/(m_maxArg-m_minArg));
-  if(x < m_grid[x_idx] || m_grid[x_idx+1] < x)
-    std::cerr << "The hash thinks " << x << " is in [" << m_grid[x_idx] << "," << m_grid[x_idx+1] << ")" << std::endl;
+  //if(x < m_grid[x_idx] || m_grid[x_idx+1] < x)
+  //  std::cerr << "The hash thinks " << x << " is in [" << m_grid[x_idx] << "," << m_grid[x_idx+1] << ")" << std::endl;
 
   double h     = m_grid[x_idx+1] - m_grid[x_idx];
   double dx    = (x - m_grid[x_idx])/h;
