@@ -17,7 +17,7 @@
   T foo(T x){ return x; }
 
   int main(){
-    FunctionContainer foo_container{SET_F(foo)};
+    FunctionContainer<double,double> foo_container{SET_F(foo,double)};
     // or if it's inconvenient to template your function
     FunctionContainer foo_container2 {foo<double>};
     // you just can't use any of the lookup tables that need 
@@ -30,17 +30,6 @@
 #include <functional>
 #include <boost/math/differentiation/autodiff.hpp>
 
-// some typedefs
-using boost::math::differentiation::autodiff_fvar;
-// will these typedefs still work if we template this class?
-typedef autodiff_fvar<double,1> fvar1;
-typedef autodiff_fvar<double,2> fvar2;
-typedef autodiff_fvar<double,3> fvar3;
-typedef autodiff_fvar<double,4> fvar4;
-typedef autodiff_fvar<double,5> fvar5;
-typedef autodiff_fvar<double,6> fvar6;
-typedef autodiff_fvar<double,7> fvar7;
-
 /* Used by each table type to check if the required function
  * type has been provided.
  * TODO decide whether or not to make this null op for -DNDEBUG */
@@ -48,24 +37,43 @@ typedef autodiff_fvar<double,7> fvar7;
   if(VAR == NULL)      \
     throw std::invalid_argument(#VAR " is NULL")
 
-#define SET_F(F) \
-  F<double>, F<fvar1>, F<fvar2>, F<fvar3>, F<fvar4>, F<fvar5>, F<fvar6>, F<fvar7>
+/* Let the user quickly define their function container with a macro */
+#define SET_F_ONE_TYPE(F,TYPE)                                \
+  F<TYPE>, F<fvar<TYPE,1>>, F<fvar<TYPE,2>>, F<fvar<TYPE,3>>, \
+  F<fvar<TYPE,4>>, F<fvar<TYPE,5>>, F<fvar<TYPE,6>>, F<fvar<TYPE,7>>
+
+#define SET_F_TWO_TYPE(F,IN_TYPE,OUT_TYPE)                                  \
+  F<IN_TYPE,OUT_TYPE>, F<fvar<IN_TYPE,1>,fvar<OUT_TYPE,1>>,                 \
+  F<fvar<IN_TYPE,2>,fvar<OUT_TYPE,2>>, F<fvar<IN_TYPE,3>,fvar<OUT_TYPE,3>>, \
+  F<fvar<IN_TYPE,4>,fvar<OUT_TYPE,4>>, F<fvar<IN_TYPE,5>,fvar<OUT_TYPE,5>>, \
+  F<fvar<IN_TYPE,6>,fvar<OUT_TYPE,6>>, F<fvar<IN_TYPE,7>,fvar<OUT_TYPE,7>>
+
+#define GET_MACRO(_1,_2,_3,NAME,...) NAME
+// Call with SET_F(foo,template-type...)
+#define SET_F(...) GET_MACRO(__VA_ARGS__, SET_F_TWO_TYPE, SET_F_ONE_TYPE)(__VA_ARGS__)
+
+// setup the automatically differentiable variable
+using boost::math::differentiation::autodiff_fvar;
+template <typename T, unsigned int N>
+using fvar = autodiff_fvar<T,N>;
 
 // create a set of structs so we can specify 
 // FunctionContainer::get_nth_func's return type with an index
-template<unsigned int N>
-struct func_type{
-  using type = std::function<autodiff_fvar<double,N>(autodiff_fvar<double,N>)>;
+template<typename IN_TYPE, typename OUT_TYPE, unsigned int N>
+struct nth_differentiable{
+  using type = std::function<fvar<OUT_TYPE,N>(fvar<IN_TYPE,N>)>;
 };
 // special case for N=0
-template<>
-struct func_type<0>{
-  using type = std::function<double(double)>;
+template<typename IN_TYPE, typename OUT_TYPE>
+struct nth_differentiable<IN_TYPE,OUT_TYPE,0>{
+  using type = std::function<OUT_TYPE(IN_TYPE)>;
 };
 
+template<typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class FunctionContainer
 {
-private:
+  template<unsigned int N>
+  using func_type = nth_differentiable<IN_TYPE,OUT_TYPE,N>;
   // 2 parter for providing a way to access each member function with a number.
   // overload func_type 9 different ways to get a function that seemingly does different
   // things based on its template value.
@@ -73,14 +81,14 @@ private:
   { 
     throw std::out_of_range("Template value must be in 0<=N<=7");
   };
-  typename func_type<0>::type get_nth_func(func_type<0>) { return double_func; };
-  typename func_type<1>::type get_nth_func(func_type<1>) { return fvar1_func;  };
-  typename func_type<2>::type get_nth_func(func_type<2>) { return fvar2_func;  };
-  typename func_type<3>::type get_nth_func(func_type<3>) { return fvar3_func;  };
-  typename func_type<4>::type get_nth_func(func_type<4>) { return fvar4_func;  };
-  typename func_type<5>::type get_nth_func(func_type<5>) { return fvar5_func;  };
-  typename func_type<6>::type get_nth_func(func_type<6>) { return fvar6_func;  };
-  typename func_type<7>::type get_nth_func(func_type<7>) { return fvar7_func;  };
+  typename func_type<0>::type get_nth_func(func_type<0>){ return standard_func;  };
+  typename func_type<1>::type get_nth_func(func_type<1>){ return autodiff1_func; };
+  typename func_type<2>::type get_nth_func(func_type<2>){ return autodiff2_func; };
+  typename func_type<3>::type get_nth_func(func_type<3>){ return autodiff3_func; };
+  typename func_type<4>::type get_nth_func(func_type<4>){ return autodiff4_func; };
+  typename func_type<5>::type get_nth_func(func_type<5>){ return autodiff5_func; };
+  typename func_type<6>::type get_nth_func(func_type<6>){ return autodiff6_func; };
+  typename func_type<7>::type get_nth_func(func_type<7>){ return autodiff7_func; };
 
 public: 
   // call as get_nth_func<N>() to get the member function that is differentiated N 
@@ -88,28 +96,31 @@ public:
   template<unsigned int N>
   typename func_type<N>::type get_nth_func(){ return get_nth_func(func_type<N>()); }
 
-  std::function<double(double)> double_func;
-  std::function<fvar1(fvar1)>   fvar1_func;
-  std::function<fvar2(fvar2)>   fvar2_func;
-  std::function<fvar3(fvar3)>   fvar3_func;
-  std::function<fvar4(fvar4)>   fvar4_func;
-  std::function<fvar5(fvar5)>   fvar5_func;
-  std::function<fvar6(fvar6)>   fvar6_func;
-  std::function<fvar7(fvar7)>   fvar7_func;
-    
+  std::function<OUT_TYPE(IN_TYPE)> standard_func;
+  std::function<fvar<OUT_TYPE,1>(fvar<IN_TYPE,1>)> autodiff1_func;
+  std::function<fvar<OUT_TYPE,2>(fvar<IN_TYPE,2>)> autodiff2_func;
+  std::function<fvar<OUT_TYPE,3>(fvar<IN_TYPE,3>)> autodiff3_func;
+  std::function<fvar<OUT_TYPE,4>(fvar<IN_TYPE,4>)> autodiff4_func;
+  std::function<fvar<OUT_TYPE,5>(fvar<IN_TYPE,5>)> autodiff5_func;
+  std::function<fvar<OUT_TYPE,6>(fvar<IN_TYPE,6>)> autodiff6_func;
+  std::function<fvar<OUT_TYPE,7>(fvar<IN_TYPE,7>)> autodiff7_func;
+      
   // some constructors
   FunctionContainer(){}
 
-  FunctionContainer(std::function<double(double)> func) :
-    double_func(func) {};
+  FunctionContainer(std::function<OUT_TYPE(IN_TYPE)> func) :
+    standard_func(func) {};
  
-  FunctionContainer(std::function<double(double)> func,
-      std::function<fvar1(fvar1)> func1, std::function<fvar2(fvar2)> func2,
-      std::function<fvar3(fvar3)> func3, std::function<fvar4(fvar4)> func4,
-      std::function<fvar5(fvar5)> func5, std::function<fvar6(fvar6)> func6,
-      std::function<fvar7(fvar7)> func7) :
-    double_func(func), fvar1_func(func1),
-    fvar2_func(func2), fvar3_func(func3),
-    fvar4_func(func4), fvar5_func(func5),
-    fvar6_func(func6), fvar7_func(func7) {}
+  FunctionContainer(std::function<OUT_TYPE(IN_TYPE)>   func,
+      std::function<fvar<OUT_TYPE,1>(fvar<IN_TYPE,1>)> func1,
+      std::function<fvar<OUT_TYPE,2>(fvar<IN_TYPE,2>)> func2,
+      std::function<fvar<OUT_TYPE,3>(fvar<IN_TYPE,3>)> func3,
+      std::function<fvar<OUT_TYPE,4>(fvar<IN_TYPE,4>)> func4,
+      std::function<fvar<OUT_TYPE,5>(fvar<IN_TYPE,5>)> func5,
+      std::function<fvar<OUT_TYPE,6>(fvar<IN_TYPE,6>)> func6,
+      std::function<fvar<OUT_TYPE,7>(fvar<IN_TYPE,7>)> func7) :
+    standard_func(func),   autodiff1_func(func1),
+    autodiff2_func(func2), autodiff3_func(func3),
+    autodiff4_func(func4), autodiff5_func(func5),
+    autodiff6_func(func6), autodiff7_func(func7) {}
 };

@@ -22,28 +22,30 @@
   fairly general
  */
 #pragma once
-#define ARMA_USE_CXX11
 #include <memory>
 #include <string>
-#include <armadillo>
 #include <functional>
+#define ARMA_USE_CXX11
+#include <armadillo>
 #include "TransferFunction.hpp"
 #include "FunctionContainer.hpp"
 
-class TransferFunctionSinh : public TransferFunction
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
+class TransferFunctionSinh : public TransferFunction<IN_TYPE>
 {
   /* --- More member vars --- */
   /* most of these functions will be lambdas that capture this because we
    * want to pass these functions as args to other functions, and we can't
    * make them static */
-  std::function<fvar1(fvar1)> m_boost_func;
-  std::function<double(double)> f_prime;
-  double m_scale_factor; // scaling factor for g
-  std::function<double(double)> g_prime;
+  std::function<fvar<OUT_TYPE,1>(fvar<IN_TYPE,1>)> m_boost_func;
+  std::function<OUT_TYPE(IN_TYPE)> f_prime;
+  IN_TYPE m_scale_factor; // scaling factor for g
+  std::function<IN_TYPE(IN_TYPE)> g_prime;
+
   std::string m_method_of_approx;
 
   unsigned int m_num_coefs;
-  __attribute__((aligned)) std::unique_ptr<double[]> m_polynomial_coefs; 
+  __attribute__((aligned)) std::unique_ptr<OUT_TYPE[]> m_polynomial_coefs; 
 
   /* --- Private Functions for approximating g^{-1} --- */
   /* Approximate g^{-1} using inverse polynomial interpolation */
@@ -72,7 +74,7 @@ class TransferFunctionSinh : public TransferFunction
 
 public:
   /* public constructor */
-  TransferFunctionSinh(FunctionContainer *fc, double a, double b);
+  TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE a, IN_TYPE b);
   void print_details(std::ostream&) override;
   void print_debugging_details(std::ostream&);
 };

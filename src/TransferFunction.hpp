@@ -20,31 +20,25 @@
 #include <functional> // std::function
 #include <utility> // std::pair
 
+template <typename IN_TYPE>
 class TransferFunction
 {
   protected:
     /* --- Member variables --- */
-    double m_minArg, m_maxArg;
-    std::function<double(double)> m_base_function;
-
-    /* simplest example of a usable g, but since it doesn't distribute points
-     * based on where f changes, it makes nonuniform lookup tables into 
-     * expensive uniform lookup tables */
-    std::function<double(double)> identity(){ return [](double x){ return x; }; }
+    IN_TYPE m_minArg, m_maxArg;
 
   public:
     // build the function pair
-    TransferFunction(std::function<double(double)> f, double minArg, double maxArg) :
-      m_minArg(minArg), m_maxArg(maxArg), m_base_function(f) {}
+    TransferFunction(IN_TYPE minArg, IN_TYPE maxArg) : m_minArg(minArg), m_maxArg(maxArg){}
     virtual ~TransferFunction(){}
 
     virtual void print_details(std::ostream& out){};
 
-    // the main functionality of the class.
-    std::function<double(double)> g;
-    std::function<double(double)> g_inv;
+    // the main functionality of the class. TODO profile with a class
+    // more lightweight than std::function
+    std::function<IN_TYPE(IN_TYPE)> g;
+    std::function<IN_TYPE(IN_TYPE)> g_inv;
 
     // public access to private vars
-    std::pair<double,double> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_maxArg); }
-    std::function<double(double)> function(){ return m_base_function; }
+    std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_maxArg); }
 };

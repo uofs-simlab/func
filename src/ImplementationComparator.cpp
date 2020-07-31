@@ -10,7 +10,9 @@
 #include <limits>
 #include <cassert>
 
-ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nEvals, unsigned int seed, RngInterface<double> *inRng) :
+template <typename IN_TYPE, typename OUT_TYPE>
+ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
+    ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals, unsigned int seed, RngInterface<IN_TYPE> *inRng) :
   m_implementations(std::move(inImpl)), m_nEvals(nEvals), mp_sampler(inRng)
 {
   /*
@@ -18,13 +20,13 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
   */
   m_numberOfImplementations = m_implementations.size();
   m_evaluationTimers.reserve(m_numberOfImplementations);
-  m_evalHolder.reset(new table_type[m_nEvals]);
+  m_evalHolder.reset(new OUT_TYPE[m_nEvals]);
 
   /*
     Initialize the timer structs with pointers to implementations
   */
   for (auto & itImpl : m_implementations) {
-    m_implTimers.push_back(ImplTimer(itImpl.get()));
+    m_implTimers.push_back(ImplTimer<IN_TYPE,OUT_TYPE>(itImpl.get()));
   }
 
   /*
@@ -37,9 +39,9 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
   ++itImpl; // assert the rest of the impls are the same
   for (; (itImpl != m_implementations.end()); ++itImpl) {
     assert( abs( (**(itImpl)).min_arg() - m_minArg) <
-  	    (std::numeric_limits<table_type>::epsilon())   );
+  	    (std::numeric_limits<IN_TYPE>::epsilon())   );
     assert( abs( (*itImpl)->max_arg() - m_maxArg) <
-  	    (std::numeric_limits<table_type>::epsilon())   );
+  	    (std::numeric_limits<IN_TYPE>::epsilon())   );
   }
 
   /*
@@ -48,17 +50,19 @@ ImplementationComparator::ImplementationComparator(ImplContainer &inImpl, int nE
     distribution on the table's endpoints 
   */
   if(mp_sampler == NULL)
-    mp_sampler = new StdRng<double>(m_minArg, m_maxArg);
+    mp_sampler = new StdRng<IN_TYPE>(m_minArg, m_maxArg);
   mp_sampler->init(seed);
-  mp_randomEvaluations = new table_type[m_nEvals];
+  mp_randomEvaluations = new IN_TYPE[m_nEvals];
 }
 
-ImplementationComparator::~ImplementationComparator()
+template <typename IN_TYPE, typename OUT_TYPE>
+ImplementationComparator<IN_TYPE,OUT_TYPE>::~ImplementationComparator()
 {
   delete[] mp_randomEvaluations;
 }
 
-void ImplementationComparator::draw_new_sample_points()
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::draw_new_sample_points()
 {
   /*
     Regenerate evaluation points.
@@ -67,14 +71,17 @@ void ImplementationComparator::draw_new_sample_points()
     mp_randomEvaluations[ii] = mp_sampler->get_point();
 }
 
-const double* ImplementationComparator:: sample_points()
+template <typename IN_TYPE, typename OUT_TYPE>
+const IN_TYPE* ImplementationComparator<IN_TYPE,OUT_TYPE>::sample_points()
 {
   /*
      Obtain a const reference to the current array of evaluation points
   */
   return mp_randomEvaluations;
 }
-void ImplementationComparator::run_all_single()
+
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::run_all_single()
 {
   /*
     Time implementation evaluations
@@ -89,7 +96,8 @@ void ImplementationComparator::run_all_single()
   }
 }
 
-void ImplementationComparator::run_timings(int nRuns)
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::run_timings(int nRuns)
 {
   /*
      Run timings with different set of random arguments
@@ -100,7 +108,8 @@ void ImplementationComparator::run_timings(int nRuns)
   }
 }
 
-void ImplementationComparator::compute_timing_statistics()
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::compute_timing_statistics()
 {
   /*
     Compute fastest and slowest
@@ -109,7 +118,9 @@ void ImplementationComparator::compute_timing_statistics()
     itImplTimer.compute_timing_stats();
   }
 }
-void ImplementationComparator::print_statistics_json(std::ostream &out)
+
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_statistics_json(std::ostream &out)
 {
   /* add implementations to vector */
   using nlohmann::json;
@@ -126,29 +137,29 @@ void ImplementationComparator::print_statistics_json(std::ostream &out)
     jsonStats[(itImplTimer.impl)->name()]["raw"]  = itImplTimer.evaluationTimes;
   }
   out << jsonStats.dump(2) << std::endl;
-
 }
 
-
-void ImplementationComparator::sort_timings(std::string type)
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::sort_timings(std::string type)
 {
   // default sort by mean time
   if (!type.compare("mean")) {
     sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer &a, const ImplTimer &b)
+	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
 	       { return (a.meanTime < b.meanTime); } );
   } else if (!type.compare("min")) {   // or sort by minimum (ie. best cases)
     sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer &a, const ImplTimer &b)
+	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
 	       { return (a.minTime < b.minTime); } );
   } else if (!type.compare("max")) {   // or sort by maximum time (ie. worst cases)
     sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer &a, const ImplTimer &b)
+	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
 	       { return (a.maxTime < b.maxTime); } );
   }
 }
 
-void ImplementationComparator::print_details(std::ostream &out)
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_details(std::ostream &out)
 {
   /*
      Print details of all timings
@@ -175,9 +186,10 @@ void ImplementationComparator::print_details(std::ostream &out)
 
   }
   out << "----------------------------------------------------------------------------\n";
-
 }
-void ImplementationComparator::print_csv_header(std::ostream &out)
+
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_csv_header(std::ostream &out)
 {
   /* Print header */
   for (auto itImplTimer : m_implTimers) {
@@ -185,7 +197,9 @@ void ImplementationComparator::print_csv_header(std::ostream &out)
   }
   out << "\n";
 }
-void ImplementationComparator::print_details_csv(std::ostream &out)
+
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_details_csv(std::ostream &out)
 {
   print_csv_header(out);
 
@@ -200,7 +214,8 @@ void ImplementationComparator::print_details_csv(std::ostream &out)
 
 }
 
-void ImplementationComparator::print_summary(std::ostream &out)
+template <typename IN_TYPE, typename OUT_TYPE>
+void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_summary(std::ostream &out)
 {
   /*
     Print summary of the timing statistics
@@ -222,7 +237,8 @@ void ImplementationComparator::print_summary(std::ostream &out)
   out << "----------------------------------------------------------------------------\n";
 }
 
-std::vector<double> ImplementationComparator::fastest_times()
+template <typename IN_TYPE, typename OUT_TYPE>
+std::vector<double> ImplementationComparator<IN_TYPE,OUT_TYPE>::fastest_times()
 {
   std::vector<double> minTimes;
   for (auto timer : m_implTimers) {
@@ -230,7 +246,9 @@ std::vector<double> ImplementationComparator::fastest_times()
   }
   return minTimes;
 }
-std::vector<double> ImplementationComparator::slowest_times()
+
+template <typename IN_TYPE, typename OUT_TYPE>
+std::vector<double> ImplementationComparator<IN_TYPE,OUT_TYPE>::slowest_times()
 {
   std::vector<double> maxTimes;
   for (auto timer : m_implTimers) {
@@ -238,3 +256,8 @@ std::vector<double> ImplementationComparator::slowest_times()
   }
   return maxTimes;
 }
+
+template class ImplementationComparator<double>;
+template class ImplementationComparator<float>;
+template class ImplementationComparator<double,float>;
+template class ImplementationComparator<float,double>;

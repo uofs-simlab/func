@@ -6,52 +6,54 @@
 #include <boost/math/differentiation/autodiff.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 #include "TransferFunctionSinh.hpp"
+#include "FunctionContainer.hpp"
 
 static double tol = 1e-8;
 
-TransferFunctionSinh::TransferFunctionSinh(FunctionContainer *fc, double a, double b) :
-  TransferFunction(fc->double_func,a,b)
+template <typename IN_TYPE, typename OUT_TYPE>
+TransferFunctionSinh<IN_TYPE,OUT_TYPE>::TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE a, IN_TYPE b) :
+  TransferFunction<IN_TYPE>(a,b)
 {
   using boost::math::quadrature::gauss_kronrod;
   using boost::math::differentiation::make_fvar;
 
   // load the first autodifferentiable function
-  m_boost_func = fc->fvar1_func;
+  m_boost_func = fc->autodiff1_func;
 
   // build a function to return the first derivative of f
-  f_prime = [this](double x) -> double {
-    return m_boost_func(make_fvar<double,1>(x)).derivative(1);
+  f_prime = [this](IN_TYPE x) -> IN_TYPE {
+    return m_boost_func(make_fvar<IN_TYPE,1>(x)).derivative(1);
   };
 
   // build our transfer function
   // we'll be adjusting temp_g: [a,b] -> [a,b]
-  std::function<double(double)> temp_g = [this](double x) -> double {
+  std::function<IN_TYPE(IN_TYPE)> temp_g = [this](IN_TYPE x) -> IN_TYPE {
     return 1/sqrt(1 + pow(f_prime(x),2));
   };
 
   // perform adaptive quadrature with a default tol of sqrt(epsilon)
-  m_scale_factor = gauss_kronrod<double, 15>::integrate(temp_g, m_minArg, m_maxArg);
+  m_scale_factor = gauss_kronrod<IN_TYPE, 15>::integrate(temp_g, this->m_minArg, this->m_maxArg);
 
   // g:[0,1] -> [0,1] integrates temp_g over all of [a,b] and scales the answer
   // such that g(1) = 1
-  g = [this](double x) -> double {
+  this->g = [this](IN_TYPE x) -> IN_TYPE {
     if(x == 0.0) return 0.0; // boost gets upset if we don't do this
-    return gauss_kronrod<double, 15>::integrate(
-        [this](double t) -> double { return 1/sqrt(1 + pow(f_prime(t),2)) / m_scale_factor; },
-        m_minArg, m_minArg+x*(m_maxArg-m_minArg));
+    return gauss_kronrod<IN_TYPE, 15>::integrate(
+        [this](IN_TYPE t) -> IN_TYPE { return 1/sqrt(1 + pow(f_prime(t),2)) / m_scale_factor; },
+        this->m_minArg, this->m_minArg+x*(this->m_maxArg-this->m_minArg));
   };
 
   // build g prime
-  g_prime = [this](double x) -> double { 
-    return (m_maxArg-m_minArg) /
-      sqrt(1 + pow(f_prime(m_minArg + x*(m_maxArg-m_minArg)),2)) / m_scale_factor;
+  g_prime = [this](IN_TYPE x) -> IN_TYPE { 
+    return (this->m_maxArg-this->m_minArg) /
+      sqrt(1 + pow(f_prime(this->m_minArg + x*(this->m_maxArg-this->m_minArg)),2)) / m_scale_factor;
   };
 
   /* build g^{-1} by computing the inverse polynomial interpolant.
    * This is the experimental part, and so it has been made modular.
    * Want g^{-1} evals to be quick so we currently approx it with
    * some type of inverse polynomial interpolation. */
-  g_inv = newtons_g_inv();
+  this->g_inv = newtons_g_inv();
   // g_inv = inverse_poly_interp(4, g, g_prime);
   // g_inv = inverse_poly_interior_slopes_interp(8, g, g_prime);
   // g_inv = inverse_hermite_interp(5, g, g_prime);
@@ -59,8 +61,9 @@ TransferFunctionSinh::TransferFunctionSinh(FunctionContainer *fc, double a, doub
   // TODO cycle through ways to approx. g_inv until we find the best fit
 }
 
-/* approximate g_inv with its inverse polynomial interpolant */
-std::function<double(double)> TransferFunctionSinh::inverse_poly_interp(unsigned int num_coefs,
+/* approximate g_inv with inverse polynomial interpolantion */
+template <typename IN_TYPE, typename OUT_TYPE>
+std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inverse_poly_interp(unsigned int num_coefs,
     std::function<double(double)> g, std::function<double(double)> gp)
 {
   using arma::span;
@@ -89,7 +92,7 @@ std::function<double(double)> TransferFunctionSinh::inverse_poly_interp(unsigned
 
   // move from arma's vector to a std::unique_ptr<double[]>
   m_num_coefs = y.n_rows;
-  m_polynomial_coefs.reset(new double[m_num_coefs]);
+  m_polynomial_coefs.reset(new OUT_TYPE[m_num_coefs]);
   for(unsigned int i = 0; i < m_num_coefs; i++)
     m_polynomial_coefs[i] = y[i];
 
@@ -104,7 +107,8 @@ std::function<double(double)> TransferFunctionSinh::inverse_poly_interp(unsigned
 
 /* approximate g_inv with inverse polynomial interpolation and by specifying
  * slopes at interior points as 1/g_prime */
-std::function<double(double)> TransferFunctionSinh::inverse_poly_interior_slopes_interp(
+template <typename IN_TYPE, typename OUT_TYPE>
+std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inverse_poly_interior_slopes_interp(
     unsigned int num_coefs,
     std::function<double(double)> g, std::function<double(double)> gp)
 {
@@ -146,7 +150,7 @@ std::function<double(double)> TransferFunctionSinh::inverse_poly_interior_slopes
 
   // move from arma's vector to a std::unique_ptr<double[]>
   m_num_coefs = y.n_rows;
-  m_polynomial_coefs.reset(new double[m_num_coefs]);
+  m_polynomial_coefs.reset(new OUT_TYPE[m_num_coefs]);
   for(unsigned int i = 0; i < m_num_coefs; i++)
     m_polynomial_coefs[i] = y[i];
 
@@ -161,7 +165,8 @@ std::function<double(double)> TransferFunctionSinh::inverse_poly_interior_slopes
 
 /* approximate g_inv with inverse hermite interpolation. ie specify
  * slopes at the endpoints as 1/g_prime */
-std::function<double(double)> TransferFunctionSinh::inverse_hermite_interp(
+template <typename IN_TYPE, typename OUT_TYPE>
+std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inverse_hermite_interp(
     unsigned int num_coefs,
     std::function<double(double)> g, std::function<double(double)> gp)
 {
@@ -204,7 +209,7 @@ std::function<double(double)> TransferFunctionSinh::inverse_hermite_interp(
 
   // move from arma's vector to a std::unique_ptr<double[]>
   m_num_coefs = y.n_rows;
-  m_polynomial_coefs.reset(new double[m_num_coefs]);
+  m_polynomial_coefs.reset(new OUT_TYPE[m_num_coefs]);
   for(unsigned int i = 0; i < m_num_coefs; i++)
     m_polynomial_coefs[i] = y[i];
 
@@ -219,8 +224,10 @@ std::function<double(double)> TransferFunctionSinh::inverse_hermite_interp(
 
 /* verrry expensive version of g^{-1} that is just Newton's method 
  * or bisection if things go south */
-std::function<double(double)> TransferFunctionSinh::newtons_g_inv()
+template <typename IN_TYPE, typename OUT_TYPE>
+std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::newtons_g_inv()
 {
+  m_method_of_approx = std::string("inverse polynomial interpolation");
   return [this](double z) -> double {
     using boost::math::tools::eps_tolerance;
     using boost::math::tools::toms748_solve;
@@ -236,14 +243,15 @@ std::function<double(double)> TransferFunctionSinh::newtons_g_inv()
     do{
       NEWTON_IT += 1;
       x0 = x;
-      if(g_prime == NULL || g_prime(x) == 0.0 || x < 0.0 || x > 1.0 || NEWTON_IT > MAX_NEWTON_IT){
+      //if(g_prime == NULL || g_prime(x) == 0.0 || x < 0.0 || x > 1.0 || NEWTON_IT > MAX_NEWTON_IT){
+      if(g_prime == NULL || g_prime(x) == 0.0 || NEWTON_IT > MAX_NEWTON_IT){
         // if g prime is undefined, do a hard switch to bisection
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
-            [this, &z](double h) -> double { return g(h) - z; }, // shift g
-            0.0, 1.0, -z, 1.0-z, eps_tolerance<double>(), MAX_IT).first;
+            [this, &z](double h) -> double { return this->g(h) - z; }, // shift g
+            0.0, 1.0, -z, 1.0 - z, eps_tolerance<double>(), MAX_IT).first;
       }else{
-        x = x-(g(x)-z)/g_prime(x);
+        x = x-(this->g(x)-z)/g_prime(x);
       }
     }while(abs(x0-x) > tol);
 
@@ -253,7 +261,8 @@ std::function<double(double)> TransferFunctionSinh::newtons_g_inv()
 
 /* fill a vector with N linearly spaced points with respect to g in [0,1].
  * assumes g is monotone on [0,1], g(0)=0, and g(1)=1 */
-arma::vec TransferFunctionSinh::gspace(unsigned int N,
+template <typename IN_TYPE, typename OUT_TYPE>
+arma::vec TransferFunctionSinh<IN_TYPE,OUT_TYPE>::gspace(unsigned int N,
     std::function<double(double)> g, std::function<double(double)> gp)
 {
   using boost::math::tools::eps_tolerance;
@@ -289,16 +298,23 @@ arma::vec TransferFunctionSinh::gspace(unsigned int N,
   return v;
 }
 
-void TransferFunctionSinh::print_details(std::ostream& out)
+template <typename IN_TYPE, typename OUT_TYPE>
+void TransferFunctionSinh<IN_TYPE,OUT_TYPE>::print_details(std::ostream& out)
 {
   out << "arcsinh transfer function approximating g_inv with ";
   out << m_method_of_approx;
 }
 
-void TransferFunctionSinh::print_debugging_details(std::ostream& out)
+template <typename IN_TYPE, typename OUT_TYPE>
+void TransferFunctionSinh<IN_TYPE,OUT_TYPE>::print_debugging_details(std::ostream& out)
 {
   print_details(out);
   out << std::endl;
   for(int i=0; i<m_num_coefs; i++)
     out << m_polynomial_coefs[i] << std::endl;
 }
+
+template class TransferFunctionSinh<double>;
+template class TransferFunctionSinh<double,float>;
+template class TransferFunctionSinh<float>;
+template class TransferFunctionSinh<float,double>;
