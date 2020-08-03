@@ -24,13 +24,10 @@ class UniformArmadilloPrecomputedInterpolationTable final : public UniformLookup
 {
   // Template substitution happens way after the preprocessor does it's work so
   // we'll register all the available template values this way
-  //REGISTER_LUT(UniformArmadilloPrecomputedInterpolationTable);
-  //template<> REGISTER_LUT_IMPL(UniformArmadilloPrecomputedInterpolationTable<4>);
-  //template<> REGISTER_LUT_IMPL(UniformArmadilloPrecomputedInterpolationTable<5>);
-  //template<> REGISTER_LUT_IMPL(UniformArmadilloPrecomputedInterpolationTable<6>);
-  //template<> REGISTER_LUT_IMPL(UniformArmadilloPrecomputedInterpolationTable<7>);
+  REGISTER_LUT(UniformArmadilloPrecomputedInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,N+1,64>[]> m_table;
+
 public:
   UniformArmadilloPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       UniformLookupTableParameters<IN_TYPE> par) :
@@ -77,16 +74,21 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // nondimensionalized x position, scaled by step size
-    double   dx = this->m_stepSize_inv*(x-this->m_minArg);
+    IN_TYPE dx = this->m_stepSize_inv*(x-this->m_minArg);
     // index of previous table entry
     unsigned x0  = (unsigned) dx;
     // value of table entries around x position
     dx -= x0;
     
     // general degree horners method, evaluated from the inside out.
-    double sum = dx*m_table[x0].coefs[N];
+    OUT_TYPE sum = dx*m_table[x0].coefs[N];
     for (int k=N-1; k>0; k--)
       sum = dx*(m_table[x0].coefs[k] + sum);
     return m_table[x0].coefs[0]+sum;
   }
 };
+
+register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,4)
+register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,5)
+register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,6)
+register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,7)
