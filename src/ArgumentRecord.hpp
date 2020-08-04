@@ -74,6 +74,7 @@ class ArgumentRecord
     ~ArgumentRecord(){}
 };
 
+/* Implementations of functions that print to the console */
 template <typename IN_TYPE>
 inline std::string ArgumentRecord<IN_TYPE>::to_string()
 {

@@ -14,8 +14,8 @@
     rng->init(2020);             // build a std::mt19937
     rng->get_point();            // return a random number
 
-    // or if you want to get fancy with something faster, a normal distribution
-    // with mean 0.0 and standard deviation 1.0,
+    // or if you want to get fancy and use a faster generator, here's
+    // a normal distribution with mean 0.0 and standard deviation 1.0,
     // using points generated from minstd_rand0
     StdRng<float,std::normal_distribution<float>,minstd_rand0> rng2(0.0,1.0));
  */
