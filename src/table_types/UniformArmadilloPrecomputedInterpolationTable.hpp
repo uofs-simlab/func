@@ -15,6 +15,8 @@
   of degrees 4 up to degree 7)
 */
 #include "UniformLookupTable.hpp"
+#include <cmath> // ceil()
+
 #define ARMA_USE_CXX11
 #include <armadillo>
 #define SOLVE_OPTS arma::solve_opts::none
@@ -22,11 +24,12 @@
 template <typename IN_TYPE, typename OUT_TYPE, unsigned int N>
 class UniformArmadilloPrecomputedInterpolationTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
-  // Template substitution happens way after the preprocessor does it's work so
-  // we'll register all the available template values this way
+  INHERIT_EVALUATION_IMPL();
+  INHERIT_UNIFORM_LUT();
+  // corresponding REGISTER_LUT_IMPL macros at the bottom of the class
   REGISTER_LUT(UniformArmadilloPrecomputedInterpolationTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,N+1,64>[]> m_table;
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,N+1,8*sizeof(OUT_TYPE)>[]> m_table;
 
 public:
   UniformArmadilloPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
@@ -34,10 +37,10 @@ public:
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
   {
     /* Base class default variables */
-    this->m_name = "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
-    this->m_order = N+1;  // take N as the degree of the polynomial interpolant which is of order N+1
-    this->m_numTableEntries = this->m_numIntervals+1;
-    this->m_dataSize = (unsigned) sizeof(m_table[0]) * this->m_numTableEntries;
+    m_name = "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
+    m_order = N+1;  // take N as the degree of the polynomial interpolant which is of order N+1
+    m_numTableEntries = m_numIntervals+1;
+    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
      
     /* build the vandermonde system for finding the interpolating polynomial's coefficients */
     arma::mat Van = arma::ones(N+1, N+1);
@@ -50,16 +53,16 @@ public:
     arma::lu(L,U,P,Van);
 
     /* Allocate and set table */
-    m_table.reset(new polynomial<OUT_TYPE,N+1,64>[this->m_numTableEntries]);
-    for (int ii=0;ii<this->m_numIntervals;++ii) {
-      const IN_TYPE x = this->m_minArg + ii*this->m_stepSize;
+    m_table.reset(new polynomial<OUT_TYPE,N+1,8*sizeof(OUT_TYPE)>[m_numTableEntries]);
+    for (int ii=0;ii<m_numIntervals;++ii) {
+      const IN_TYPE x = m_minArg + ii*m_stepSize;
       // grid points
-      this->m_grid[ii] = x;
+      m_grid[ii] = x;
       
       // build the vector of coefficients from uniformly spaced function values
-      arma::vec y = arma::linspace(x,x+this->m_stepSize,N+1);
+      arma::vec y = arma::linspace(x,x+m_stepSize,N+1);
       for (unsigned int k=0; k<N+1; k++)
-        y[k] = this->mp_func(y[k]);
+        y[k] = mp_func(y[k]);
       
       // make y the coefficients of the polynomial interpolant
       y = solve(trimatu(U), solve(trimatl(L), P*y));
@@ -74,7 +77,7 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // nondimensionalized x position, scaled by step size
-    IN_TYPE dx = this->m_stepSize_inv*(x-this->m_minArg);
+    IN_TYPE dx = m_stepSize_inv*(x-m_minArg);
     // index of previous table entry
     unsigned x0  = (unsigned) dx;
     // value of table entries around x position
@@ -88,7 +91,9 @@ public:
   }
 };
 
-register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,4)
-register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,5)
-register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,6)
-register_double_and_float_types(UniformArmadilloPrecomputedInterpolationTable,7)
+// Template substitution happens way after the preprocessor does it's work so
+// we'll register all the available template values this way
+REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformArmadilloPrecomputedInterpolationTable,4);
+REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformArmadilloPrecomputedInterpolationTable,5);
+REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformArmadilloPrecomputedInterpolationTable,6);
+REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformArmadilloPrecomputedInterpolationTable,7);
