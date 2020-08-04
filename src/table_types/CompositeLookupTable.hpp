@@ -5,9 +5,6 @@
   lookup table. The hash for this table is O(logn) or O(n) depending on
   certain parameters, where n is the number of FunC LUTs.
 
-  TODO move special points to be specific to this class and decide how
-  they'll affect table generation.
-
   Usage example:
     CompositeLookupTable comp_table(unique_ptr<UniformLookupTable>(
       new UniformCubicPrecomputedInterpolationTable(&function,0,10,0.0001))
@@ -26,28 +23,37 @@
 #pragma once
 #include "EvaluationImplementation.hpp"
 #include "UniformLookupTable.hpp"
-#include "SpecialPoint.hpp"
 #include <vector> // store LUTs, names, special points
 #include <memory> // shared_ptr
 #include <utility> // std::pair
+
 
 /* A subclass used to define function behaviour at table endpoints and breakpoints */
 template <typename IN_TYPE, typename OUT_TYPE>
 class SpecialPoint
 {
-  std::pair<IN_TYPE,OUT_TYPE> m_point; // x,y coordinate
+  // x,y coordinate
+  std::pair<IN_TYPE,OUT_TYPE> m_point;
 
-  // specify why this point is special
+  // explain why this point is special
   enum DiscontType { None=-1, Discont=0, FirstDiscont=1, SecondDiscont=2, ThirdDiscont=3 };
   enum LimitType { Equals, Approaches, Inf };
   DiscontType m_discType;
   LimitType m_limType;
 
 public:
-  SpecialPoint(IN_TYPE x, OUT_TYPE y, DiscontType dt, LimitType lt) : m_point(std::make_pair(x,y)), m_discType(dt), m_limType(lt) {}
-  SpecialPoint(std::pair<IN_TYPE,OUT_TYPE> pt, DiscontType dt, LimitType lt) : m_point(pt), m_discType(dt), m_limType(lt) {}
+  SpecialPoint(IN_TYPE x, OUT_TYPE y, DiscontType dt, LimitType lt) :
+    m_point(std::make_pair(x,y)), m_discType(dt), m_limType(lt) {}
+
+  SpecialPoint(std::pair<IN_TYPE,OUT_TYPE> pt, DiscontType dt, LimitType lt) :
+    m_point(pt), m_discType(dt), m_limType(lt) {}
+
+  // public getters
   std::pair<IN_TYPE,OUT_TYPE> point(){ return m_point; }
+  DiscontType discType(){ return m_discType; }
+  LimitType limType(){ return m_limType; }
 };
+
 
 template <typename IN_TYPE, typename OUT_TYPE>
 class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
@@ -55,7 +61,7 @@ class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_T
   std::vector<std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
 
   // names of each lookup table used
-  std::vector<std::string>  mv_LUT_names;
+  std::vector<std::string> mv_LUT_names;
 
   // describe function behaviour at the endpoints
   std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> mv_special_points;
@@ -91,5 +97,5 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override;
 
   void print_details(std::ostream &out) override;
-  // Add a way to print details about each subinterval
+  // TODO Add a way to print details about each subinterval
 };
