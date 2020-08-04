@@ -139,20 +139,33 @@ public:
       itImplTimer.compute_timing_stats();
   }
 
-  void print_statistics_json(std::ostream&);
   void sort_timings(std::string type = "mean");
+  void print_statistics_json(std::ostream&);
   void print_details(std::ostream&);
   void print_csv_header(std::ostream&);
   void print_details_csv(std::ostream&);
   void print_summary(std::ostream&);
-  std::vector<double> fastest_times();
-  std::vector<double> slowest_times();
+
+  std::vector<double> fastest_times()
+  {
+    std::vector<double> minTimes;
+    for (auto timer : m_implTimers) {
+      minTimes.push_back(timer.minTime);
+    }
+    return minTimes;
+  }
+
+  std::vector<double> slowest_times()
+  {
+    std::vector<double> maxTimes;
+    for (auto timer : m_implTimers) {
+      maxTimes.push_back(timer.maxTime);
+    }
+    return maxTimes;
+  }
 };
 
-/*
-  Implementation of ImplementationComparator.
-*/
-
+/* Constructor's implementation */
 template <typename IN_TYPE, typename OUT_TYPE>
 inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
     ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals, unsigned int seed, RngInterface<IN_TYPE> *inRng) :
@@ -198,6 +211,27 @@ inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
   mp_randomEvaluations = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[m_nEvals]);
 }
 
+/* sort the vector of timings based on the min, max, or mean times */
+template <typename IN_TYPE, typename OUT_TYPE>
+inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::sort_timings(std::string type)
+{
+  // default sort by mean time
+  if (!type.compare("mean")) {
+    sort( m_implTimers.begin(), m_implTimers.end(),
+	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
+	       { return (a.meanTime < b.meanTime); } );
+  } else if (!type.compare("min")) {   // or sort by minimum (ie. best cases)
+    sort( m_implTimers.begin(), m_implTimers.end(),
+	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
+	       { return (a.minTime < b.minTime); } );
+  } else if (!type.compare("max")) {   // or sort by maximum time (ie. worst cases)
+    sort( m_implTimers.begin(), m_implTimers.end(),
+	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
+	       { return (a.maxTime < b.maxTime); } );
+  }
+}
+
+/* Implementation of functions that print to an ostream */
 template <typename IN_TYPE, typename OUT_TYPE>
 inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_statistics_json(std::ostream &out)
 {
@@ -216,25 +250,6 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_statistics_json(st
     jsonStats[(itImplTimer.impl)->name()]["raw"]  = itImplTimer.evaluationTimes;
   }
   out << jsonStats.dump(2) << std::endl;
-}
-
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::sort_timings(std::string type)
-{
-  // default sort by mean time
-  if (!type.compare("mean")) {
-    sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
-	       { return (a.meanTime < b.meanTime); } );
-  } else if (!type.compare("min")) {   // or sort by minimum (ie. best cases)
-    sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
-	       { return (a.minTime < b.minTime); } );
-  } else if (!type.compare("max")) {   // or sort by maximum time (ie. worst cases)
-    sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
-	       { return (a.maxTime < b.maxTime); } );
-  }
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
@@ -313,26 +328,6 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_summary(std::ostre
     out << "| Timings:          "; itImplTimer.print_timing_stats(out);
   }
   out << "----------------------------------------------------------------------------\n";
-}
-
-template <typename IN_TYPE, typename OUT_TYPE>
-inline std::vector<double> ImplementationComparator<IN_TYPE,OUT_TYPE>::fastest_times()
-{
-  std::vector<double> minTimes;
-  for (auto timer : m_implTimers) {
-    minTimes.push_back(timer.minTime);
-  }
-  return minTimes;
-}
-
-template <typename IN_TYPE, typename OUT_TYPE>
-inline std::vector<double> ImplementationComparator<IN_TYPE,OUT_TYPE>::slowest_times()
-{
-  std::vector<double> maxTimes;
-  for (auto timer : m_implTimers) {
-    maxTimes.push_back(timer.maxTime);
-  }
-  return maxTimes;
 }
 
 #endif  // LUTDE_HPP

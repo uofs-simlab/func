@@ -60,6 +60,7 @@ public:
   ~DirectEvaluation(){};
 };
 
+/* Implementations of functions that print to the console */
 template <typename IN_TYPE, typename OUT_TYPE>
 inline void DirectEvaluation<IN_TYPE,OUT_TYPE>::print_details(std::ostream& out)
 {
