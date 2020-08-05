@@ -15,9 +15,12 @@
 template <typename IN_TYPE, typename OUT_TYPE>
 class NonUniformLinearInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE>
 {
-  REGISTER_ULUT(NonUniformLinearInterpolationTable);
+  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+  INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1,8>[]> m_table;
+  REGISTER_LUT(NonUniformLinearInterpolationTable);
+
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
 public:
   NonUniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       UniformLookupTableParameters<IN_TYPE> par);

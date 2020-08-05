@@ -1,6 +1,10 @@
 /*
-  Intermediate abstract class for LUTs with grid points spaced such that
-  error is equally distributed throughout the interval [a,b]
+  An extension of the abstract class UniformLookupTable. Tables that
+  inherit from this class will be equiped with a transfer function which
+  will allow for nonuniform grid spacing.
+  Ideally, the transfer function is constructed such that table error
+  is equidistributed throughout the interval [a,b]
+  Currently not an especially useful intermediate class.
 */
 #pragma once
 #include "FunctionContainer.hpp"

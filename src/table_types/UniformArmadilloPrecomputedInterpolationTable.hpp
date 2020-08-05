@@ -24,12 +24,12 @@
 template <typename IN_TYPE, typename OUT_TYPE, unsigned int N>
 class UniformArmadilloPrecomputedInterpolationTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
-  INHERIT_EVALUATION_IMPL();
-  INHERIT_UNIFORM_LUT();
-  // corresponding REGISTER_LUT_IMPL macros at the bottom of the class
+  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+  INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
+
   REGISTER_LUT(UniformArmadilloPrecomputedInterpolationTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,N+1,8*sizeof(OUT_TYPE)>[]> m_table;
+  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,N+1>[]> m_table;
 
 public:
   UniformArmadilloPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
@@ -53,7 +53,7 @@ public:
     arma::lu(L,U,P,Van);
 
     /* Allocate and set table */
-    m_table.reset(new polynomial<OUT_TYPE,N+1,8*sizeof(OUT_TYPE)>[m_numTableEntries]);
+    m_table.reset(new polynomial<OUT_TYPE,N+1>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
       const IN_TYPE x = m_minArg + ii*m_stepSize;
       // grid points
@@ -77,7 +77,7 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // nondimensionalized x position, scaled by step size
-    IN_TYPE dx = m_stepSize_inv*(x-m_minArg);
+    OUT_TYPE dx = (OUT_TYPE) m_stepSize_inv*(x-m_minArg);
     // index of previous table entry
     unsigned x0  = (unsigned) dx;
     // value of table entries around x position

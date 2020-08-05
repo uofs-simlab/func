@@ -57,6 +57,8 @@ public:
 
 template <typename IN_TYPE, typename OUT_TYPE>
 class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
+  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+
   // collection of FunC lookup tables used to sample from
   std::vector<std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
 

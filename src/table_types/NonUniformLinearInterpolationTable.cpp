@@ -1,14 +1,13 @@
 /* Implementation of a Uniform Lookup table with linear interpolation */
 #include "NonUniformLinearInterpolationTable.hpp"
 
-#define IMPL_NAME NonUniformLinearInterpolationTable
-REGISTER_ULUT_IMPL(IMPL_NAME);
+REGISTER_LUT_IMPL(NonUniformLinearInterpolationTable);
 
 NonUniformLinearInterpolationTable::NonUniformLinearInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
   NonUniformLookupTable(func_container, par)
 {
   /* Base class variables */
-  m_name = STR(IMPL_NAME);
+  m_name = STR(NonUniformLinearInterpolationTable);
   m_order = 2;
   m_numTableEntries = m_numIntervals;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
