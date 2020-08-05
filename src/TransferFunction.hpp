@@ -20,11 +20,16 @@
 #include <functional> // std::function
 #include <utility> // std::pair
 
+#define INHERIT_TRANSFER_FUNCTION(IN_TYPE) \
+  using TransferFunction<IN_TYPE>::m_minArg; \
+  using TransferFunction<IN_TYPE>::m_maxArg; \
+  using TransferFunction<IN_TYPE>::g; \
+  using TransferFunction<IN_TYPE>::g_inv
+
 template <typename IN_TYPE>
 class TransferFunction
 {
   protected:
-    /* --- Member variables --- */
     IN_TYPE m_minArg, m_maxArg;
 
   public:

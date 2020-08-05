@@ -26,8 +26,8 @@
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class DirectEvaluation final : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
-{  
-private:
+{
+  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   #ifdef FUNC_RECORD
     std::unique_ptr<ArgumentRecord> mp_recorder;
   #endif
@@ -39,7 +39,7 @@ public:
       IN_TYPE min = 0, IN_TYPE max = 1, unsigned int histSize = 10) :
     EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "DirectEvaluation")
   {
-    this->m_minArg = min, this->m_maxArg = max, this->m_dataSize = 0;
+    m_minArg = min, m_maxArg = max, m_dataSize = 0;
     #ifdef FUNC_RECORD
       mp_recorder = std::unique_ptr<ArgumentRecord>(new ArgumentRecord(histSize, min, max));
     #endif
@@ -52,7 +52,7 @@ public:
     #ifdef FUNC_RECORD
       mp_recorder->record_arg(x);
     #endif
-    return this->mp_func(x);
+    return mp_func(x);
   }
 
   void print_details(std::ostream& out) override;
@@ -64,7 +64,7 @@ public:
 template <typename IN_TYPE, typename OUT_TYPE>
 inline void DirectEvaluation<IN_TYPE,OUT_TYPE>::print_details(std::ostream& out)
 {
-  out<< this->m_name << " " << this->m_minArg << " " << this->m_maxArg;
+  out<< m_name << " " << m_minArg << " " << m_maxArg;
   #ifdef FUNC_RECORD
     out << std::endl;
     mp_recorder->print_details(out);
@@ -77,9 +77,9 @@ inline void DirectEvaluation<IN_TYPE,OUT_TYPE>::print_details_json(std::ostream&
   using nlohmann::json;
   json jsonStats;
 
-  jsonStats["name"] = this->m_name;
-  jsonStats["minArg"] = this->m_minArg;
-  jsonStats["maxArg"] = this->m_maxArg;
+  jsonStats["name"] = m_name;
+  jsonStats["minArg"] = m_minArg;
+  jsonStats["maxArg"] = m_maxArg;
   #ifdef FUNC_RECORD
     mp_recorder->print_details_json(out);
   #endif

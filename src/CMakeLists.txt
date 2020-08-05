@@ -1,86 +1,69 @@
+# FunC libs
+add_library(func INTERFACE)
 
 # Implementations are separated out into their own library
-# Create lists for func_impls source files, libs to link with, and include
-# dir in case the user doesn't have Armadillo installed
-list(APPEND func_impls_src
-    ArgumentRecord.cpp
-    #table_types/UniformLookupTable.cpp
-    table_types/CompositeLookupTable.cpp
-    #table_types/UniformConstantTaylorTable.cpp
-    #table_types/UniformCubicHermiteTable.cpp
-    #table_types/UniformCubicPrecomputedInterpolationTable.cpp
-    #table_types/UniformCubicTaylorTable.cpp
-    #table_types/UniformLinearInterpolationTable.cpp
-    #table_types/UniformLinearPrecomputedInterpolationTable.cpp
-    #table_types/UniformLinearTaylorTable.cpp
-    #table_types/UniformQuadraticPrecomputedInterpolationTable.cpp
-    #table_types/UniformQuadraticTaylorTable.cpp
+add_library(func_impls INTERFACE)
+
+list(APPEND func_impls_headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/func_impls.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FunctionContainer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/EvaluationImplementation.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DirectEvaluation.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/TableIncludes.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformLookupTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformConstantTaylorTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformLinearTaylorTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformQuadraticTaylorTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformCubicTaylorTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformCubicHermiteTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformLinearInterpolationTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformLinearPrecomputedInterpolationTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformCubicPrecomputedInterpolationTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformQuadraticPrecomputedInterpolationTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/FailureProofTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/CompositeLookupTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TransferFunction.hpp
 )
+
 list(APPEND func_impls_include_dirs ./ table_types)
 
 if(USE_ARMADILLO AND ARMADILLO_FOUND)
   # link with Armadillo add all the table types that use Armadillo
   list(APPEND func_impls_include_dirs ${ARMADILLO_INCLUDE_DIR})
   list(APPEND func_impls_link_libs ${ARMADILLO_LIBRARIES})
-
-  list(APPEND func_impls_src
-    #table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
-    #table_types/UniformPadeTable.cpp
-    # currently every transfer function requires armadillo, and so every
-    # nonuniform LUT requires arma as well.
-    TransferFunctionSinh.cpp
-    #table_types/NonUniformLinearInterpolationTable.cpp
+  target_compile_definitions(func_impls INTERFACE -DUSE_ARMADILLO)
+  list(APPEND func_impls_headers 
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformArmadilloPrecomputedInterpolationTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/table_types/UniformPadeTable.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TransferFunctionSinh.hpp
   )
 endif()
 
-# add the func_impls lib with the lists we built above
-add_library(func_impls SHARED ${func_impls_src})
-target_link_libraries(func_impls PUBLIC ${func_impls_link_libs})
-target_include_directories(func_impls PUBLIC ${func_impls_include_dirs})
+target_link_libraries(func_impls INTERFACE ${func_impls_link_libs})
+target_include_directories(func_impls INTERFACE ${func_impls_include_dirs})
+target_sources(func_impls INTERFACE ${func_impls_headers})
 
-# FunC library
-add_library(func SHARED
-    ImplementationComparator.cpp
-    UniformLookupTableGenerator.cpp
-)
+#NonUniformLookupTable.hpp;\
+#NonUniformLinearInterpolationTable.hpp;\
 
-target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} Boost::boost func_impls)
+target_link_libraries(func INTERFACE ${QUADMATH_LIBRARIES} Boost::boost func_impls)
 if(USE_QUADMATH AND QUADMATH_FOUND)
-  target_compile_definitions(func PUBLIC -DUSE_QUADMATH)
+  target_compile_definitions(func INTERFACE -DUSE_QUADMATH)
 endif()
 
 if(FUNC_RECORD)
-  target_compile_definitions(func PUBLIC -DFUNC_RECORD)
-  target_compile_definitions(func_impls PUBLIC -DFUNC_RECORD)
+  target_compile_definitions(func INTERFACE -DFUNC_RECORD)
+  target_compile_definitions(func_impls INTERFACE -DFUNC_RECORD)
 endif()
 
-# TODO: Create a simplified public header? BTW every header is always being made
-set_target_properties(func PROPERTIES PUBLIC_HEADER "\
-func.hpp;func_impls.hpp;\
-FunctionContainer.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;\
-ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
-TransferFunction.hpp;TransferFunctionSinh.hpp;\
-UniformLookupTableGenerator.hpp;SpecialPoint.hpp;\
-table_types/UniformLookupTable.hpp;\
-table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;\
-")
-#table_types/TableIncludes.hpp;\
-#table_types/CompositeLookupTable.hpp;\
-#table_types/FailureProofTable.hpp;\
-#table_types/NonUniformLinearInterpolationTable.hpp;\
-#table_types/NonUniformLookupTable.hpp;\
-#table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;\
-#table_types/UniformConstantTaylorTable.hpp;\
-#table_types/UniformCubicHermiteTable.hpp;\
-#table_types/UniformCubicPrecomputedInterpolationTable.hpp;\
-#table_types/UniformCubicTaylorTable.hpp;\
-#table_types/UniformLinearInterpolationTable.hpp;\
-#table_types/UniformLinearPrecomputedInterpolationTable.hpp;\
-#table_types/UniformLinearTaylorTable.hpp;\
-#table_types/UniformPadeTable.hpp;\
-#table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;\
-#table_types/UniformQuadraticTaylorTable.hpp\
-
+target_sources(func INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/func.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/ImplementationComparator.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/RngInterface.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/StdRng.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/Timer.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/UniformLookupTableGenerator.hpp
+)
 
 install(TARGETS func func_impls
     LIBRARY DESTINATION lib
