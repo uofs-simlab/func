@@ -1,14 +1,13 @@
 /*
   Intermediate abstract class for LUTs with uniformly spaced grid points
-  TODO use "using" statements instead of putting "this->" everywhere
 */
 #pragma once
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
 #include "TransferFunction.hpp"
 
-#include <memory>
 #include <map>
+#include <memory>
 #include <vector>
 #include <functional>
 
@@ -21,16 +20,28 @@ struct UniformLookupTableParameters
   std::shared_ptr<TransferFunction<IN_TYPE>> transferFunction;
 };
 
-template <typename OUT_TYPE, unsigned int NUM_COEFS, std::size_t ALIGN=64>
-struct alignas(ALIGN) polynomial{
+static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
+
+template <typename OUT_TYPE, unsigned int NUM_COEFS>
+struct alignas(sizeof(OUT_TYPE)*alignments[NUM_COEFS]) polynomial{
   OUT_TYPE coefs[NUM_COEFS];
 };
+
+/* Use to inherit UniformLookupTable's member variables 
+   without having to put "this->" everywhere. */
+#define INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE) \
+  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_grid; \
+  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_numIntervals; \
+  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_numTableEntries; \
+  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_stepSize; \
+  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_stepSize_inv; \
+  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_tableMaxArg
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformLookupTable : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
 {
 protected:
-
+  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   std::unique_ptr<IN_TYPE[]> m_grid;  // pointers to grid and evaluation data
   // a LUT array needs to be provided by each implementation
 
@@ -49,7 +60,7 @@ public:
     EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "uniform_lookup_table")
   {
     /* Base class variables */
-    this->m_minArg = par.minArg; this->m_maxArg = par.maxArg;
+    m_minArg = par.minArg; m_maxArg = par.maxArg;
 
     /*
        Uniform Lookup Table variables
@@ -57,15 +68,15 @@ public:
     */
     m_stepSize     = par.stepSize;
     m_stepSize_inv = 1.0/m_stepSize;
-    m_numIntervals = (unsigned) ceil(m_stepSize_inv*(this->m_maxArg-this->m_minArg))+1;
+    m_numIntervals = (unsigned) ceil(m_stepSize_inv*(m_maxArg-m_minArg))+1;
     /*
       If the step size does not exactly divide the arg domain, the max
       arg of the table is set to the nearest value above such that it
       does.
      */
-    m_tableMaxArg = this->m_maxArg;
-    if ( m_tableMaxArg < this->m_minArg+this->m_stepSize*(m_numIntervals-1) )
-      m_tableMaxArg = this->m_minArg+m_stepSize*(m_numIntervals-1);
+    m_tableMaxArg = m_maxArg;
+    if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
+      m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
     m_grid.reset(new IN_TYPE[m_numIntervals]);
   }
 
@@ -78,7 +89,7 @@ public:
 
   void print_details(std::ostream &out)
   {
-    out << this->m_name << " " << this->m_minArg << " " << this->m_maxArg << " "
+    out << m_name << " " << m_minArg << " " << m_maxArg << " "
         << m_stepSize << " " << m_numIntervals << " ";
   }
 
@@ -190,22 +201,35 @@ public:
 /*
    Macros for class registration:
    - REGISTER_LUT goes inside class definition
+   - REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS goes underneath the class definition.
+   Several different versions of this macro exist for registering templated classes
    - other... is for template parameters unrelated to the tables IN_TYPE and OUT_TYPE
-   template parameters you'd like to use for the registry
 */
 #define REGISTER_LUT(classname) \
 private: \
-  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar;
+  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar
 #define STR_EXPAND(x...) #x
 #define STR(x...) STR_EXPAND(x)
-// have to specialize every template parameter here
-#define REGISTER_LUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
-  const UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,other>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE,other>::registrar(STR(classname<other>));
 
-// macro used in each class to quickly register 4 different template instantiations
-#define register_double_and_float_types(classname,other...)   \
-  template<> REGISTER_LUT_IMPL(classname,double,double,other) \
-  template<> REGISTER_LUT_IMPL(classname,float,double,other)  \
-  template<> REGISTER_LUT_IMPL(classname,double,float,other)  \
-  template<> REGISTER_LUT_IMPL(classname,float,float,other)
+#define REGISTER_LUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
+  template<> const \
+  UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE>,IN_TYPE,OUT_TYPE> \
+    classname<IN_TYPE,OUT_TYPE>::registrar(STR(classname))
+
+#define REGISTER_TEMPLATED_LUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
+  template<> const \
+    UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,other>,IN_TYPE,OUT_TYPE> \
+    classname<IN_TYPE,OUT_TYPE,other>::registrar(STR(classname<other>))
+
+// macros used in each class to quickly register 4 different template instantiations
+#define REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(classname)\
+  REGISTER_LUT_IMPL(classname,double,double); \
+  REGISTER_LUT_IMPL(classname,float,double); \
+  REGISTER_LUT_IMPL(classname,double,float); \
+  REGISTER_LUT_IMPL(classname,float,float);
+
+#define REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(classname,other...) \
+  REGISTER_TEMPLATED_LUT_IMPL(classname,double,double,other); \
+  REGISTER_TEMPLATED_LUT_IMPL(classname,float,double,other);  \
+  REGISTER_TEMPLATED_LUT_IMPL(classname,double,float,other);  \
+  REGISTER_TEMPLATED_LUT_IMPL(classname,float,float,other)

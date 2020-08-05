@@ -13,6 +13,18 @@
 #include <iostream>
 #include <functional>
 
+/* macro to get the EvaluationImplementation's member variables
+   without having to sprinkle "this->" throughout our code.
+   Remember to at least make these "using" statments protected */
+#define INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE) \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::mp_func; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_order; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_name; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_dataSize; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_minArg; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_maxArg
+
+
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class EvaluationImplementation
 {
