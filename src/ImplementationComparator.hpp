@@ -258,7 +258,16 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_details(std::ostre
   /*
      Print details of all timings
   */
+  // temporary vars to hopefully get the template values
+  IN_TYPE temp_in_type;
+  OUT_TYPE temp_out_type;
+
   out << "----------------------------------------------------------------------------\n";
+  out << "Table domain and range: "
+      << typeid(temp_in_type).name()
+      << " -> "
+      << typeid(temp_out_type).name()
+      << std::endl;
   out << "Number of trials performed: "
 	    << m_implTimers[0].evaluationTimes.size()
 	    << "\n";

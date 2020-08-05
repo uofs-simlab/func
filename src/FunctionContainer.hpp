@@ -33,7 +33,7 @@
 /* Used by each table type to check if the required function
  * type has been provided.
  * TODO decide whether or not to make this null op for -DNDEBUG */
-#define __IS_NULL(VAR) \
+#define __IS_NULL(VAR...) \
   if(VAR == NULL)      \
     throw std::invalid_argument(#VAR " is NULL")
 
@@ -91,8 +91,8 @@ class FunctionContainer
   typename func_type<7>::type get_nth_func(func_type<7>){ return autodiff7_func; };
 
 public: 
-  // call as get_nth_func<N>() to get the member function that is differentiated N 
-  // times for each function call
+  // call as func_container->template get_nth_func<N>() to get the member
+  // function that is differentiated N times for each function call.
   template<unsigned int N>
   typename func_type<N>::type get_nth_func(){ return get_nth_func(func_type<N>()); }
 

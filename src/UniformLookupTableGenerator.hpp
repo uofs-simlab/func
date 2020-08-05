@@ -24,7 +24,12 @@
 using namespace boost::multiprecision;
 using errprecision = float128;
 #else
-using errprecision = long double;
+using errprecision = double;
+#endif
+
+// If Armadillo is used, add functionality for generating nonuniform lookup tables
+#ifdef USE_ARMADILLO
+  #include "TransferFunctionSinh.hpp"
 #endif
 
 
@@ -35,6 +40,7 @@ private:
   FunctionContainer<IN_TYPE,OUT_TYPE> *mp_func_container;
 
   std::shared_ptr<TransferFunction<IN_TYPE>> mp_transfer_function;
+
   IN_TYPE m_min;
   IN_TYPE m_max;
 
@@ -49,12 +55,12 @@ public:
   UniformLookupTableGenerator(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       IN_TYPE minArg, IN_TYPE maxArg,
       std::shared_ptr<TransferFunction<IN_TYPE>> transferFunction = nullptr) :
-    mp_func_container(func_container), m_min(minArg), m_max(maxArg) 
+    mp_func_container(func_container), m_min(minArg), m_max(maxArg), mp_transfer_function(transferFunction)
   {
-    if(transferFunction == nullptr)
+  #ifdef USE_ARMADILLO
+    if(mp_transfer_function == nullptr)
       mp_transfer_function.reset(new TransferFunctionSinh<IN_TYPE,OUT_TYPE>(mp_func_container, m_min, m_max));
-    else
-      mp_transfer_function = transferFunction;
+  #endif
   }
 
   ~UniformLookupTableGenerator(){}
@@ -90,7 +96,7 @@ public:
    Nested Functor used for computing error in a given lookup table
 */
 template <typename IN_TYPE, typename OUT_TYPE>
-inline struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::LookupTableErrorFunctor
+struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::LookupTableErrorFunctor
 {
   LookupTableErrorFunctor(UniformLookupTable<IN_TYPE,OUT_TYPE>* impl) : m_impl(impl) {}
   /* operator() always returns a negative value */
@@ -109,7 +115,7 @@ private:
 
 /* Nested Functor used for finding optimal stepsize that satisfies TOL */
 template <typename IN_TYPE, typename OUT_TYPE>
-inline struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
+struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
 {
   OptimalStepSizeFunctor(UniformLookupTableGenerator<IN_TYPE,OUT_TYPE> &parent, std::string tableKey, double tol) :
     m_parent(parent), m_tableKey(tableKey), m_tol(tol) {}
@@ -247,7 +253,7 @@ inline std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> UniformLookupTableG
      - even if not in asymptotic regime, this thing has some pretty
        robust convergence!
   */
-  const int  N_NEWTON_MAX_IT  = 2;     // max log-Newton-iterations
+  const int  N_NEWTON_MAX_IT  = 0;     // max log-Newton-iterations
   const double NEWTON_IT_RTOL = 1e-5;
   const double NEWTON_IT_ATOL = 1e-10;
 
