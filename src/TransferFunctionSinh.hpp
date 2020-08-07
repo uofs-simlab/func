@@ -13,138 +13,221 @@
   - TODO check the monotonicity of g_inv and that g_inv(1)=1. Especially need
   0 <= g_inv(x) <= 1 for every x in [0,1] if we want to avoid strange seg faults
   - TODO if g'=0 where we need 1/g' then swap out that method as well
-  - TODO need to be aware of the possibility of g' being so bad that it causes
-  table evaluations to be out of bounds resulting in a seg fault
-  - TODO If an implementation of g_inv is bad then swap it for something else.
-  if they're all bad, alter the original g.
   - TODO decide on pros/cons of certain options.
-  - TODO decide if helper functions should be in base class. Currently their
+  - TODO decide if helper functions should be in base class. Currently they're
   fairly general
  */
 #pragma once
-#include <cmath>
-#include <memory>
+#include <cmath> // sqrt
 #include <string>
-#include <iostream>
-#include <functional>
+#include <limits> // std::numeric_limits<T>::max
+#include <functional> // std::function
 #define ARMA_USE_CXX11
 #include <armadillo>
 #include "TransferFunction.hpp"
 #include "FunctionContainer.hpp"
 
 #define BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND
-#include <boost/math/quadrature/gauss_kronrod.hpp>
-#include <boost/math/differentiation/autodiff.hpp>
-#include <boost/math/tools/toms748_solve.hpp>
+#include <boost/math/quadrature/gauss_kronrod.hpp> // gauss_kronrod::integrate
+#include <boost/math/tools/toms748_solve.hpp> // toms748_solve
 
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
-class TransferFunctionSinh : public TransferFunction<IN_TYPE>
+template <typename IN_TYPE, unsigned int N>
+class HornersFunctor : public LightweightFunctor<IN_TYPE>
+{
+  __attribute__((aligned)) std::unique_ptr<IN_TYPE[]> m_coefs;
+
+public:
+  HornersFunctor(std::unique_ptr<IN_TYPE[]>& coefs) :
+    m_coefs(std::move(coefs)) {}
+
+  IN_TYPE operator()(IN_TYPE x) override
+  {
+      IN_TYPE sum = x*m_coefs[N-1];
+      for (int k=N-2; k>0; k--)
+        sum = x*(m_coefs[k] + sum);
+      return sum + m_coefs[0];
+  }
+};
+
+/* convenience function for wrapping lambdas */
+template <typename IN_TYPE, class F>
+class LambdaWrapper : public LightweightFunctor<IN_TYPE>
+{
+  F m_f;
+public:
+  LambdaWrapper(F f) : m_f(f) {}
+
+  IN_TYPE operator()(IN_TYPE x){ return m_f(x); }
+};
+
+
+static double tol = 1e-8;
+
+template <typename IN_TYPE>
+class TransferFunctionSinh final : public TransferFunction<IN_TYPE>
 {
   INHERIT_TRANSFER_FUNCTION(IN_TYPE);
 
   /* --- More member vars --- */
-  /* most of these functions will be lambdas that capture this because we
-   * want to pass these functions as args to other functions, and we can't
-   * make them static */
-  std::function<fvar<OUT_TYPE,1>(fvar<IN_TYPE,1>)> m_boost_func;
-  std::function<OUT_TYPE(IN_TYPE)> f_prime;
-  IN_TYPE m_scale_factor; // scaling factor for g
-  std::function<IN_TYPE(IN_TYPE)> g_prime;
-
+  std::unique_ptr<LightweightFunctor<IN_TYPE>> m_g_inv_prime;
   std::string m_method_of_approx;
-
-  unsigned int m_num_coefs;
-  __attribute__((aligned)) std::unique_ptr<OUT_TYPE[]> m_polynomial_coefs; 
 
   /* --- Private Functions for approximating g^{-1} --- */
   /* Approximate g^{-1} using inverse polynomial interpolation */
-  std::function<double(double)> inverse_poly_interp(unsigned int num_coefs,
-      std::function<double(double)> g, std::function<double(double)> gp);
+  std::unique_ptr<IN_TYPE[]> inverse_poly_interp(unsigned int num_coefs,
+      std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp);
 
   /* Approximate g^{-1} using inverse polynomial interpolation
    * and specifying the slopes of inner points */
-  std::function<double(double)> inverse_poly_interior_slopes_interp(
-      unsigned int num_coefs, std::function<double(double)> g,
-      std::function<double(double)> gp);
+  std::unique_ptr<IN_TYPE[]> inverse_poly_interior_slopes_interp(
+      unsigned int num_coefs, std::function<IN_TYPE(IN_TYPE)> g,
+      std::function<IN_TYPE(IN_TYPE)> gp);
 
   /* Approximate g^{-1} using inverse polynomial interpolation
    * and specifying slopes at function endpoints */
-  std::function<double(double)> inverse_hermite_interp(unsigned int num_coefs,
-      std::function<double(double)> g, std::function<double(double)> gp);
+  std::unique_ptr<IN_TYPE[]> inverse_hermite_interp(unsigned int num_coefs,
+      std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp);
 
-  /* Approx. g^{-1} using newton's method. v slow but accurate */
-  std::function<double(double)> newtons_g_inv();
+  /* Use Newton's method to build g's inverse function,
+   * or use bisection if things go south */
+  std::function<IN_TYPE(IN_TYPE)> newtons_inv(
+      std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp);
 
   /* --- Private Helper functions --- */
   /* fill a vector with N linearly spaced points with respect to g in [0,1].
    * assumes g is monotone on [0,1], g(0)=0, and g(1)=1 */
-  arma::vec gspace(unsigned int N, std::function<double(double)> g,
-      std::function<double(double)> gp = NULL);
+  arma::vec gspace(unsigned int N, std::function<IN_TYPE(IN_TYPE)> g,
+      std::function<IN_TYPE(IN_TYPE)> gp = NULL);
 
 public:
   /* public constructor */
+  template<typename OUT_TYPE>
   TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE a, IN_TYPE b);
-  void print_details(std::ostream&) override;
-  void print_debugging_details(std::ostream&);
+
+  void print_details(std::ostream& out) override
+  {
+    out << "arcsinh transfer function approximating g_inv with ";
+    out << m_method_of_approx;
+  }
 };
 
-static double tol = 1e-8;
-
-template <typename IN_TYPE, typename OUT_TYPE>
-inline TransferFunctionSinh<IN_TYPE,OUT_TYPE>::TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE a, IN_TYPE b) :
+template <typename IN_TYPE>
+template <typename OUT_TYPE>
+inline TransferFunctionSinh<IN_TYPE>::TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE a, IN_TYPE b) :
   TransferFunction<IN_TYPE>(a,b)
 {
   using boost::math::quadrature::gauss_kronrod;
   using boost::math::differentiation::make_fvar;
 
-  // load the first autodifferentiable function
-  m_boost_func = fc->autodiff1_func;
-
   // build a function to return the first derivative of f
-  f_prime = [this](IN_TYPE x) -> IN_TYPE {
-    return m_boost_func(make_fvar<IN_TYPE,1>(x)).derivative(1);
+  std::function<OUT_TYPE(IN_TYPE)> f_prime = [&fc](IN_TYPE x) -> OUT_TYPE {
+    return (fc->autodiff1_func)(make_fvar<IN_TYPE,1>(x)).derivative(1);
   };
 
   // build our transfer function
   // we'll be adjusting temp_g: [a,b] -> [a,b]
-  std::function<IN_TYPE(IN_TYPE)> temp_g = [this](IN_TYPE x) -> IN_TYPE {
-    return 1/sqrt(1 + pow(f_prime(x),2));
+  std::function<IN_TYPE(IN_TYPE)> temp_g = [f_prime](IN_TYPE x) -> IN_TYPE {
+    return 1/((IN_TYPE) sqrt(1 + f_prime(x)*f_prime(x)));
   };
 
   // perform adaptive quadrature with a default tol of sqrt(epsilon)
-  m_scale_factor = gauss_kronrod<IN_TYPE, 15>::integrate(temp_g, this->m_minArg, this->m_maxArg);
+  IN_TYPE c = gauss_kronrod<IN_TYPE, 15>::integrate(temp_g, m_minArg, m_maxArg);
 
   // g:[0,1] -> [0,1] integrates temp_g over all of [a,b] and scales the answer
-  // such that g(1) = 1
-  this->g = [this](IN_TYPE x) -> IN_TYPE {
+  // such that g(1) = 1. We'll re-adjust this later
+  temp_g = [this,f_prime,c](IN_TYPE x) -> IN_TYPE {
     if(x == 0.0) return 0.0; // boost gets upset if we don't do this
     return gauss_kronrod<IN_TYPE, 15>::integrate(
-        [this](IN_TYPE t) -> IN_TYPE { return 1/sqrt(1 + pow(f_prime(t),2)) / m_scale_factor; },
-        this->m_minArg, this->m_minArg+x*(this->m_maxArg-this->m_minArg));
+        [f_prime,c](IN_TYPE t) -> IN_TYPE { return 1/((IN_TYPE)sqrt(1 + f_prime(t)*f_prime(t))) / c; },
+        m_minArg, m_minArg+x*(m_maxArg-m_minArg));
   };
 
   // build g prime
-  g_prime = [this](IN_TYPE x) -> IN_TYPE { 
-    return (this->m_maxArg-this->m_minArg) /
-      sqrt(1 + pow(f_prime(this->m_minArg + x*(this->m_maxArg-this->m_minArg)),2)) / m_scale_factor;
+  std::function<IN_TYPE(IN_TYPE)> g_prime = [this, f_prime, c](IN_TYPE x) -> IN_TYPE
+  {
+    IN_TYPE lerp = m_minArg + x*(m_maxArg-m_minArg);
+    return (m_maxArg-m_minArg) / ((IN_TYPE) sqrt(1 + f_prime(lerp)*f_prime(lerp))) / c;
   };
 
-  /* build g^{-1} by computing the inverse polynomial interpolant.
-   * This is the experimental part, and so it has been made modular.
-   * Want g^{-1} evals to be quick so we currently approx it with
-   * some type of inverse polynomial interpolation. */
-  this->g_inv = newtons_g_inv();
-  // g_inv = inverse_poly_interp(4, g, g_prime);
-  // g_inv = inverse_poly_interior_slopes_interp(8, g, g_prime);
-  // g_inv = inverse_hermite_interp(5, g, g_prime);
-  //
-  // TODO cycle through ways to approx. g_inv until we find the best fit
+  /* build g^{-1} with inverse polynomial interpolant.
+   * This is the experimental part, and so it has been made modular
+   * want a fast g_inv, but we also want an accurate g_inv in order to make
+   * good use of the nonuniform grid*/
+
+  // for
+  // get around the requirement for a constant with a const array {1,...,8}
+  const unsigned int num_coefs = 4;
+  //auto inv_coefs = inverse_poly_interp(num_coefs, temp_g, g_prime);
+  auto inv_coefs = inverse_poly_interior_slopes_interp(num_coefs, temp_g, g_prime);
+
+  auto inv_p_coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[num_coefs-1]);
+  for(unsigned int i=1; i < num_coefs + 1; i++)
+    inv_p_coefs[i-1] = i*inv_coefs[i];
+  
+  // build g_inv which will also make us lose access to inv_coefs
+  m_g_inv.reset(new HornersFunctor<IN_TYPE,num_coefs>(inv_coefs));
+
+  // compute g_inv_prime
+  m_g_inv_prime.reset(new HornersFunctor<IN_TYPE,num_coefs-1>(inv_p_coefs));
+  
+  /* check if this version of g_inv is any good */
+  //{
+  //  unsigned int N = 20;
+  //  if(abs(m_g_inv(0)) > tol || abs(m_g_inv(1) - 1) > tol){
+  //    return false;
+  //  }
+  //  // check g_inv at N linearly spaced points
+  //  for(unsigned int i=1; i<N; i++){
+  //    // check for monotonicity
+  //    if(m_g_inv((i-1)/(N-1)) > m_g_inv(i/(N-1)))
+  //      return false;
+
+  //    // estimate the error
+  //  }
+  //}
+
+  /* Now that we have a fast approx to g_inv, we'll make it more accurate by
+     setting our original g to g_inv_inv */
+
+  temp_g = [this](IN_TYPE z) -> IN_TYPE {
+    // FunC tables are often generated with points a bit past their right endpoint
+    if(z >= 1.0)
+      return z;
+
+    // approx g with newton's method on g_inv
+    using boost::math::tools::eps_tolerance;
+    using boost::math::tools::toms748_solve;
+
+    const unsigned int MAX_NEWTON_IT = 20; // might be a bit large
+    boost::uintmax_t const MAX_BISECTION = 54;
+
+    // Find what g maps to x
+    IN_TYPE x = z;
+    IN_TYPE x0;
+    unsigned int NEWTON_IT = 0;
+    // Use Newton's method if we can get away with it. o.w. resort to bisection
+    do{
+      NEWTON_IT += 1;
+      x0 = x;
+      if((*m_g_inv_prime)(x) == 0.0 || NEWTON_IT > MAX_NEWTON_IT){
+        // if g prime is undefined, do a hard switch to bisection
+        boost::uintmax_t MAX_IT = MAX_BISECTION;
+        x0 = x = toms748_solve(
+            [this, &z](IN_TYPE h) -> IN_TYPE { return (*m_g_inv)(h) - z; }, // shift g
+            (IN_TYPE)0.0, (IN_TYPE)1.0, -z, (IN_TYPE)1.0 - z, eps_tolerance<IN_TYPE>(), MAX_IT).first;
+      }else{
+        x = x-((*m_g_inv)(x)-z)/(*m_g_inv_prime)(x);
+      }
+    }while(abs(x0-x) > tol);
+
+    return x;
+  };
+  m_g.reset(new LambdaWrapper<IN_TYPE,decltype(temp_g)>(temp_g));
 }
 
-/* approximate g_inv with inverse polynomial interpolantion */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inverse_poly_interp(unsigned int num_coefs,
-    std::function<double(double)> g, std::function<double(double)> gp)
+template <typename IN_TYPE>
+inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE>::inverse_poly_interp(unsigned int num_coefs,
+    std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
 {
   using arma::span;
   // generate vandermonde system
@@ -171,26 +254,19 @@ inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inv
       " solve for the inverse");
 
   // move from arma's vector to a std::unique_ptr<double[]>
-  m_num_coefs = y.n_rows;
-  m_polynomial_coefs.reset(new OUT_TYPE[m_num_coefs]);
-  for(unsigned int i = 0; i < m_num_coefs; i++)
-    m_polynomial_coefs[i] = y[i];
+  auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[num_coefs]);
+  for(unsigned int i = 0; i < num_coefs; i++)
+    coefs[i] = y[i];
 
-  // evaluate the resulting polynomial using horners
-  return [this](double z) -> double {
-      double sum = z*m_polynomial_coefs[m_num_coefs-1];
-      for (int k=m_num_coefs-2; k>0; k--)
-        sum = z*(m_polynomial_coefs[k] + sum);
-      return sum;
-  };
+  return coefs;
 }
 
 /* approximate g_inv with inverse polynomial interpolation and by specifying
  * slopes at interior points as 1/g_prime */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inverse_poly_interior_slopes_interp(
+template <typename IN_TYPE>
+inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE>::inverse_poly_interior_slopes_interp(
     unsigned int num_coefs,
-    std::function<double(double)> g, std::function<double(double)> gp)
+    std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
 {
   using arma::span;
   // generate vandermonde system
@@ -229,34 +305,26 @@ inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inv
       " solve for the inverse");
 
   // move from arma's vector to a std::unique_ptr<double[]>
-  m_num_coefs = y.n_rows;
-  m_polynomial_coefs.reset(new OUT_TYPE[m_num_coefs]);
-  for(unsigned int i = 0; i < m_num_coefs; i++)
-    m_polynomial_coefs[i] = y[i];
+  auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[num_coefs]);
+  for(unsigned int i = 0; i < num_coefs; i++)
+    coefs[i] = y[i];
 
-  // evaluate the resulting polynomial using horners
-  return [this](double z) -> double {
-      double sum = z*m_polynomial_coefs[m_num_coefs-1];
-      for (int k=m_num_coefs-2; k>0; k--)
-        sum = z*(m_polynomial_coefs[k] + sum);
-      return sum;
-  };
+  return coefs;
 }
 
 /* approximate g_inv with inverse hermite interpolation. ie specify
  * slopes at the endpoints as 1/g_prime */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inverse_hermite_interp(
+template <typename IN_TYPE>
+inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE>::inverse_hermite_interp(
     unsigned int num_coefs,
-    std::function<double(double)> g, std::function<double(double)> gp)
+    std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
 {
   using arma::span;
   // generate vandermonde system
   // assert the user is asking for at least 4 coefs
   if(num_coefs < 4)
-      throw std::invalid_argument("num_coefs is too small"
-      " or it is odd but inverse_poly_interior_slopes_coefs() can only"
-      " produce an even number of polynomial coefficients");
+      throw std::invalid_argument("num_coefs is too small."
+      " inverse_hermite_interp() can only produce 4 or more coefs");
   m_method_of_approx = std::string("inverse polynomial interpolation specifying "
       "slopes of endpoints as 1/g'");
   unsigned int M = num_coefs-2; // number of unique points being sampled from
@@ -288,50 +356,40 @@ inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::inv
       " solve for the inverse");
 
   // move from arma's vector to a std::unique_ptr<double[]>
-  m_num_coefs = y.n_rows;
-  m_polynomial_coefs.reset(new OUT_TYPE[m_num_coefs]);
-  for(unsigned int i = 0; i < m_num_coefs; i++)
-    m_polynomial_coefs[i] = y[i];
-
-  // evaluate the resulting polynomial using horners
-  return [this](double z) -> double {
-      double sum = z*m_polynomial_coefs[m_num_coefs-1];
-      for (int k=m_num_coefs-2; k>0; k--)
-        sum = z*(m_polynomial_coefs[k] + sum);
-      return sum;
-  };
+  auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[num_coefs]);
+  for(unsigned int i = 0; i < num_coefs; i++)
+    coefs[i] = y[i];
+  
+  return coefs;
 }
 
-/* verrry expensive version of g^{-1} that is just Newton's method 
- * or bisection if things go south */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::newtons_g_inv()
+template <typename IN_TYPE>
+inline std::function<IN_TYPE(IN_TYPE)> TransferFunctionSinh<IN_TYPE>::newtons_inv(
+    std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
 {
-  m_method_of_approx = std::string("inverse polynomial interpolation");
-  return [this](double z) -> double {
+  return [this, &g, &gp](IN_TYPE z) -> IN_TYPE {
     using boost::math::tools::eps_tolerance;
     using boost::math::tools::toms748_solve;
 
-    const unsigned int MAX_NEWTON_IT = 20;
+    const unsigned int MAX_NEWTON_IT = 20; // might be a bit large
     boost::uintmax_t const MAX_BISECTION = 54;
 
     // Find what g maps to x
-    double x = z;
-    double x0;
+    IN_TYPE x = z;
+    IN_TYPE x0;
     unsigned int NEWTON_IT = 0;
     // Use Newton's method if we can get away with it. o.w. resort to bisection
     do{
       NEWTON_IT += 1;
       x0 = x;
-      //if(g_prime == NULL || g_prime(x) == 0.0 || x < 0.0 || x > 1.0 || NEWTON_IT > MAX_NEWTON_IT){
-      if(g_prime == NULL || g_prime(x) == 0.0 || NEWTON_IT > MAX_NEWTON_IT){
+      if(gp == NULL || gp(x) == 0.0 || NEWTON_IT > MAX_NEWTON_IT){
         // if g prime is undefined, do a hard switch to bisection
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
-            [this, &z](double h) -> double { return this->g(h) - z; }, // shift g
-            0.0, 1.0, -z, 1.0 - z, eps_tolerance<double>(), MAX_IT).first;
+            [this, &g, &z](IN_TYPE h) -> IN_TYPE { return g(h) - z; }, // shift g
+            (IN_TYPE)0.0, (IN_TYPE)1.0, -z, (IN_TYPE)1.0 - z, eps_tolerance<IN_TYPE>(), MAX_IT).first;
       }else{
-        x = x-(this->g(x)-z)/g_prime(x);
+        x = x-(g(x)-z)/gp(x);
       }
     }while(abs(x0-x) > tol);
 
@@ -341,9 +399,9 @@ inline std::function<double(double)> TransferFunctionSinh<IN_TYPE,OUT_TYPE>::new
 
 /* fill a vector with N linearly spaced points with respect to g in [0,1].
  * assumes g is monotone on [0,1], g(0)=0, and g(1)=1 */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline arma::vec TransferFunctionSinh<IN_TYPE,OUT_TYPE>::gspace(unsigned int N,
-    std::function<double(double)> g, std::function<double(double)> gp)
+template <typename IN_TYPE>
+inline arma::vec TransferFunctionSinh<IN_TYPE>::gspace(unsigned int N,
+    std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
 {
   using boost::math::tools::eps_tolerance;
   using boost::math::tools::toms748_solve;
@@ -355,8 +413,8 @@ inline arma::vec TransferFunctionSinh<IN_TYPE,OUT_TYPE>::gspace(unsigned int N,
 
   for(int i=1; i<N-1; i++){
     // Find what g maps to linear_pts[i]
-    double x0;
-    double x = linear_pts[i];
+    IN_TYPE x0;
+    IN_TYPE x = linear_pts[i];
     unsigned int NEWTON_IT = 0;
     // Use Newton's method if we can get away with it. o.w. resort to bisection
     do{
@@ -366,8 +424,8 @@ inline arma::vec TransferFunctionSinh<IN_TYPE,OUT_TYPE>::gspace(unsigned int N,
         // if g prime is undefined, do a hard switch to bisection
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
-            [&g, &linear_pts, &i](double z) -> double { return g(z) - linear_pts[i]; }, // shift g
-            0.0, 1.0, -linear_pts[i], 1.0-linear_pts[i], eps_tolerance<double>(), MAX_IT).first;
+            [&g, &linear_pts, &i](IN_TYPE z) -> IN_TYPE { return g(z) - linear_pts[i]; }, // shift g
+            (IN_TYPE)0.0, (IN_TYPE)1.0, (IN_TYPE)(-linear_pts[i]), (IN_TYPE)(1.0-linear_pts[i]), eps_tolerance<IN_TYPE>(), MAX_IT).first;
       }else{
         x = x-(g(x)-linear_pts[i])/gp(x);
       }
@@ -376,20 +434,4 @@ inline arma::vec TransferFunctionSinh<IN_TYPE,OUT_TYPE>::gspace(unsigned int N,
   }
   v[N-1] = 1.0;
   return v;
-}
-
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void TransferFunctionSinh<IN_TYPE,OUT_TYPE>::print_details(std::ostream& out)
-{
-  out << "arcsinh transfer function approximating g_inv with ";
-  out << m_method_of_approx;
-}
-
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void TransferFunctionSinh<IN_TYPE,OUT_TYPE>::print_debugging_details(std::ostream& out)
-{
-  print_details(out);
-  out << std::endl;
-  for(int i=0; i<m_num_coefs; i++)
-    out << m_polynomial_coefs[i] << std::endl;
 }
