@@ -11,17 +11,22 @@
 #include "UniformLookupTable.hpp"
 #include <exception>
 
+#define INHERIT_NONUNIFORM_LUT(IN_TYPE,OUT_TYPE) \
+  using NonUniformLookupTable<IN_TYPE,OUT_TYPE>::m_transferFunction
+
 template <typename IN_TYPE, typename OUT_TYPE>
 class NonUniformLookupTable : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
 protected:
+  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+  INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
   std::shared_ptr<TransferFunction<IN_TYPE>> m_transferFunction;
 public:
   // set the transfer function
   NonUniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
-    UniformLookupTable(func_container, par), m_transferFunction(par.transferFunction)
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par), m_transferFunction(par.transferFunction)
   {
-    if(m_transferFunction == nullptr)
+    if(m_transferFunction == NULL)
       throw std::invalid_argument("NonUniformLookupTable needs a transfer function");
   }
   virtual ~NonUniformLookupTable(){};

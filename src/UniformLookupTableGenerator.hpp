@@ -59,7 +59,7 @@ public:
   {
   #ifdef USE_ARMADILLO
     if(mp_transfer_function == nullptr)
-      mp_transfer_function.reset(new TransferFunctionSinh<IN_TYPE,OUT_TYPE>(mp_func_container, m_min, m_max));
+      mp_transfer_function.reset(new TransferFunctionSinh<IN_TYPE>(mp_func_container, m_min, m_max));
   #endif
   }
 
