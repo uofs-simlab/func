@@ -50,8 +50,8 @@ public:
     //  std::cerr << "The hash thinks " << x << " is in [" << m_grid[x_idx] << "," << m_grid[x_idx+1] << ")" << std::endl;
 
     // find where x is in that subinterval
-    double h     = m_grid[x_idx+1] - m_grid[x_idx];
-    double dx    = (x - m_grid[x_idx])/h;
+    IN_TYPE h   = m_grid[x_idx+1] - m_grid[x_idx];
+    OUT_TYPE dx = (OUT_TYPE) (x - m_grid[x_idx])/h;
 
     // value of table entries around x position
     double   y1  = m_table[x_idx].coefs[0];
