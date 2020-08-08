@@ -3,8 +3,8 @@
   table's range then the original function is used and the arg is recorded.
 
   Usage example:
-    FailureProofTable failsafe(unique_ptr<UniformLookupTable>(
-      new UniformCubicPrecomputedInterpolationTable(&function,0,10,0.0001))
+    FailureProofTable<double> failsafe(unique_ptr<UniformLookupTable<double>>(
+      new UniformCubicPrecomputedInterpolationTable<double>(&function,0,10,0.0001))
     );
     double val = failsafe(0.87354);
 
@@ -49,7 +49,7 @@
   #define PRINT_ARGS(out)
 #endif
 
-template <typename IN_TYPE, typename OUT_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class FailureProofTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
   #ifndef NDEBUG
     std::vector<IN_TYPE> m_args;
@@ -58,7 +58,7 @@ class FailureProofTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE
 
   std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> mp_LUT;
 public:
-  /* Steal the given LUTs identity */
+  /* Steal the given LUTs identity TODO remove std::move() ?*/
   FailureProofTable(std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> LUT) :
     mp_LUT(std::move(LUT)), EvaluationImplementation<IN_TYPE,OUT_TYPE>(mp_LUT->function(), "FailureProof" + mp_LUT->name())
   {
@@ -75,14 +75,15 @@ public:
     // check if x is in the range of the table
     if(x < this->m_minArg || x > this->m_maxArg){
       RECORD_ARG(x);
-      return mp_func(x);
+      return this->mp_func(x);
     }
-    return (*mp_LUT)(x);
+    return (*(this->mp_LUT))(x);
   }
 
   void print_details(std::ostream &out) override 
   {
-    EvaluationImplementation<IN_TYPE,OUT_TYPE>::print_details();
+    out << this->m_name << " " << this->m_minArg << " " << this->m_maxArg << " "
+        << mp_LUT->step_size() << " " << mp_LUT->num_intervals() << " ";
   }
   
   /* print out any args that were recorded as out of bounds */
