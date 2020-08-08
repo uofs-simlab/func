@@ -60,7 +60,6 @@ public:
   IN_TYPE operator()(IN_TYPE x){ return m_f(x); }
 };
 
-
 static double tol = 1e-8;
 
 template <typename IN_TYPE>
@@ -87,6 +86,11 @@ class TransferFunctionSinh final : public TransferFunction<IN_TYPE>
    * and specifying slopes at function endpoints */
   std::unique_ptr<IN_TYPE[]> inverse_hermite_interp(unsigned int num_coefs,
       std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp);
+
+  /* approximate g_inv by projecting g onto the corresponding polynomial space. */
+  std::unique_ptr<IN_TYPE[]> inverse_polynomial_projection(
+    unsigned int num_coefs,
+    std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp);
 
   /* Use Newton's method to build g's inverse function,
    * or use bisection if things go south */
@@ -148,47 +152,58 @@ inline TransferFunctionSinh<IN_TYPE>::TransferFunctionSinh(FunctionContainer<IN_
     IN_TYPE lerp = m_minArg + x*(m_maxArg-m_minArg);
     return (m_maxArg-m_minArg) / ((IN_TYPE) sqrt(1 + f_prime(lerp)*f_prime(lerp))) / c;
   };
-
-  /* build g^{-1} with inverse polynomial interpolant.
-   * This is the experimental part, and so it has been made modular
-   * want a fast g_inv, but we also want an accurate g_inv in order to make
-   * good use of the nonuniform grid*/
-
-  // for
-  // get around the requirement for a constant with a const array {1,...,8}
-  const unsigned int num_coefs = 4;
-  //auto inv_coefs = inverse_poly_interp(num_coefs, temp_g, g_prime);
-  auto inv_coefs = inverse_poly_interior_slopes_interp(num_coefs, temp_g, g_prime);
-
-  auto inv_p_coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[num_coefs-1]);
-  for(unsigned int i=1; i < num_coefs + 1; i++)
-    inv_p_coefs[i-1] = i*inv_coefs[i];
   
-  // build g_inv which will also make us lose access to inv_coefs
-  m_g_inv.reset(new HornersFunctor<IN_TYPE,num_coefs>(inv_coefs));
+  // use slow Newton's method as a slow but accurate initial approximation of g_inv
+  std::function<IN_TYPE(IN_TYPE)> slow_g_inv = newtons_inv(temp_g, g_prime);
 
-  // compute g_inv_prime
-  m_g_inv_prime.reset(new HornersFunctor<IN_TYPE,num_coefs-1>(inv_p_coefs));
-  
-  /* check if this version of g_inv is any good */
-  //{
-  //  unsigned int N = 20;
-  //  if(abs(m_g_inv(0)) > tol || abs(m_g_inv(1) - 1) > tol){
-  //    return false;
-  //  }
-  //  // check g_inv at N linearly spaced points
-  //  for(unsigned int i=1; i<N; i++){
-  //    // check for monotonicity
-  //    if(m_g_inv((i-1)/(N-1)) > m_g_inv(i/(N-1)))
-  //      return false;
+  /* We'll build g_inv by using some form of inverse polynomial interpolant.
+     This is the experimental part, and so it has been made modular
+     want a fast g_inv, but we also want an accurate g_inv in order to make
+     good use of the nonuniform grid */
+  constexpr unsigned int num_coefs = 2;
+  for(unsigned int i=0; i < 1; i++){
+    //auto inv_coefs = inverse_poly_interp(num_coefs[i], temp_g, g_prime);
+    //std::unique_ptr<IN_TYPE[]> inv_coefs = inverse_poly_interior_slopes_interp(num_coefs, temp_g, g_prime);
+    std::unique_ptr<IN_TYPE[]> inv_coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[]{0, 1});
 
-  //    // estimate the error
-  //  }
-  //}
+    // compute this approximation's derivative while we still have access to inv_coefs
+    std::unique_ptr<IN_TYPE[]> inv_p_coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[num_coefs-1]);
+    for(unsigned int i=1; i < num_coefs + 1; i++)
+      inv_p_coefs[i-1] = i*inv_coefs[i];
+    
+    // build g_inv. Not particularly efficient to create & delete all these
+    // functors, but we currently lose access to inv_coefs upon creation
+    mp_g_inv.reset(new HornersFunctor<IN_TYPE,num_coefs>(inv_coefs));
 
-  /* Now that we have a fast approx to g_inv, we'll make it more accurate by
+    // compute g_inv_prime
+    m_g_inv_prime.reset(new HornersFunctor<IN_TYPE,num_coefs-1>(inv_p_coefs));
+
+    // check if this version of g_inv is any good
+    //{
+    //  unsigned int N = 20;
+    //  long double error_est;
+    //  // base conditions
+    //  if(abs(mp_g_inv(0)) > tol || abs(mp_g_inv(1) - 1) > tol){
+    //    return std::numeric_limits<double>::max;
+    //  }
+    //  // check g_inv at N linearly spaced points
+    //  for(unsigned int i=1; i<=N; i++){
+    //    // check for monotonicity
+    //    if((*mp_g_inv)((i-1)/(IN_TYPE)N) > (*mp_g_inv)(i/(IN_TYPE)N))
+    //      return std::numeric_limits<double>::max;
+
+    //    // estimate the error
+    //    long double exact  = slow_g_inv(i/(IN_TYPE)N);
+    //    long double approx = (*mp_g_inv)(i/(IN_TYPE)N);
+    //    error_est += 2*(abs(exact - approx)/(exact+approx));
+    //  }
+    //  // return the average relative error
+    //  return error_est / N;
+    //}
+  }
+
+  /* Now that we have a fast approx to g_inv, we'll make it more "accurate" by
      setting our original g to g_inv_inv */
-
   temp_g = [this](IN_TYPE z) -> IN_TYPE {
     // FunC tables are often generated with points a bit past their right endpoint
     if(z >= 1.0)
@@ -213,16 +228,16 @@ inline TransferFunctionSinh<IN_TYPE>::TransferFunctionSinh(FunctionContainer<IN_
         // if g prime is undefined, do a hard switch to bisection
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
-            [this, &z](IN_TYPE h) -> IN_TYPE { return (*m_g_inv)(h) - z; }, // shift g
+            [this, &z](IN_TYPE h) -> IN_TYPE { return (*mp_g_inv)(h) - z; }, // shift g
             (IN_TYPE)0.0, (IN_TYPE)1.0, -z, (IN_TYPE)1.0 - z, eps_tolerance<IN_TYPE>(), MAX_IT).first;
       }else{
-        x = x-((*m_g_inv)(x)-z)/(*m_g_inv_prime)(x);
+        x = x-((*mp_g_inv)(x)-z)/(*m_g_inv_prime)(x);
       }
     }while(abs(x0-x) > tol);
 
     return x;
   };
-  m_g.reset(new LambdaWrapper<IN_TYPE,decltype(temp_g)>(temp_g));
+  mp_g.reset(new LambdaWrapper<IN_TYPE,decltype(temp_g)>(temp_g));
 }
 
 template <typename IN_TYPE>
@@ -309,6 +324,20 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE>::inverse_poly_in
   for(unsigned int i = 0; i < num_coefs; i++)
     coefs[i] = y[i];
 
+  return coefs;
+}
+
+template <typename IN_TYPE>
+inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE>::inverse_polynomial_projection(
+    unsigned int num_coefs,
+    std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
+{
+  // TODO
+  // move from arma's vector to a std::unique_ptr<double[]>
+  auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[num_coefs]);
+  for(unsigned int i = 0; i < num_coefs; i++)
+    coefs[i] = 1;
+  
   return coefs;
 }
 

@@ -24,8 +24,8 @@
 #define INHERIT_TRANSFER_FUNCTION(IN_TYPE) \
   using TransferFunction<IN_TYPE>::m_minArg; \
   using TransferFunction<IN_TYPE>::m_maxArg; \
-  using TransferFunction<IN_TYPE>::m_g; \
-  using TransferFunction<IN_TYPE>::m_g_inv
+  using TransferFunction<IN_TYPE>::mp_g; \
+  using TransferFunction<IN_TYPE>::mp_g_inv
 
 /* a lightweight functor used to speedup evaluations of g_inv 
    Unfortunate that we'll have to do so much pointer chasing
@@ -44,8 +44,8 @@ protected:
   IN_TYPE m_minArg, m_maxArg;
 
   // the main functionality of the class
-  std::unique_ptr<LightweightFunctor<IN_TYPE>> m_g;
-  std::unique_ptr<LightweightFunctor<IN_TYPE>> m_g_inv;
+  std::unique_ptr<LightweightFunctor<IN_TYPE>> mp_g;
+  std::unique_ptr<LightweightFunctor<IN_TYPE>> mp_g_inv;
 
 public:
   // build the function pair
@@ -58,6 +58,6 @@ public:
   std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_maxArg); }
 
   // getters used to avoid having to use pointer syntax
-  IN_TYPE g(IN_TYPE x){ return (*m_g)(x); }
-  IN_TYPE g_inv(IN_TYPE x){ return (*m_g_inv)(x); }
+  IN_TYPE g(IN_TYPE x){ return (*mp_g)(x); }
+  IN_TYPE g_inv(IN_TYPE x){ return (*mp_g_inv)(x); }
 };

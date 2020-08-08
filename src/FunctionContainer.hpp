@@ -3,7 +3,7 @@
 
   Notes:
   - needed for passing functions to tables. Tables using boost's 
-    automatic differentiation (such as Taylor, Hermite, and Pade) 
+    automatic differentiation (such as Taylor, Hermite, Pade, and every NonUniformLUT)
     take advantage of the fvar[1-9] functions.
   - easy to use if your mathematical function is easy to template
   - copy and paste the following example code into a new file and use

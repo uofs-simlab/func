@@ -28,9 +28,9 @@ using errprecision = double;
 #endif
 
 // If Armadillo is used, add functionality for generating nonuniform lookup tables
-#ifdef USE_ARMADILLO
+//#ifdef USE_ARMADILLO
   #include "TransferFunctionSinh.hpp"
-#endif
+//#endif
 
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
@@ -57,10 +57,10 @@ public:
       std::shared_ptr<TransferFunction<IN_TYPE>> transferFunction = nullptr) :
     mp_func_container(func_container), m_min(minArg), m_max(maxArg), mp_transfer_function(transferFunction)
   {
-  #ifdef USE_ARMADILLO
+  //#ifdef USE_ARMADILLO
     if(mp_transfer_function == nullptr)
       mp_transfer_function.reset(new TransferFunctionSinh<IN_TYPE>(mp_func_container, m_min, m_max));
-  #endif
+  //#endif
   }
 
   ~UniformLookupTableGenerator(){}
