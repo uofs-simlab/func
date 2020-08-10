@@ -56,13 +56,15 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // find the subinterval x lives in
-    unsigned x_idx = (unsigned) (m_transferFunction->g_inv(x)-m_minArg)*m_stepSize_inv;
+    OUT_TYPE dx = m_transferFunction->g_inv(x);
+    unsigned x_idx = (unsigned) dx;
+    dx -= x_idx;
     //if(x < m_grid[x_idx]-0.00000005 || m_grid[x_idx+1] < x)
     //  std::cerr << "The hash thinks " << x << " is in [" << m_grid[x_idx] << "," << m_grid[x_idx+1] << ")" << std::endl;
 
     // find where x is in that subinterval
-    OUT_TYPE h  = m_grid[x_idx+1] - m_grid[x_idx];
-    OUT_TYPE dx = (x - m_grid[x_idx])/h;
+    //OUT_TYPE h  = m_grid[x_idx+1] - m_grid[x_idx];
+    //OUT_TYPE dx = (x - m_grid[x_idx])/h;
 
     // cubic interpolation
     return m_table[x_idx].coefs[0]+dx*(m_table[x_idx].coefs[1]+dx*(m_table[x_idx].coefs[2]+dx*m_table[x_idx].coefs[3]));

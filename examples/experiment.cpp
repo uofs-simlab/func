@@ -45,6 +45,7 @@ int main(int argc, char* argv[])
   unsigned int seed   = std::stoi(argv[6]);
 
   FunctionContainer<double> func_container{SET_F(MyFunction,double)};
+  FunctionContainer<float> func_container_f{SET_F(MyFunction,float)};
 
   double stepSize;
 
@@ -57,22 +58,24 @@ int main(int argc, char* argv[])
 
   /* Fill in the implementations */
   std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
+  std::vector<unique_ptr<EvaluationImplementation<float>>> implsf;
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-    "UniformArmadilloPrecomputedInterpolationTable<4>",
-    "UniformArmadilloPrecomputedInterpolationTable<5>",
-    "UniformArmadilloPrecomputedInterpolationTable<6>",
-    "UniformArmadilloPrecomputedInterpolationTable<7>",
-    "UniformCubicHermiteTable",
+    //"UniformArmadilloPrecomputedInterpolationTable<4>",
+    //"UniformArmadilloPrecomputedInterpolationTable<5>",
+    //"UniformArmadilloPrecomputedInterpolationTable<6>",
+    //"UniformArmadilloPrecomputedInterpolationTable<7>",
+    //"UniformCubicHermiteTable",
     "UniformCubicPrecomputedInterpolationTable",
-    "UniformCubicTaylorTable",
+    //"UniformCubicTaylorTable",
     "UniformLinearInterpolationTable",
-    "UniformLinearPrecomputedInterpolationTable",
-    "UniformLinearTaylorTable",
+    //"UniformLinearPrecomputedInterpolationTable",
+    //"UniformLinearTaylorTable",
+    //"UniformQuadraticPrecomputedInterpolationTable",
+    //"UniformQuadraticTaylorTable",
     "NonUniformLinearInterpolationTable",
-    "UniformQuadraticPrecomputedInterpolationTable",
-    "UniformQuadraticTaylorTable"
+    "NonUniformCubicPrecomputedInterpolationTable"
   };
 
   std::vector<std::string> padeNames {
@@ -87,18 +90,22 @@ int main(int argc, char* argv[])
     "UniformPadeTable<4,2>",
     "UniformPadeTable<5,2>",
     "UniformPadeTable<3,3>",
-    "UniformPadeTable<4,3>",
+    "UniformPadeTable<4,3>"
   };
 
   UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
-
-  /* add implementations to vector */
-  // unique_ptr<EvaluationImplementation> test = make_unique<DirectEvaluation>(&func,tableMin,tableMax);
+  UniformLookupTableGenerator<float> genf(&func_container_f, tableMin, tableMax);
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
+    cout << "about to build " << itName << endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
+
+  //implsf.emplace_back(unique_ptr<EvaluationImplementation<float>>(new DirectEvaluation<float>(&func_container_f,tableMin,tableMax)));
+  //for(auto itName : implNames){
+  //  implsf.emplace_back(genf.generate_by_tol(itName,tableTol));
+  //}
   //for (auto itName : padeNames) {
   //  impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   //}
@@ -116,6 +123,9 @@ int main(int argc, char* argv[])
   ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
+  //ImplementationComparator<float> implComparef(implsf, nEvals, seed);
+  //implComparef.run_timings(nExperiments);
+
   /* Summarize the results */
   cout << "# Function:  " << FUNCNAME << endl;
   cout << "# Range:      (" << tableMin << "," << tableMax << ")" << endl;
@@ -123,6 +133,10 @@ int main(int argc, char* argv[])
   implCompare.compute_timing_statistics();
   implCompare.sort_timings("max");
   implCompare.print_summary(std::cout);
+
+  //implComparef.compute_timing_statistics();
+  //implComparef.sort_timings("max");
+  //implComparef.print_summary(std::cout);
 
   return 0;
 }
