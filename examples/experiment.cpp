@@ -44,48 +44,76 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  MyFunction func;
+  FunctionContainer<double> func_container{SET_F(MyFunction,double)};
+
   double stepSize;
 
   /* Check which implementations are available */
   std::cout << "# Registered uniform tables: \n#  ";
-  for (auto it : UniformLookupTableFactory::get_registry_keys() ) {
+  for (auto it : UniformLookupTableFactory<double>::get_registry_keys() ) {
     std::cout << it << "\n#  ";
   }
   std::cout << "\n";
 
   /* Fill in the implementations */
-  std::vector<unique_ptr<EvaluationImplementation>> impls;
+  std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
 
   /* Which LUT implementations to use */
-  std::vector<std::string> implNames {"UniformLinearInterpolationTable",
-      "UniformLinearPrecomputedInterpolationTable",
-      "UniformQuadraticPrecomputedInterpolationTable",
-      "UniformCubicPrecomputedInterpolationTable",
-      "UniformArmadilloPrecomputedInterpolationTable<4>",
-      "UniformArmadilloPrecomputedInterpolationTable<5>",
-      "UniformArmadilloPrecomputedInterpolationTable<6>",
-      "UniformArmadilloPrecomputedInterpolationTable<7>",
-      "UniformPadeTable<1,1>",
-      "UniformPadeTable<2,2>",
-      "UniformPadeTable<3,3>",
-      "UniformPadeTable<4,3>",
-      "UniformLinearTaylorTable",
-      "UniformQuadraticTaylorTable",
-      "UniformCubicTaylorTable"};
+  std::vector<std::string> implNames {
+    "UniformArmadilloPrecomputedInterpolationTable<4>",
+    "UniformArmadilloPrecomputedInterpolationTable<5>",
+    "UniformArmadilloPrecomputedInterpolationTable<6>",
+    "UniformArmadilloPrecomputedInterpolationTable<7>",
+    "UniformCubicHermiteTable",
+    "UniformCubicPrecomputedInterpolationTable",
+    "UniformCubicTaylorTable",
+    "UniformLinearInterpolationTable",
+    "UniformLinearPrecomputedInterpolationTable",
+    "UniformLinearTaylorTable",
+    "NonUniformLinearInterpolationTable",
+    "UniformQuadraticPrecomputedInterpolationTable",
+    "UniformQuadraticTaylorTable"
+  };
 
-  UniformLookupTableGenerator gen(&func, tableMin, tableMax);
+  std::vector<std::string> padeNames {
+    "UniformPadeTable<1,1>",
+    "UniformPadeTable<2,1>",
+    "UniformPadeTable<3,1>",
+    "UniformPadeTable<4,1>",
+    "UniformPadeTable<5,1>",
+    "UniformPadeTable<6,1>",
+    "UniformPadeTable<2,2>",
+    "UniformPadeTable<3,2>",
+    "UniformPadeTable<4,2>",
+    "UniformPadeTable<5,2>",
+    "UniformPadeTable<3,3>",
+    "UniformPadeTable<4,3>",
+  };
+
+  UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
 
   /* add implementations to vector */
   // unique_ptr<EvaluationImplementation> test = make_unique<DirectEvaluation>(&func,tableMin,tableMax);
 
-  impls.emplace_back(unique_ptr<EvaluationImplementation>(new DirectEvaluation(&func,tableMin,tableMax)));
+  impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
+  //for (auto itName : padeNames) {
+  //  impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+  //}
+  
+  //add a composite table. The generator doesn't converge with mid = the root 
+  //and also this is far too specific for this experiment.
+  //double mid = exp(7.7/13.0287)+1;
+  //UniformLookupTableGenerator gen1(&func_container, tableMin, mid);
+  //UniformLookupTableGenerator gen2(&func_container, mid, tableMax);
 
-  /* Run comparator */
-  ImplementationComparator implCompare(impls, nEvals, seed);
+  //impls.emplace_back(unique_ptr<EvaluationImplementation>(
+  //      new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),
+  //        gen2.generate_by_tol(implNames[7],tableTol*(tableMax-mid)/(tableMax-tableMin))})));
+ 
+  ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
   /* Summarize the results */
