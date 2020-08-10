@@ -1,5 +1,7 @@
 /*
-  Intermediate abstract class for LUTs with uniformly spaced grid points
+  Intermediate abstract class for LUTs with uniformly spaced grid points.
+  Outfits tables with enough tools to sample from a nonuniform
+  grid efficiently.
 */
 #pragma once
 #include "FunctionContainer.hpp"
@@ -17,7 +19,6 @@ struct UniformLookupTableParameters
   IN_TYPE minArg = 0;
   IN_TYPE maxArg = 1;
   IN_TYPE stepSize = 1;
-  std::shared_ptr<TransferFunction<IN_TYPE>> transferFunction;
 };
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};

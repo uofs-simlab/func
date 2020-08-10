@@ -9,25 +9,31 @@
 #pragma once
 #include "FunctionContainer.hpp"
 #include "UniformLookupTable.hpp"
+#include "TransferFunctionSinh.hpp"
 #include <exception>
 
 #define INHERIT_NONUNIFORM_LUT(IN_TYPE,OUT_TYPE) \
-  using NonUniformLookupTable<IN_TYPE,OUT_TYPE>::m_transferFunction
+  using NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>::m_transferFunction
 
-template <typename IN_TYPE, typename OUT_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE, class TRANSFER_FUNC_TYPE>
 class NonUniformLookupTable : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
 protected:
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  std::shared_ptr<TransferFunction<IN_TYPE>> m_transferFunction;
+  std::unique_ptr<TRANSFER_FUNC_TYPE> m_transferFunction;
 public:
   // set the transfer function
   NonUniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
-    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par), m_transferFunction(par.transferFunction)
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
   {
-    if(m_transferFunction == NULL)
-      throw std::invalid_argument("NonUniformLookupTable needs a transfer function");
+    // TODO add more sophisticated transfer function generation here
+    m_transferFunction = std::unique_ptr<TRANSFER_FUNC_TYPE>(new TRANSFER_FUNC_TYPE(func_container,par.minArg,par.maxArg,par.stepSize));
   }
   virtual ~NonUniformLookupTable(){};
 };
+
+#define REGISTER_NONUNIFORM_IMPL(classname,IN_TYPE,OUT_TYPE,TRANSFER_FUNC) \
+  template<> const \
+    UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,TRANSFER_FUNC>,IN_TYPE,OUT_TYPE> \
+    classname<IN_TYPE,OUT_TYPE,TRANSFER_FUNC>::registrar(STR(classname))

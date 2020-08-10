@@ -12,8 +12,8 @@
 #pragma once
 #include "NonUniformLookupTable.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
-class NonUniformCubicPrecomputedInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class TRANSFER_FUNC_TYPE = TransferFunctionSinh<IN_TYPE>>
+class NonUniformCubicPrecomputedInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
@@ -25,7 +25,7 @@ class NonUniformCubicPrecomputedInterpolationTable final : public NonUniformLook
 public:
   NonUniformCubicPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       UniformLookupTableParameters<IN_TYPE> par) :
-    NonUniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
+    NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>(func_container, par)
   {
     /* Base class variables */
     m_name = STR(NonUniformCubicPrecomputedInterpolationTable);
@@ -36,9 +36,9 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<OUT_TYPE,4>[m_numTableEntries]);
     for (int ii=0; ii<m_numIntervals; ++ii) {
-      const IN_TYPE x = m_minArg + m_transferFunction->g((IN_TYPE) (ii/(IN_TYPE)(m_numIntervals-1)))*(m_tableMaxArg-m_minArg);
+      const IN_TYPE x = m_transferFunction->g(m_minArg + ii*m_stepSize);
       // the local stepsize of our nonuniform grid
-      const IN_TYPE h = m_minArg + m_transferFunction->g((IN_TYPE) ((ii+1)/(IN_TYPE)(m_numIntervals-1)))*(m_tableMaxArg-m_minArg) - x;
+      const IN_TYPE h = m_transferFunction->g(m_minArg + (ii+1)*m_stepSize) - x;
       // grid points
       m_grid[ii] = x;
       // polynomial coefficients
@@ -56,7 +56,7 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // find the subinterval x lives in
-    unsigned x_idx = (unsigned) (m_numIntervals-1)*m_transferFunction->g_inv((x-m_minArg)/(m_tableMaxArg-m_minArg));
+    unsigned x_idx = (unsigned) (m_transferFunction->g_inv(x)-m_minArg)*m_stepSize_inv;
     //if(x < m_grid[x_idx]-0.00000005 || m_grid[x_idx+1] < x)
     //  std::cerr << "The hash thinks " << x << " is in [" << m_grid[x_idx] << "," << m_grid[x_idx+1] << ")" << std::endl;
 
@@ -69,4 +69,4 @@ public:
   }
 };
 
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(NonUniformCubicPrecomputedInterpolationTable);
+REGISTER_NONUNIFORM_IMPL(NonUniformCubicPrecomputedInterpolationTable,double,double,TransferFunctionSinh<double>);
