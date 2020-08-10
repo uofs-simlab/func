@@ -2,25 +2,25 @@
    Interface for a class that builds and contains FunC transfer
    function pairs g and g^{-1}. These are the backbones of
    NonUniformLookupTables and are used to map a uniform grid
-   in [0,1] to a non-uniform grid in [0,1].
+   in [a,b] to a non-uniform grid in [a,b].
    The new grid will ideally do a better job of distributing error
-   when used for interpolation points.
-   g must satisfy the following conditions
-   g(0) = 0
-   g(1) = 1
-   x <= y implies g(x) <= g(y) (ie, g must be monotone increasing)
-
-   Since more grid points will exist where g(x/(b-a)) changes the slowest,
-   in order to better distribute error, we want
-   g'(x/(b-a)) to be similar to 1/f' on [a,b]
+   when used for grid points.
+   g must satisfy the following conditions:
+   g(a) = a;
+   g(b) = b;
+   x <= y implies g(x) <= g(y) (ie, g must be monotone increasing).
 
   Notes:
-    - g^{-1} must be quick to evaluate to see any speedup compared to uniform lookup tables
+    - g^{-1} must be quick to evaluate to see any speedup compared to uniform
+    lookup tables
+    - Since more grid points will exist where g changes the slowest we
+    want g' to grow like 1/f' in order to distribute error.
 */
 #pragma once
 #include <utility> // std::pair
 #include <memory> // std::unique_ptr
 
+/* inheritance macro */
 #define INHERIT_TRANSFER_FUNCTION(IN_TYPE) \
   using TransferFunction<IN_TYPE>::m_minArg; \
   using TransferFunction<IN_TYPE>::m_maxArg; \
@@ -41,15 +41,20 @@ template <typename IN_TYPE>
 class TransferFunction
 {
 protected:
+  /* This min must be the same as the corresponding table's min, and the max
+   * must be equal to the tables max arg (not necessarily the actual max arg) */
   IN_TYPE m_minArg, m_maxArg;
+  IN_TYPE m_stepSize;
 
   // the main functionality of the class
   std::unique_ptr<LightweightFunctor<IN_TYPE>> mp_g;
   std::unique_ptr<LightweightFunctor<IN_TYPE>> mp_g_inv;
 
 public:
-  // build the function pair
-  TransferFunction(IN_TYPE minArg, IN_TYPE maxArg) : m_minArg(minArg), m_maxArg(maxArg){}
+  // build the function pair. The FunctionContainer is unused but it's nice as an interface
+  template <typename OUT_TYPE>
+  TransferFunction(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize) :
+    m_minArg(minArg), m_maxArg(maxArg), m_stepSize(stepSize) {}
   virtual ~TransferFunction(){}
 
   virtual void print_details(std::ostream& out){};
