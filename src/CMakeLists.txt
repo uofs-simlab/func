@@ -29,7 +29,7 @@ func.hpp;\
 FunctionContainer.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;\
 ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
 json.hpp;\
-TransferFunction.hpp;TransferFunctionSinh.hpp;\
+TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\
 UniformLookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/UniformLookupTable.hpp;\

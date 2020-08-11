@@ -45,23 +45,15 @@ public:
 
   OUT_TYPE operator()(IN_TYPE x) override
   {
-    // set x_idx = floor((g_inv(x)-m_minArg)/m_stepSize)
+    // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
     // where each of the above member vars are encoded into g_inv
-    // Note: the fractional part of g_inv can't be used as
-    // dx b/c distances work differently in this nonuniform grid
-    //unsigned int x_idx = (unsigned int) (m_transferFunction->g_inv(x));
-
-    // find where x is in that subinterval
-    //IN_TYPE  h  = m_grid[x_idx+1] - m_grid[x_idx];
-    //IN_TYPE dx = (OUT_TYPE) (x - m_grid[x_idx])/h;
-
     OUT_TYPE dx = m_transferFunction->g_inv(x);
-    unsigned x_idx = (unsigned) dx;
-    dx -= x_idx;
+    unsigned x0 = (unsigned) dx;
+    dx -= x0;
 
     // value of table entries around x position
-    OUT_TYPE y1  = m_table[x_idx].coefs[0];
-    OUT_TYPE y2  = m_table[x_idx+1].coefs[0];
+    OUT_TYPE y1  = m_table[x0].coefs[0];
+    OUT_TYPE y2  = m_table[x0+1].coefs[0];
     // linear interpolation
     return y1+dx*(y2-y1);
   }

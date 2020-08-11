@@ -6,7 +6,6 @@
 #pragma once
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
-#include "TransferFunction.hpp"
 
 #include <map>
 #include <memory>

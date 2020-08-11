@@ -27,12 +27,14 @@ public:
   NonUniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
   {
+    // TODO check TRANSFER_FUNC_TYPE actually inherits from TransferFunctionInterface
     // TODO add more sophisticated transfer function generation here
     m_transferFunction = std::unique_ptr<TRANSFER_FUNC_TYPE>(new TRANSFER_FUNC_TYPE(func_container,par.minArg,par.maxArg,par.stepSize));
   }
   virtual ~NonUniformLookupTable(){};
 };
 
+// TODO register based on unsigned int?
 #define REGISTER_NONUNIFORM_IMPL(classname,IN_TYPE,OUT_TYPE,TRANSFER_FUNC) \
   template<> const \
     UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,TRANSFER_FUNC>,IN_TYPE,OUT_TYPE> \

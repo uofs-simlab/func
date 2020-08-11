@@ -21,24 +21,13 @@
 #include <memory> // std::unique_ptr
 
 /* inheritance macro */
-#define INHERIT_TRANSFER_FUNCTION(IN_TYPE) \
-  using TransferFunction<IN_TYPE>::m_minArg; \
-  using TransferFunction<IN_TYPE>::m_maxArg; \
-  using TransferFunction<IN_TYPE>::mp_g; \
-  using TransferFunction<IN_TYPE>::mp_g_inv
-
-/* a lightweight functor used to speedup evaluations of g_inv 
-   Unfortunate that we'll have to do so much pointer chasing
-   here but this implementation is convenient and flexible */
-template <typename IN_TYPE>
-struct LightweightFunctor
-{
-  virtual IN_TYPE operator()(IN_TYPE x)=0;
-  virtual ~LightweightFunctor(){};
-};
+#define IMPLEMENT_TRANSFER_FUNCTION_INTERFACE(IN_TYPE) \
+  using TransferFunctionInterface<IN_TYPE>::m_minArg; \
+  using TransferFunctionInterface<IN_TYPE>::m_maxArg; \
+  using TransferFunctionInterface<IN_TYPE>::m_stepSize;
 
 template <typename IN_TYPE>
-class TransferFunction
+class TransferFunctionInterface
 {
 protected:
   /* This min must be the same as the corresponding table's min, and the max
@@ -46,23 +35,21 @@ protected:
   IN_TYPE m_minArg, m_maxArg;
   IN_TYPE m_stepSize;
 
-  // the main functionality of the class
-  std::unique_ptr<LightweightFunctor<IN_TYPE>> mp_g;
-  std::unique_ptr<LightweightFunctor<IN_TYPE>> mp_g_inv;
-
 public:
-  // build the function pair. The FunctionContainer is unused but it's nice as an interface
+  // build the function pair. The FunctionContainer is unused
+  // here but will probably be used in an implementation
   template <typename OUT_TYPE>
-  TransferFunction(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize) :
+  TransferFunctionInterface(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize) :
     m_minArg(minArg), m_maxArg(maxArg), m_stepSize(stepSize) {}
-  virtual ~TransferFunction(){}
+
+  virtual ~TransferFunctionInterface(){}
 
   virtual void print_details(std::ostream& out){};
 
   // public access to private vars
   std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_maxArg); }
 
-  // getters used to avoid having to use pointer syntax
-  IN_TYPE g(IN_TYPE x){ return (*mp_g)(x); }
-  IN_TYPE g_inv(IN_TYPE x){ return (*mp_g_inv)(x); }
+  // getters used to ensure g and g_inv are implemented using some type of functors
+  virtual IN_TYPE g(IN_TYPE x) = 0;
+  virtual IN_TYPE g_inv(IN_TYPE x) = 0;
 };
