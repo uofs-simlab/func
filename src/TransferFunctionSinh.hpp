@@ -37,6 +37,7 @@ class HornersFunctor
   __attribute__((aligned)) std::unique_ptr<IN_TYPE[]> m_coefs;
 
 public:
+  HornersFunctor(){}
   HornersFunctor(std::unique_ptr<IN_TYPE[]> coefs) :
     m_coefs(std::move(coefs)) {}
 
@@ -51,15 +52,15 @@ public:
 
 static double tol = 1e-8;
 
-template <typename IN_TYPE, unsigned int NUM_COEFS = 4>
+template <typename IN_TYPE, unsigned int NUM_COEFS = 2>
 class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
 {
   IMPLEMENT_TRANSFER_FUNCTION_INTERFACE(IN_TYPE);
 
   /* --- More member vars --- */
   std::string m_method_of_approx;
-  std::function<IN_TYPE(IN_TYPE)> mp_g;
-  std::unique_ptr<HornersFunctor<IN_TYPE,NUM_COEFS>> mp_g_inv;
+  std::function<IN_TYPE(IN_TYPE)> m_g;
+  HornersFunctor<IN_TYPE,NUM_COEFS> m_g_inv;
 
   /* --- Private Functions for approximating g^{-1} --- */
   /* Approximate g^{-1} using inverse polynomial interpolation */
@@ -96,8 +97,8 @@ public:
   template<typename OUT_TYPE>
   TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize);
 
-  IN_TYPE g(IN_TYPE x) override { return mp_g(x); }
-  IN_TYPE g_inv(IN_TYPE x) override { return (*mp_g_inv)(x); }
+  IN_TYPE g(IN_TYPE x) override { return m_g(x); }
+  IN_TYPE g_inv(IN_TYPE x) override { return m_g_inv(x); }
 
   void print_details(std::ostream& out) override
   {
@@ -177,18 +178,18 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
   //  unsigned int N = 20;
   //  long double error_est;
   //  // base conditions
-  //  if(abs(mp_g_inv(0)) > tol || abs(mp_g_inv(1) - 1) > tol){
+  //  if(abs(m_g_inv(0)) > tol || abs(m_g_inv(1) - 1) > tol){
   //    return std::numeric_limits<double>::max;
   //  }
   //  // check g_inv at N linearly spaced points
   //  for(unsigned int i=1; i<=N; i++){
   //    // check for monotonicity
-  //    if((*mp_g_inv)((i-1)/(IN_TYPE)N) > (*mp_g_inv)(i/(IN_TYPE)N))
+  //    if((*m_g_inv)((i-1)/(IN_TYPE)N) > (*m_g_inv)(i/(IN_TYPE)N))
   //      return std::numeric_limits<double>::max;
 
   //    // estimate the error
   //    long double exact  = slow_g_inv(i/(IN_TYPE)N);
-  //    long double approx = (*mp_g_inv)(i/(IN_TYPE)N);
+  //    long double approx = (*m_g_inv)(i/(IN_TYPE)N);
   //    error_est += 2*(abs(exact - approx)/(exact+approx));
   //  }
   //  // return the average relative error
@@ -204,12 +205,12 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
   for(unsigned int i=0; i<NUM_COEFS; i++)
     inv_coefs[i] = inv_coefs[i] / stepSize;
 
-  mp_g_inv.reset(new HornersFunctor<IN_TYPE,NUM_COEFS>(std::move(inv_coefs)));
+  m_g_inv =  HornersFunctor<IN_TYPE,NUM_COEFS>(std::move(inv_coefs));
 
   /* Now that we have a fast approx to g_inv, we'll make it more "accurate" by
      setting our original g to g_inv_inv. This Newton's method is the reason why
      we computed all those derivatives earlier */
-  mp_g = [this,temp_g_inv,temp_g_inv_prime](IN_TYPE z) -> IN_TYPE {
+  m_g = [this,temp_g_inv,temp_g_inv_prime](IN_TYPE z) -> IN_TYPE {
     // FunC tables are often generated with points a bit past their right endpoint
     if(z >= m_maxArg)
       return z;
@@ -233,7 +234,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
         // if g prime is undefined, do a hard switch to bisection
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
-            [this, &z](IN_TYPE h) -> IN_TYPE { return (*mp_g_inv)(h) - z; }, // shift g
+            [this, temp_g_inv, z](IN_TYPE h) -> IN_TYPE { return (*temp_g_inv)(h) - z; }, // shift g
             m_minArg, m_maxArg, m_minArg - z, m_maxArg - z, eps_tolerance<IN_TYPE>(), MAX_IT).first;
       }else{
         x = x-((*temp_g_inv)(x)-z)/(*temp_g_inv_prime)(x);

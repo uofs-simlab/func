@@ -21,15 +21,16 @@ class NonUniformLookupTable : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 protected:
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  std::unique_ptr<TRANSFER_FUNC_TYPE> m_transferFunction;
+  //std::unique_ptr<TRANSFER_FUNC_TYPE> mp_transferFunction;
+  TRANSFER_FUNC_TYPE m_transferFunction;
 public:
   // set the transfer function
   NonUniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
-    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par),
+    m_transferFunction(TRANSFER_FUNC_TYPE(func_container,par.minArg,par.maxArg,par.stepSize))
   {
     // TODO check TRANSFER_FUNC_TYPE actually inherits from TransferFunctionInterface
-    // TODO add more sophisticated transfer function generation here
-    m_transferFunction = std::unique_ptr<TRANSFER_FUNC_TYPE>(new TRANSFER_FUNC_TYPE(func_container,par.minArg,par.maxArg,par.stepSize));
+    //m_transferFunction = std::unique_ptr<TRANSFER_FUNC_TYPE>(new TRANSFER_FUNC_TYPE(func_container,par.minArg,par.maxArg,par.stepSize));
   }
   virtual ~NonUniformLookupTable(){};
 };

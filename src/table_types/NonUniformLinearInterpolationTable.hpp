@@ -37,7 +37,7 @@ public:
     m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
     for (int ii=0; ii<m_numIntervals; ++ii) {
       // transform the previously used uniform grid to a nonuniform grid
-      const IN_TYPE x = m_transferFunction->g(m_minArg + ii*m_stepSize);
+      const IN_TYPE x = m_transferFunction.g(m_minArg + ii*m_stepSize);
       m_grid[ii]  = x;
       m_table[ii].coefs[0] = mp_func(x);
     }
@@ -47,7 +47,7 @@ public:
   {
     // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
     // where each of the above member vars are encoded into g_inv
-    OUT_TYPE dx = m_transferFunction->g_inv(x);
+    OUT_TYPE dx = m_transferFunction.g_inv(x);
     unsigned x0 = (unsigned) dx;
     dx -= x0;
 

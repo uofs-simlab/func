@@ -36,9 +36,9 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<OUT_TYPE,4>[m_numTableEntries]);
     for (int ii=0; ii<m_numIntervals; ++ii) {
-      const IN_TYPE x = m_transferFunction->g(m_minArg + ii*m_stepSize);
+      const IN_TYPE x = m_transferFunction.g(m_minArg + ii*m_stepSize);
       // the local stepsize of our nonuniform grid
-      const IN_TYPE h = m_transferFunction->g(m_minArg + (ii+1)*m_stepSize) - x;
+      const IN_TYPE h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
       // grid points
       m_grid[ii] = x;
       // polynomial coefficients
@@ -56,15 +56,9 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // find the subinterval x lives in
-    OUT_TYPE dx = m_transferFunction->g_inv(x);
+    OUT_TYPE dx = m_transferFunction.g_inv(x);
     unsigned x_idx = (unsigned) dx;
     dx -= x_idx;
-    //if(x < m_grid[x_idx]-0.00000005 || m_grid[x_idx+1] < x)
-    //  std::cerr << "The hash thinks " << x << " is in [" << m_grid[x_idx] << "," << m_grid[x_idx+1] << ")" << std::endl;
-
-    // find where x is in that subinterval
-    //OUT_TYPE h  = m_grid[x_idx+1] - m_grid[x_idx];
-    //OUT_TYPE dx = (x - m_grid[x_idx])/h;
 
     // cubic interpolation
     return m_table[x_idx].coefs[0]+dx*(m_table[x_idx].coefs[1]+dx*(m_table[x_idx].coefs[2]+dx*m_table[x_idx].coefs[3]));
