@@ -52,7 +52,7 @@ public:
 
 static double tol = 1e-8;
 
-template <typename IN_TYPE, unsigned int NUM_COEFS = 2>
+template <typename IN_TYPE, unsigned int NUM_COEFS = 4>
 class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
 {
   IMPLEMENT_TRANSFER_FUNCTION_INTERFACE(IN_TYPE);
@@ -138,8 +138,8 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
         m_minArg, x) / c;
   };
 
-  // build g_prime
-  std::function<IN_TYPE(IN_TYPE)> g_prime = [this, f_prime, c](IN_TYPE x) -> IN_TYPE
+  // build temp_g_prime
+  std::function<IN_TYPE(IN_TYPE)> temp_g_prime = [this, f_prime, c](IN_TYPE x) -> IN_TYPE
   {
     return (m_maxArg-m_minArg) / (IN_TYPE) sqrt(1 + f_prime(x)*f_prime(x)) / c;
   };
@@ -149,8 +149,8 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
      want a fast g_inv, but we also want an accurate g_inv in order to make
      good use of the nonuniform grid */
   // TODO make a vector of usable coefficients and then check which one is the best
-  //inv_coefs = inverse_poly_interior_slopes_interp(NUM_COEFS, temp_g, g_prime);
-  std::unique_ptr<IN_TYPE[]> inv_coefs = inverse_poly_interp(temp_g, g_prime);
+  //std::unique_ptr<IN_TYPE[]> inv_coefs = inverse_poly_interior_slopes_interp(temp_g, temp_g_prime);
+  std::unique_ptr<IN_TYPE[]> inv_coefs = inverse_poly_interp(temp_g, temp_g_prime);
   std::shared_ptr<HornersFunctor<IN_TYPE,NUM_COEFS>> temp_g_inv;
 
   // make a copy
@@ -173,7 +173,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
   // check if this version of g_inv is any good and make a fuss if it's terrible
   //
   // Slow but accurate approximation of g_inv
-  // std::function<IN_TYPE(IN_TYPE)> slow_g_inv = newtons_inv(temp_g, g_prime);
+  // std::function<IN_TYPE(IN_TYPE)> slow_g_inv = newtons_inv(temp_g, temp_g_prime);
   //{
   //  unsigned int N = 20;
   //  long double error_est;
@@ -205,7 +205,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
   for(unsigned int i=0; i<NUM_COEFS; i++)
     inv_coefs[i] = inv_coefs[i] / stepSize;
 
-  m_g_inv =  HornersFunctor<IN_TYPE,NUM_COEFS>(std::move(inv_coefs));
+  m_g_inv = HornersFunctor<IN_TYPE,NUM_COEFS>(std::move(inv_coefs));
 
   /* Now that we have a fast approx to g_inv, we'll make it more "accurate" by
      setting our original g to g_inv_inv. This Newton's method is the reason why
@@ -250,13 +250,14 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inver
     std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
 {
   using arma::span;
-  // generate vandermonde system
+  // check if this is possible
   if(NUM_COEFS < 2)
     throw std::invalid_argument("inverse_poly_coefs() must"
       " produce at least 2 polynomial coefficients");
   m_method_of_approx = std::string("inverse polynomial interpolation");
-  arma::mat A = arma::ones(NUM_COEFS,NUM_COEFS);
 
+  // generate vandermonde system
+  arma::mat A = arma::ones(NUM_COEFS,NUM_COEFS);
   A(span(0,NUM_COEFS-1), 1)=arma::linspace(m_minArg,m_maxArg,NUM_COEFS);
   for(unsigned int i=2; i<NUM_COEFS; i++)
     A(span(0,NUM_COEFS-1),i) = A(span(0,NUM_COEFS-1),i-1) % A(span(0,NUM_COEFS-1),1);
@@ -268,10 +269,6 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inver
   y.rows(0,NUM_COEFS-1) = gspace(NUM_COEFS, g, gp);
 
   y = arma::solve(A,y);
-
-  //if(abs(y[0]) > tol)
-  //  throw std::runtime_error("inverse_poly_interp() failed to"
-  //    " solve for the inverse");
 
   // move from arma's vector to a std::unique_ptr<double[]>
   auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[NUM_COEFS]);
@@ -300,7 +297,7 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inver
   unsigned int M = NUM_COEFS/2+1; // number of unique points being sampled from
   arma::mat A = arma::ones(NUM_COEFS,NUM_COEFS);
 
-  A(span(0,M-1), 1)=arma::linspace(0,1,M);
+  A(span(0,M-1), 1)=arma::linspace(m_minArg,m_maxArg,M);
   for(unsigned int i=2; i<NUM_COEFS; i++)
     A(span(0,M-1),i) = A(span(0,M-1),i-1) % A(span(0,M-1),1);
 
@@ -318,10 +315,6 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inver
   }
 
   y = arma::solve(A,y);
-
-  if(abs(y[0]) > tol)
-    throw std::runtime_error("inverse_poly_interior_slopes_interp() failed to"
-      " solve for the inverse");
 
   // move from arma's vector to a std::unique_ptr<double[]>
   auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[NUM_COEFS]);
@@ -350,6 +343,8 @@ template <typename IN_TYPE, unsigned int NUM_COEFS>
 inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inverse_hermite_interp(
     std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp)
 {
+  // TODO this is outdated and I don't there are
+  // many situations where this will be useful...
   using arma::span;
   // generate vandermonde system
   // assert the user is asking for at least 4 coefs
@@ -418,7 +413,7 @@ inline std::function<IN_TYPE(IN_TYPE)> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
             [this, &g, &z](IN_TYPE h) -> IN_TYPE { return g(h) - z; }, // shift g
-            (IN_TYPE)0.0, (IN_TYPE)1.0, -z, (IN_TYPE)1.0 - z, eps_tolerance<IN_TYPE>(), MAX_IT).first;
+            m_minArg, m_maxArg, m_minArg-z, m_maxArg - z, eps_tolerance<IN_TYPE>(), MAX_IT).first;
       }else{
         x = x-(g(x)-z)/gp(x);
       }
@@ -439,7 +434,7 @@ inline arma::vec TransferFunctionSinh<IN_TYPE,NUM_COEFS>::gspace(unsigned int N,
 
   arma::vec const linear_pts = arma::linspace(m_minArg,m_maxArg,N);
   arma::vec v = arma::ones(N,1);
-  v = v*m_minArg;
+  v[0] = m_minArg;
   const unsigned int MAX_NEWTON_IT = 20;
   boost::uintmax_t const MAX_BISECTION = 54;
 

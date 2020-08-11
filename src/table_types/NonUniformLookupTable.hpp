@@ -29,8 +29,7 @@ public:
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par),
     m_transferFunction(TRANSFER_FUNC_TYPE(func_container,par.minArg,par.maxArg,par.stepSize))
   {
-    // TODO check TRANSFER_FUNC_TYPE actually inherits from TransferFunctionInterface
-    //m_transferFunction = std::unique_ptr<TRANSFER_FUNC_TYPE>(new TRANSFER_FUNC_TYPE(func_container,par.minArg,par.maxArg,par.stepSize));
+    // TODO check if TRANSFER_FUNC_TYPE actually inherits from TransferFunctionInterface if the compiler doesn't already
   }
   virtual ~NonUniformLookupTable(){};
 };

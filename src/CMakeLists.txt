@@ -25,7 +25,7 @@ if(FUNC_RECORD)
 endif()
 
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
-func.hpp;\
+func.hpp;func_impls.hpp;\
 FunctionContainer.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;\
 ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
 json.hpp;\
