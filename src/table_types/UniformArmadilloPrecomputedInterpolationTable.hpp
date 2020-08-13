@@ -14,6 +14,7 @@
   - the template implementation is only for N=4,5,6,7 (ie, available polynomial interpolation is 
   of degrees 4 up to degree 7)
 */
+#pragma once
 #include "UniformLookupTable.hpp"
 #include <cmath> // ceil()
 

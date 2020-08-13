@@ -74,9 +74,9 @@ private:
   ImplContainer<IN_TYPE,OUT_TYPE>          m_implementations;
   unsigned                                 m_numberOfImplementations;
 
-  std::vector<TimeContainer>      m_evaluationTimers;
+  std::vector<TimeContainer>  m_evaluationTimers;
 
-  IN_TYPE                 m_minArg,m_maxArg;
+  IN_TYPE                     m_minArg,m_maxArg;
 
   std::unique_ptr<OUT_TYPE[]> m_evalHolder;
 

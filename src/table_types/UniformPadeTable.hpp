@@ -13,6 +13,7 @@
   - evaluate by using parentheses, just like a function
   - Available template values are all M,N such that 0 < N <= M and M+N<=7
 */
+#pragma once
 #include "UniformLookupTable.hpp"
 #include <armadillo>
 #include <iostream>

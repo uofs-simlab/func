@@ -11,6 +11,7 @@
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
 */
+#pragma once
 #include "UniformLookupTable.hpp"
 
 template <typename IN_TYPE, typename OUT_TYPE>
