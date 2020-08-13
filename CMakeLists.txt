@@ -38,9 +38,16 @@ If you wish to use Armadillo (NEEDED FOR HIGHER ORDER AND PADE TABLES),
   message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
 endif()
 
-# Search for quadmath (fatal error if requested but not found)
-option(USE_QUADMATH "Use quadmath library" ON)
+# Use quadmath if possible. Don't make a fuss if it's not there
+# Could be reconfigured if the user really doesn't want quadmath
+# even if they have it
 find_package(Quadmath)
+if(QUADMATH_FOUND)  
+  option(USE_QUADMATH "Use quadmath library" ON)
+else()
+  # we'll just use long double instead
+  option(USE_QUADMATH "Use quadmath library" OFF)
+endif()
 
 # Add an option for turning on argument recording
 option(FUNC_RECORD "Enable recording of arguments for DirectEvaluation" OFF)
