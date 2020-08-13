@@ -2,7 +2,7 @@
   Linear Interpolation LUT with nonuniform sampling
 
   Usage example:
-    NonUniformLinearInterpolationTable look(&function,0,10,0.0001);
+    NonUniformPseudoLinearInterpolationTable look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -13,22 +13,22 @@
 #include "NonUniformLookupTable.hpp"
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class TRANSFER_FUNC_TYPE = TransferFunctionSinh<IN_TYPE>>
-class NonUniformLinearInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>
+class NonUniformPseudoLinearInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
   INHERIT_NONUNIFORM_LUT(IN_TYPE,OUT_TYPE);
 
-  REGISTER_LUT(NonUniformLinearInterpolationTable);
+  REGISTER_LUT(NonUniformPseudoLinearInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
 public:
-  NonUniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+  NonUniformPseudoLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       UniformLookupTableParameters<IN_TYPE> par) :
     NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>(func_container, par)
   {
     /* Base class variables */
-    m_name = STR(NonUniformLinearInterpolationTable);
+    m_name = STR(NonUniformPseudoLinearInterpolationTable);
     m_order = 2;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -46,10 +46,12 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
+    // and dx = fractional((g_inv(x)-m_minArg)/m_stepSize)
     // where each of the above member vars are encoded into g_inv
-    unsigned x0 = m_transferFunction.g_inv(x);
-    IN_TYPE h   = m_grid[x0+1] - m_grid[x0];
-    OUT_TYPE dx = (x - m_grid[x0])/h;
+    // The source of the pseudolinearity is from the way we compute dx
+    OUT_TYPE dx = m_transferFunction.g_inv(x);
+    unsigned x0 = (unsigned) dx;
+    dx -= x0;
 
     // value of table entries around x position
     OUT_TYPE y1  = m_table[x0].coefs[0];
@@ -59,4 +61,4 @@ public:
   }
 };
 
-REGISTER_NONUNIFORM_IMPL(NonUniformLinearInterpolationTable,double,double,TransferFunctionSinh<double>);
+REGISTER_NONUNIFORM_IMPL(NonUniformPseudoLinearInterpolationTable,double,double,TransferFunctionSinh<double>);

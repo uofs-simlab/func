@@ -29,7 +29,9 @@
 /* ---- NonUniform Tables ---- */
 #include "NonUniformLookupTable.hpp"
 #include "NonUniformLinearInterpolationTable.hpp"
+#include "NonUniformPseudoLinearInterpolationTable.hpp"
 #include "NonUniformCubicPrecomputedInterpolationTable.hpp"
+#include "NonUniformPseudoCubicPrecomputedInterpolationTable.hpp"
 
 
 /* ---- Meta Tables ---- */

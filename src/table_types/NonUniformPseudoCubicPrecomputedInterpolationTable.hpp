@@ -2,7 +2,7 @@
   Cubic polynomial Interpolation LUT with nonuniform sampling
 
   Usage example:
-    NonUniformCubicPrecomputedInterpolationTable look(&function,0,10,0.0001);
+    NonUniformPseudoCubicPrecomputedInterpolationTable look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -13,22 +13,22 @@
 #include "NonUniformLookupTable.hpp"
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class TRANSFER_FUNC_TYPE = TransferFunctionSinh<IN_TYPE>>
-class NonUniformCubicPrecomputedInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>
+class NonUniformPseudoCubicPrecomputedInterpolationTable final : public NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
   INHERIT_NONUNIFORM_LUT(IN_TYPE,OUT_TYPE);
 
-  REGISTER_LUT(NonUniformCubicPrecomputedInterpolationTable);
+  REGISTER_LUT(NonUniformPseudoCubicPrecomputedInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,4>[]> m_table;
 public:
-  NonUniformCubicPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+  NonUniformPseudoCubicPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       UniformLookupTableParameters<IN_TYPE> par) :
     NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>(func_container, par)
   {
     /* Base class variables */
-    m_name = STR(NonUniformCubicPrecomputedInterpolationTable);
+    m_name = STR(NonUniformPseudoCubicPrecomputedInterpolationTable);
     m_order = 4;
     m_numTableEntries = m_numIntervals + 1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -56,14 +56,13 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // find the subinterval x lives in
-    unsigned x0 = m_transferFunction.g_inv(x);
-    // find where x is within that interval
-    IN_TYPE h   = m_grid[x0+1] - m_grid[x0];
-    OUT_TYPE dx = (x - m_grid[x0])/h;
+    OUT_TYPE dx = m_transferFunction.g_inv(x);
+    unsigned x0 = (unsigned) dx;
+    dx -= x0;
 
     // cubic interpolation
     return m_table[x0].coefs[0]+dx*(m_table[x0].coefs[1]+dx*(m_table[x0].coefs[2]+dx*m_table[x0].coefs[3]));
   }
 };
 
-REGISTER_NONUNIFORM_IMPL(NonUniformCubicPrecomputedInterpolationTable,double,double,TransferFunctionSinh<double>);
+REGISTER_NONUNIFORM_IMPL(NonUniformPseudoCubicPrecomputedInterpolationTable,double,double,TransferFunctionSinh<double>);
