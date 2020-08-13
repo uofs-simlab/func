@@ -31,25 +31,6 @@
 #include <boost/math/quadrature/gauss_kronrod.hpp> // gauss_kronrod::integrate
 #include <boost/math/tools/toms748_solve.hpp> // toms748_solve
 
-template <typename IN_TYPE, unsigned int NUM_COEFS>
-class HornersFunctor
-{
-  __attribute__((aligned)) std::unique_ptr<IN_TYPE[]> m_coefs;
-
-public:
-  HornersFunctor(){}
-  HornersFunctor(std::unique_ptr<IN_TYPE[]> coefs) :
-    m_coefs(std::move(coefs)) {}
-
-  IN_TYPE operator()(IN_TYPE x)
-  {
-      IN_TYPE sum = x*m_coefs[NUM_COEFS-1];
-      for (int k=NUM_COEFS-2; k>0; k--)
-        sum = x*(m_coefs[k] + sum);
-      return sum + m_coefs[0];
-  }
-};
-
 static double tol = 1e-8;
 
 template <typename IN_TYPE, unsigned int NUM_COEFS = 4>
@@ -60,7 +41,8 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
   /* --- More member vars --- */
   std::string m_method_of_approx;
   std::function<IN_TYPE(IN_TYPE)> m_g;
-  HornersFunctor<IN_TYPE,NUM_COEFS> m_g_inv;
+  // using inverse polynomial interpolation and horners method for g_inv
+  __attribute__((aligned)) std::unique_ptr<IN_TYPE[]> m_inv_coefs;
 
   /* --- Private Functions for approximating g^{-1} --- */
   /* Approximate g^{-1} using inverse polynomial interpolation */
@@ -98,7 +80,13 @@ public:
   TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize);
 
   IN_TYPE g(IN_TYPE x) override { return m_g(x); }
-  IN_TYPE g_inv(IN_TYPE x) override { return m_g_inv(x); }
+  IN_TYPE g_inv(IN_TYPE x) override
+  {
+    IN_TYPE sum = x*m_inv_coefs[NUM_COEFS-1];
+    for (int k=NUM_COEFS-2; k>0; k--)
+      sum = x*(m_inv_coefs[k] + sum);
+    return sum + m_inv_coefs[0];
+  }
 
   void print_details(std::ostream& out) override
   {
@@ -149,26 +137,36 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
      want a fast g_inv, but we also want an accurate g_inv in order to make
      good use of the nonuniform grid */
   // TODO make a vector of usable coefficients and then check which one is the best
-  //std::unique_ptr<IN_TYPE[]> inv_coefs = inverse_poly_interior_slopes_interp(temp_g, temp_g_prime);
-  std::unique_ptr<IN_TYPE[]> inv_coefs = inverse_poly_interp(temp_g, temp_g_prime);
-  std::shared_ptr<HornersFunctor<IN_TYPE,NUM_COEFS>> temp_g_inv;
+  //std::unique_ptr<IN_TYPE[]> m_inv_coefs = inverse_poly_interior_slopes_interp(temp_g, temp_g_prime);
+  m_inv_coefs = inverse_poly_interp(temp_g, temp_g_prime);
 
-  // make a copy
-  auto inv_coefs_copy = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[NUM_COEFS]);
+  // make a copy of inv_coefs to give to a functor
+  std::array<IN_TYPE,NUM_COEFS> inv_coefs_copy;
   for(unsigned int j=0; j<NUM_COEFS; j++)
-    inv_coefs_copy[j] = inv_coefs[j];
+    inv_coefs_copy[j] = m_inv_coefs[j];
 
-  temp_g_inv.reset(new HornersFunctor<IN_TYPE,NUM_COEFS>(std::move(inv_coefs_copy)));
+  // set temp_g_inv using horners method
+  auto temp_g_inv = [inv_coefs_copy](IN_TYPE x) -> IN_TYPE
+  {
+    IN_TYPE sum = x*inv_coefs_copy[NUM_COEFS-1];
+    for (int k=NUM_COEFS-2; k>0; k--)
+      sum = x*(inv_coefs_copy[k] + sum);
+    return sum + inv_coefs_copy[0];
+  };
 
-  std::shared_ptr<HornersFunctor<IN_TYPE,NUM_COEFS-1>> temp_g_inv_prime;
   // compute temp_g_inv's derivative
-  std::unique_ptr<IN_TYPE[]> inv_prime_coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[NUM_COEFS-1]);
-  for(unsigned int i=1; i <= NUM_COEFS; i++)
-    inv_prime_coefs[i-1] = i*inv_coefs[i];
+  std::array<IN_TYPE,NUM_COEFS-1> inv_prime_coefs;
+  for(unsigned int j=1; j < NUM_COEFS; j++)
+    inv_prime_coefs[j-1] = j*m_inv_coefs[j];
 
-  // compute g_inv_prime
-  temp_g_inv_prime.reset(new HornersFunctor<IN_TYPE,NUM_COEFS-1>(std::move(inv_prime_coefs)));
-
+  // set g_inv_prime using horners method
+  auto temp_g_inv_prime = [inv_prime_coefs](IN_TYPE x) -> IN_TYPE
+  {
+    IN_TYPE sum = x*inv_prime_coefs[NUM_COEFS-2];
+    for (int k=NUM_COEFS-3; k>0; k--)
+      sum = x*(inv_prime_coefs[k] + sum);
+    return sum + inv_prime_coefs[0];
+  };
 
   // check if this version of g_inv is any good and make a fuss if it's terrible
   //
@@ -201,11 +199,9 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
      underlying table's hash into the transfer function eval. This
      will obfuscate our code, but now the only price of using
      nonuniform tables is an indirection */
-  inv_coefs[0] = inv_coefs[0] - m_minArg;
+  m_inv_coefs[0] = m_inv_coefs[0] - m_minArg;
   for(unsigned int i=0; i<NUM_COEFS; i++)
-    inv_coefs[i] = inv_coefs[i] / stepSize;
-
-  m_g_inv = HornersFunctor<IN_TYPE,NUM_COEFS>(std::move(inv_coefs));
+    m_inv_coefs[i] = m_inv_coefs[i] / stepSize;
 
   /* Now that we have a fast approx to g_inv, we'll make it more "accurate" by
      setting our original g to g_inv_inv. This Newton's method is the reason why
@@ -230,14 +226,14 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
     do{
       NEWTON_IT += 1;
       x0 = x;
-      if((*temp_g_inv_prime)(x) == 0.0 || NEWTON_IT > MAX_NEWTON_IT){
+      if(temp_g_inv_prime(x) == 0.0 || NEWTON_IT > MAX_NEWTON_IT){
         // if g prime is undefined, do a hard switch to bisection
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
-            [this, temp_g_inv, z](IN_TYPE h) -> IN_TYPE { return (*temp_g_inv)(h) - z; }, // shift g
+            [this, temp_g_inv, z](IN_TYPE h) -> IN_TYPE { return temp_g_inv(h) - z; }, // shift g
             m_minArg, m_maxArg, m_minArg - z, m_maxArg - z, eps_tolerance<IN_TYPE>(), MAX_IT).first;
       }else{
-        x = x-((*temp_g_inv)(x)-z)/(*temp_g_inv_prime)(x);
+        x = x-(temp_g_inv(x)-z)/temp_g_inv_prime(x);
       }
     }while(abs(x0-x) > tol);
 
