@@ -22,6 +22,8 @@ class UniformQuadraticPrecomputedInterpolationTable final : public UniformLookup
   REGISTER_LUT(UniformQuadraticPrecomputedInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,3>[]> m_table;
+  OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
+  unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
 
 public:
   UniformQuadraticPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
@@ -47,6 +49,27 @@ public:
       m_table[ii].coefs[1] = -3*y0+4*y1-y2;
       m_table[ii].coefs[2] = 2*y0+-4*y1+2*y2;
     }
+  }
+
+  /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
+  UniformQuadraticPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::string filename) :
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, filename)
+  {
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+
+    // double check the names match
+    std::string temp_name = jsonStats["name"].get<std::string>();
+    if(temp_name != "UniformQuadraticPrecomputedInterpolationTable")
+      throw std::invalid_argument("Error while reading " + filename + ": "
+          "Cannot build a " + temp_name + " from a UniformQuadraticPrecomputedInterpolationTable");
+
+    m_table.reset(new polynomial<OUT_TYPE,3>[m_numTableEntries]);
+    for(unsigned int i=0; i<m_numTableEntries; i++)
+      for(unsigned int j=0; j<m_table[i].num_coefs; j++)
+        m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<OUT_TYPE>();
   }
 
   OUT_TYPE operator()(IN_TYPE x) override

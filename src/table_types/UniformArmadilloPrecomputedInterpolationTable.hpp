@@ -1,6 +1,6 @@
 /*
-  4th to 7th degree polynomial interpolation LUT with uniform sampling (precomputed coefficients using an
-  Armadillo matrix)
+  4th to 7th degree polynomial interpolation LUT with uniform sampling (precomputed 
+  coefficients solved using Armadillo matrices)
 
   Usage example for a 4th degree interpolant:
     UniformArmadilloPrecomputedInterpolationTable<4> look(&function,0,10,0.0001);
@@ -31,6 +31,8 @@ class UniformArmadilloPrecomputedInterpolationTable final : public UniformLookup
   REGISTER_LUT(UniformArmadilloPrecomputedInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,N+1>[]> m_table;
+  OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
+  unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
 
 public:
   UniformArmadilloPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
@@ -73,6 +75,27 @@ public:
       for (unsigned int k=0; k<N+1; k++)
         m_table[ii].coefs[k] = y[k];
     }
+  }
+
+  /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
+  UniformArmadilloPrecomputedInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::string filename) :
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, filename)
+  {
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+
+    // double check the names match
+    std::string temp_name = jsonStats["name"].get<std::string>();
+    if(temp_name != "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">")
+      throw std::invalid_argument("Error while reading " + filename + ": "
+          "Cannot build a " + temp_name + " from a UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">");
+
+    m_table.reset(new polynomial<OUT_TYPE,N+1>[m_numTableEntries]);
+    for(unsigned int i=0; i<m_numTableEntries; i++)
+      for(unsigned int j=0; j<m_table[i].num_coefs; j++)
+        m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<OUT_TYPE>();
   }
 
   OUT_TYPE operator()(IN_TYPE x) override

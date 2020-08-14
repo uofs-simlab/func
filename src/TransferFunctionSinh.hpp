@@ -138,9 +138,10 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
      good use of the nonuniform grid */
   // TODO make a vector of usable coefficients and then check which one is the best
   //std::unique_ptr<IN_TYPE[]> m_inv_coefs = inverse_poly_interior_slopes_interp(temp_g, temp_g_prime);
+  // Check if the number of coefs asked for will make for a half decent transfer function
   m_inv_coefs = inverse_poly_interp(temp_g, temp_g_prime);
 
-  // make a copy of inv_coefs to give to a functor
+  // make a copy of inv_coefs to give to a lambda
   std::array<IN_TYPE,NUM_COEFS> inv_coefs_copy;
   for(unsigned int j=0; j<NUM_COEFS; j++)
     inv_coefs_copy[j] = m_inv_coefs[j];

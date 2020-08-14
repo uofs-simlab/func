@@ -115,14 +115,7 @@ public:
     if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
 
-    // recompute m_grid (TODO just needed
-    // for arg_bounds_of_interval which could be replaced by 
-    // return std::make_pair(min + i*step, min + (i+1)*step);
-    // so maybe remove this?
-    m_grid.reset(new IN_TYPE[m_numIntervals]);
-    for (int ii=0; ii < m_numIntervals; ++ii)
-      m_grid[ii] = m_minArg + ii*m_stepSize;
-
+    // Not recomputing m_grid so the NonuniformLUTs can use this code.
     // the array of polynomials must now be built by each table implementation
   }
 
@@ -139,9 +132,9 @@ public:
         << m_stepSize << " " << m_numIntervals << " ";
   }
 
-  std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(unsigned intervalNumber)
+  virtual std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(unsigned intervalNumber)
   {
-    return std::make_pair(m_grid[intervalNumber],m_grid[intervalNumber+1]);
+    return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
   }
 
 
