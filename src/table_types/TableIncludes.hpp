@@ -27,11 +27,14 @@
 
 
 /* ---- NonUniform Tables ---- */
-#include "NonUniformLookupTable.hpp"
-#include "NonUniformLinearInterpolationTable.hpp"
-#include "NonUniformPseudoLinearInterpolationTable.hpp"
-#include "NonUniformCubicPrecomputedInterpolationTable.hpp"
-#include "NonUniformPseudoCubicPrecomputedInterpolationTable.hpp"
+// Currently an armadillo extension
+#ifdef USE_ARMADILLO
+  #include "NonUniformLookupTable.hpp"
+  #include "NonUniformLinearInterpolationTable.hpp"
+  #include "NonUniformPseudoLinearInterpolationTable.hpp"
+  #include "NonUniformCubicPrecomputedInterpolationTable.hpp"
+  #include "NonUniformPseudoCubicPrecomputedInterpolationTable.hpp"
+#endif
 
 
 /* ---- Meta Tables ---- */
