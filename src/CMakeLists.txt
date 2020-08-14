@@ -26,7 +26,8 @@ endif()
 
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
 func.hpp;func_impls.hpp;\
-FunctionContainer.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;\
+FunctionContainer.hpp;EvaluationImplementation.hpp;\
+DirectEvaluation.hpp;ArgumentRecord.hpp;\
 ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
 json.hpp;\
 TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\

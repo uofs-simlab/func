@@ -29,7 +29,7 @@ class DirectEvaluation final : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   #ifdef FUNC_RECORD
-    std::unique_ptr<ArgumentRecord> mp_recorder;
+    std::unique_ptr<ArgumentRecord<IN_TYPE>> mp_recorder;
   #endif
 public:
 
@@ -41,7 +41,7 @@ public:
   {
     m_minArg = min, m_maxArg = max, m_dataSize = 0;
     #ifdef FUNC_RECORD
-      mp_recorder = std::unique_ptr<ArgumentRecord>(new ArgumentRecord(histSize, min, max));
+      mp_recorder = std::unique_ptr<ArgumentRecord<IN_TYPE>>(new ArgumentRecord<IN_TYPE>(histSize, min, max));
     #endif
     (void) histSize; // ignore histSize if -DFUNC_RECORD isn't specified
   }
@@ -83,7 +83,7 @@ inline void DirectEvaluation<IN_TYPE,OUT_TYPE>::print_details_json(std::ostream&
   jsonStats["maxArg"] = m_maxArg;
   #ifdef FUNC_RECORD
     // have our ArgumentRecord add it's own data
-    mp_recorder->print_details_json(json);
+    mp_recorder->print_details_json(jsonStats);
   #endif
 
   out << jsonStats.dump(2) << std::endl;
