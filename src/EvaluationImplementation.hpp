@@ -33,6 +33,7 @@ protected:
   std::function<OUT_TYPE(IN_TYPE)>   mp_func; // mathematical function to evaluate
 
   IN_TYPE      m_minArg, m_maxArg; // bounds of evaluation
+
   unsigned     m_order;    // order of accuracy of implementation
   std::string  m_name;     // name of implementation type
   unsigned     m_dataSize; // size of relevant data for impl evaluation
@@ -51,6 +52,7 @@ public:
   {
     out << m_minArg << " " << m_maxArg << " ";
   };
+  virtual void print_details_json(std::ostream& out)=0;
 
   /* public access of protected data */
   IN_TYPE min_arg(){ return m_minArg; };

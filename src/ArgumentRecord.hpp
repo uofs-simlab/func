@@ -3,9 +3,14 @@
   Wraps an array of unsigned int which acts as a histogram
   for recording the usage of a function's domain.
 
-  Currently, this class doesn't end up in the current version 
+  Notes:
+  - Currently, this class doesn't end up in the current version 
   of FunC unless the -DFUNC_RECORD flag is specified at compile time.
   See DirectEvaluation for example usage.
+  - Designed assuming it will be a private member var so some functions
+  won't do everything on their own
+  *specifically print_details_json assumes the encapsulating 
+  class will do most of the work for it*
 */
 #pragma once
 #include <string> // to_string()
@@ -68,7 +73,9 @@ class ArgumentRecord
 
     // print out the various fields in this class
     void print_details(std::ostream& out);
-    void print_details_json(std::ostream& out);
+
+    // add to the provided json object
+    void print_details_json(nlohmann::json& jsonStats);
 
     // free up the space used by the histogram
     ~ArgumentRecord(){}
@@ -96,20 +103,15 @@ inline std::string ArgumentRecord<IN_TYPE>::to_string()
 }
 
 template <typename IN_TYPE>
-inline void ArgumentRecord<IN_TYPE>::print_details_json(std::ostream& out)
+inline void ArgumentRecord<IN_TYPE>::print_details_json(nlohmann::json& jsonStats)
 {
-  using nlohmann::json;
-  json jsonStats;
-
-  jsonStats["_comment"] = "Histogram of function evaluations.";
-  jsonStats["histogramSize"] = m_histSize;
+  jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
+  jsonStats["ArgumentRecord"]["histogramSize"] = m_histSize;
   for(unsigned int i=0; i<m_histSize; i++)
-    jsonStats["histogram["+std::to_string(i)+"]"]=mp_histogram[i];
-  jsonStats["peak_idx"] = COMPUTE_INDEX(m_peak);
-  jsonStats["max"] = m_max;
-  jsonStats["min"] = m_min;
-  //other statistics
-  out << jsonStats.dump(2) << std::endl;
+    jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)]=mp_histogram[i];
+  jsonStats["ArgumentRecord"]["peak_idx"] = COMPUTE_INDEX(m_peak);
+  // Assume the caller has the same max/min
+  // insert other statistics here
 }
 
 template <typename IN_TYPE>

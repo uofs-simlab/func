@@ -6,11 +6,13 @@
 #pragma once
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
+#include "json.hpp"
 
 #include <map>
 #include <memory>
 #include <vector>
 #include <functional>
+#include <fstream>
 
 template <typename IN_TYPE>
 struct UniformLookupTableParameters
@@ -22,9 +24,10 @@ struct UniformLookupTableParameters
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
 
-template <typename OUT_TYPE, unsigned int NUM_COEFS>
-struct alignas(sizeof(OUT_TYPE)*alignments[NUM_COEFS]) polynomial{
-  OUT_TYPE coefs[NUM_COEFS];
+template <typename OUT_TYPE, unsigned int N>
+struct alignas(sizeof(OUT_TYPE)*alignments[N]) polynomial{
+  static const unsigned int num_coefs = N;
+  OUT_TYPE coefs[N];
 };
 
 /* Use to inherit UniformLookupTable's member variables 
@@ -43,7 +46,12 @@ class UniformLookupTable : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
 protected:
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   std::unique_ptr<IN_TYPE[]> m_grid;  // pointers to grid and evaluation data
-  // a LUT array needs to be provided by each implementation
+  // a polynomial (above) array needs to be provided by each implementation
+
+  // get the ith polynomial's jth coefficient
+  virtual OUT_TYPE get_table_entry(unsigned int i, unsigned int j)=0;
+  // get the number of coefficients used
+  virtual unsigned int get_num_coefs()=0;
 
   unsigned int m_numIntervals;   // sizes of grid and evaluation data
   unsigned int m_numTableEntries;
@@ -80,6 +88,44 @@ public:
     m_grid.reset(new IN_TYPE[m_numIntervals]);
   }
 
+  /* Set every generic member variable from a json file */
+  UniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+      std::string filename) :
+    EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "uniform_lookup_table")
+  {
+    // Assuming we're still using the same function container as before
+    // Also kinda inefficient since the derived class will also make its own
+    // jsonStats but oh well
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+    m_name = jsonStats["name"].get<std::string>();
+    m_minArg = jsonStats["minArg"].get<IN_TYPE>();
+    m_maxArg = jsonStats["maxArg"].get<IN_TYPE>();
+    m_stepSize = jsonStats["stepSize"].get<IN_TYPE>();
+    m_stepSize_inv = 1.0/m_stepSize;
+    m_order = jsonStats["order"].get<unsigned int>();
+    m_dataSize = jsonStats["dataSize"].get<unsigned int>();
+    m_numIntervals = jsonStats["numIntervals"].get<unsigned int>();
+    m_numTableEntries = jsonStats["numTableEntries"].get<unsigned int>();
+
+    // recompute m_tableMaxArg
+    m_tableMaxArg = m_maxArg;
+    if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
+      m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
+
+    // recompute m_grid (TODO just needed
+    // for arg_bounds_of_interval which could be replaced by 
+    // return std::make_pair(min + i*step, min + (i+1)*step);
+    // so maybe remove this?
+    m_grid.reset(new IN_TYPE[m_numIntervals]);
+    for (int ii=0; ii < m_numIntervals; ++ii)
+      m_grid[ii] = m_minArg + ii*m_stepSize;
+
+    // the array of polynomials must now be built by each table implementation
+  }
+
   virtual ~UniformLookupTable(){};
 
   /* public access of protected data */
@@ -96,6 +142,37 @@ public:
   std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(unsigned intervalNumber)
   {
     return std::make_pair(m_grid[intervalNumber],m_grid[intervalNumber+1]);
+  }
+
+
+  /* Write table data to the provided ostream in the form of json. Virtual in case derived
+     classes need to save their own member vars. eg. NonuniformLUTs will store their
+     grid and rebuild their transfer function */
+  virtual void print_details_json(std::ostream& out)
+  {
+    // TODO if FunC gets a namespace we should consider renaming our json
+    // functions to to_json() and from_json functions as seen here
+    // https://github.com/nlohmann/json
+    using nlohmann::json;
+    json jsonStats;
+
+    jsonStats["_comment"] = "FunC lookup table data";
+    jsonStats["name"] = m_name;
+    jsonStats["minArg"] = m_minArg;
+    jsonStats["maxArg"] = m_maxArg;
+    jsonStats["stepSize"] = m_stepSize;
+    jsonStats["order"] = m_order;
+    jsonStats["dataSize"] = m_dataSize;
+    jsonStats["numIntervals"] = m_numIntervals;
+    jsonStats["numTableEntries"] = m_numTableEntries;
+
+    // save the polynomial coefs of each lookup table
+    // Note: m_order is used as the number of polynomial coefs
+    for(unsigned int i=0; i<m_numTableEntries; i++)
+      for(unsigned int j=0; j<get_num_coefs(); j++)
+        jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)] = get_table_entry(i,j);
+
+    out << jsonStats.dump(2) << std::endl;
   }
 };
 
@@ -117,12 +194,15 @@ public:
   std::unique_ptr<EvaluationImplementation<double>> p_table = 
     UniformLookupTableFactory<double>::Create("UniformCubicPrecomputedInterpolationTable",fc, par);
 
+  TODO need a read from file variant
+
 //////////////////////////////////////////////////////////////////////////// */
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformLookupTableFactory
 {
 public:
   // Only ever hand out unique pointers
+  // TODO overload with a filename
   static std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> Create(
       std::string name, FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
       UniformLookupTableParameters<IN_TYPE> par)

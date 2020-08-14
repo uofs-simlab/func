@@ -34,7 +34,7 @@ class DirectEvaluation final : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
 public:
 
   /* set base class args and set up argument recording if 
-     -DFUNC_RECORD is used at compile time */
+     FUNC_RECORD is defined used at compile time */
   DirectEvaluation(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       IN_TYPE min = 0, IN_TYPE max = 1, unsigned int histSize = 10) :
     EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "DirectEvaluation")
@@ -56,7 +56,7 @@ public:
   }
 
   void print_details(std::ostream& out) override;
-  void print_details_json(std::ostream& out);
+  void print_details_json(std::ostream& out) override;
   ~DirectEvaluation(){};
 };
 
@@ -77,11 +77,14 @@ inline void DirectEvaluation<IN_TYPE,OUT_TYPE>::print_details_json(std::ostream&
   using nlohmann::json;
   json jsonStats;
 
+  jsonStats["_comment"] = "FunC DirectEvaluation data";
   jsonStats["name"] = m_name;
   jsonStats["minArg"] = m_minArg;
   jsonStats["maxArg"] = m_maxArg;
   #ifdef FUNC_RECORD
-    mp_recorder->print_details_json(out);
+    // have our ArgumentRecord add it's own data
+    mp_recorder->print_details_json(json);
   #endif
+
   out << jsonStats.dump(2) << std::endl;
 }
