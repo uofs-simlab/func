@@ -2,6 +2,10 @@
   Intermediate abstract class for LUTs with uniformly spaced grid points.
   Outfits tables with enough tools to sample from a nonuniform
   grid efficiently.
+
+  Notes:
+  - In the case where (max-min)/stepsize is not an integer then
+  the real table max is greater than the user supplied max
 */
 #pragma once
 #include "FunctionContainer.hpp"

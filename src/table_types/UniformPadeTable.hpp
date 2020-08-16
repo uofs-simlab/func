@@ -30,7 +30,7 @@ class UniformPadeTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
   REGISTER_LUT(UniformPadeTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE, M+N+1>[]> m_table;
-  std::function<fvar<OUT_TYPE,M+N>(fvar<OUT_TYPE,M+N>)> mp_boost_func;
+  std::function<adVar<OUT_TYPE,M+N>(adVar<OUT_TYPE,M+N>)> mp_boost_func;
   OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
 
@@ -190,7 +190,7 @@ public:
     return P/Q;
   }
 
-  std::function<fvar<OUT_TYPE,M+N>(fvar<OUT_TYPE,M+N>)> boost_function(){ return mp_boost_func; }
+  std::function<adVar<OUT_TYPE,M+N>(adVar<OUT_TYPE,M+N>)> boost_function(){ return mp_boost_func; }
 };
 
 REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,1,1);

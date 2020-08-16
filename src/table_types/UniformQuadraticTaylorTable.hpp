@@ -20,7 +20,7 @@ class UniformQuadraticTaylorTable final : public UniformLookupTable<IN_TYPE,OUT_
   REGISTER_LUT(UniformQuadraticTaylorTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,3>[]> m_table;
-  std::function<fvar<OUT_TYPE,2>(fvar<IN_TYPE,2>)> mp_boost_func;
+  std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> mp_boost_func;
   OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
 
@@ -84,7 +84,7 @@ public:
     return m_table[x1].coefs[0]+dx*(m_table[x1].coefs[1]+dx*m_table[x1].coefs[2]);
   }
 
-  std::function<fvar<OUT_TYPE,2>(fvar<IN_TYPE,2>)> boost_function(){ return mp_boost_func; }
+  std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> boost_function(){ return mp_boost_func; }
 };
 
 REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformQuadraticTaylorTable);
