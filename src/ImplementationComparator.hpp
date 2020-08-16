@@ -57,9 +57,9 @@ struct ImplTimer
   };
   void print_timing_stats(std::ostream& out)
   {
-    out << "Min " << minTime
-      << " Max " << maxTime
-      << " Mean " << meanTime
+    out << "Min " << minTime << "s"
+      << " Max " << maxTime << "s"
+      << " Mean " << meanTime << "s"
       << "\n";
   }
 };

@@ -4,6 +4,7 @@
 
   Notes:
   - duration data is considered static after stop() has been called.
+  - time is measured in seconds
 */
 #pragma once
 #include <chrono>
@@ -30,6 +31,7 @@ public:
     m_finish = std::chrono::high_resolution_clock::now();
 
     if(!m_done){
+      // store (finish - start) as time in seconds
       m_duration = std::chrono::duration_cast<std::chrono::duration<double>>(
           m_finish - m_start);
       m_done = true;
