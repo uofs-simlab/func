@@ -23,7 +23,7 @@
 using namespace boost::multiprecision;
 using errprecision = float128;
 #else
-using errprecision = double;
+using errprecision = long double;
 #endif
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
@@ -49,7 +49,7 @@ public:
 
   ~UniformLookupTableGenerator(){}
 
-  /* essentially a wrapper function for the UniformLookupTableFactory */
+  /* A wrapper for the UniformLookupTableFactory */
   std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, IN_TYPE stepSize)
   {
     UniformLookupTableParameters<IN_TYPE> par;
@@ -58,6 +58,13 @@ public:
     par.stepSize = stepSize;
     return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
   }
+
+  /* TODO A wrapper for the UniformLookupTableFactory */
+  std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, std::string filename)
+  {
+    //return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, filename);
+  }
+
 
   /* Generate a table that is accurate to desiredTolerance */
   std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_tol(std::string tableKey, double desiredTolerance);
