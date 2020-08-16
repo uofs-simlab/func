@@ -1,14 +1,22 @@
 /*
-  std::function wrapper with optional support
-  for plotting the usage of a function's domain
+  std::function wrapper with optional support for plotting the usage
+  of a function's domain in a histogram.
+  Replace your original function's usage with this class and compile
+  with -DFUNC_RECORD in order to figure out what bounds you should
+  set your table intervals to.
 
   Usage example:
     DirectEvaluation de(&function,0,10);
     double f = de(0.87354);
+    // sim code
+    de.print_details(); // prints max/min recorded args if FUNC_RECORD is defined
 
   Notes:
-  - basically just a wrapper around a function
-  - requires a max and min value (for consistency with EvaluationImplementation)
+  - Used to store a std::function as an EvaluationImplementation which
+  made ImplementationComparator easier to implement and use.
+  - requires min and max args for consistency with the EvaluationImplementation.
+  Once compiled with -DFUNC_RECORD, they're used as a rough guess for the
+  histogram's bounds. print_details() will tell you if they were a bad guess.
   - Record where the function is being evaluated by specifying the -DFUNC_RECORD
   flag at compile time. ArgumentRecorder is an extension of this class which does
   all the work recording function arguments.
@@ -18,7 +26,7 @@
 #include "EvaluationImplementation.hpp"
 #include "FunctionContainer.hpp"
 #include "json.hpp"
-#include <cmath>
+#include <fstream> //ifstream
 
 #ifdef FUNC_RECORD
   #include "ArgumentRecord.hpp"
@@ -45,6 +53,24 @@ public:
     #endif
     (void) histSize; // ignore histSize if -DFUNC_RECORD isn't specified
   }
+
+  DirectEvaluation(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+    std::string filename)
+  {
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+    m_name = jsonStats["name"].get<std::string>();
+    m_minArg = jsonStats["minArg"].get<IN_TYPE>();
+    m_maxArg = jsonStats["maxArg"].get<IN_TYPE>();
+
+  #ifdef FUNC_RECORD
+    // reconstruct our arg record
+    mp_recorder = std::unique_ptr<ArgumentRecord<IN_TYPE>>(new ArgumentRecord<IN_TYPE>(jsonStats));
+  #endif
+  }
+
 
   // Evaluate the underlying std::function and optionally record the arg
   OUT_TYPE operator()(IN_TYPE x) override

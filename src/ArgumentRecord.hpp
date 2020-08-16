@@ -1,7 +1,8 @@
 /*
-  Helper class which acts as an extension to any existing EvaluationImplementation. 
-  Wraps an array of unsigned int which acts as a histogram
-  for recording the usage of a function's domain.
+  Helper class which acts as an extension to any existing
+  EvaluationImplementation. Wraps a vector of unsigned
+  int which acts as a histogram for recording the
+  usage of a function's domain.
 
   Notes:
   - Currently, this class doesn't end up in the current version 
@@ -20,16 +21,17 @@
 #include "json.hpp"
 
 // macro used to decide where an arg should be placed in the histogram
-#define COMPUTE_INDEX(X) (((unsigned int) (m_histSize*(X-m_minArg)/(m_maxArg+1-m_minArg)))%m_histSize)
+#define COMPUTE_INDEX(X) \
+  (((unsigned int) (m_histSize*(X-m_minArg)/(m_maxArg+1-m_minArg)))%m_histSize)
 
 template <typename IN_TYPE>
 class ArgumentRecord
 {
   // Histogram used to record locations of function evaluations
   // and other helper helper vars
-  std::unique_ptr<unsigned int[]> mp_histogram; // TODO possibly switch to std::vector?
-  std::unique_ptr<std::mutex[]>   mp_histogram_mutex;
-  unsigned int m_histSize;
+  std::vector<unsigned int>     mv_histogram;
+  std::unique_ptr<std::mutex[]> mp_histogram_mutex;
+  unsigned int                  m_histSize;
 
   // min and max should always be the same as the EvaluationImpl
   // containing the ArgumentRecord
@@ -41,48 +43,81 @@ class ArgumentRecord
   IN_TYPE m_peak_arg;
   std::mutex m_peak_mutex;
 
+  // Record the extreme args so the user
+  // knows what bounds to use for their tables
+  IN_TYPE m_max_recorded;
+  std::mutex m_max_recorded_mutex;
+
+  IN_TYPE m_min_recorded;
+  std::mutex m_min_recorded_mutex;
+
   public:
     ArgumentRecord(unsigned int histSize, IN_TYPE min, IN_TYPE max) :
       m_histSize(histSize), m_minArg(min), m_maxArg(max)
     {
       /* variables needed for recording function arguments
          init the histogram to 0 for easy incrementing*/
-      unsigned int *raw_hist = new unsigned int[histSize];
-      std::fill(raw_hist, raw_hist+histSize, 0);
-      // make this pointer unique and threadsafe
-      this->mp_histogram = std::unique_ptr<unsigned int[]>(mp_histogram);
-      this->mp_histogram_mutex.reset(new std::mutex[histSize]);
-      this->m_peak_arg=0;
+      mv_histogram = std::vector<unsigned int>(histSize, 0);
+      mp_histogram_mutex = std::unique_ptr<std::mutex[]>(new std::mutex[histSize]);
+
+      // naive initial member arg values
+      m_peak_arg=0;
+      m_max_recorded=std::numeric_limits<IN_TYPE>::min();
+      m_min_recorded=std::numeric_limits<IN_TYPE>::max();
     }
 
-    ArgumentRecord(std::string filename)
-    {
-      std::ifstream file_reader(filename);
-      using nlohmann::json;
-      json jsonStats;
-      file_reader >> jsonStats;
+    ~ArgumentRecord(){}
 
-      m_minArg = jsonStats["minArg"].get<IN_TYPE>();
-      m_maxArg = jsonStats["maxArg"].get<IN_TYPE>();
+    // Rebuild our argument record
+    // Assuming the encapsulating EvaluationImplementation
+    // gave us a valid json file
+    ArgumentRecord(nlohmann::json jsonStats)
+    {
+      m_minArg = jsonStats["ArgumentRecord"]["minArg"].get<IN_TYPE>();
+      m_maxArg = jsonStats["ArgumentRecord"]["maxArg"].get<IN_TYPE>();
 
       m_histSize = jsonStats["ArgumentRecord"]["histogramSize"].get<unsigned int>();
       for(unsigned int i=0; i<m_histSize; i++)
-        mp_histogram[i] = jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)].get<unsigned int>();
+        mv_histogram[i] = jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)].get<unsigned int>();
+      // restore our histogram's thread safety
+      mp_histogram_mutex = std::vector<std::unique_ptr<std::mutex>>(m_histSize, std::unique_ptr<std::mutex>(new std::mutex));
+
       m_peak_arg = jsonStats["ArgumentRecord"]["peak_arg"].get<IN_TYPE>();
+      m_max_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<IN_TYPE>();
+      m_min_recorded = jsonStats["ArgumentRecord"]["m_max_recorded"].get<IN_TYPE>();
     }
 
     // place x in the histogram
     void record_arg(IN_TYPE x)
     {
-      unsigned int index = COMPUTE_INDEX(x);
-      // lock only exists for the scope of this function
-      std::lock_guard<std::mutex> lock1(mp_histogram_mutex[index]);
-      mp_histogram[index]++;
+      // Record x if it's within our table's limits
+      // note: each std::lock_guard only exists for the duration of its scope
+      if(m_minArg <= x && x <= m_maxArg){
+        int index = COMPUTE_INDEX(x);
+        {
+          std::lock_guard<std::mutex> lock(mp_histogram_mutex[index]);
+          mv_histogram[index]++;
+        }
 
-      std::lock_guard<std::mutex> lock2(m_peak_mutex);
-      unsigned int peak_index = COMPUTE_INDEX(m_peak_arg);
-      if(mp_histogram[index]>mp_histogram[peak_index])
-        m_peak_arg=x;
+        {
+          std::lock_guard<std::mutex> lock(m_peak_mutex);
+          unsigned int peak_index = COMPUTE_INDEX(m_peak_arg);
+          if(mv_histogram[index] > mv_histogram[peak_index])
+            m_peak_arg = x;
+        } 
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(m_max_recorded_mutex);
+        if(m_max_recorded < x)
+          m_max_recorded = x;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(m_min_recorded_mutex);
+        if(m_min_recorded < x)
+          m_min_recorded = x;
+      }
     }
 
     // make a string representation of the histogram
@@ -93,9 +128,6 @@ class ArgumentRecord
 
     // add to the provided json object
     void print_details_json(nlohmann::json& jsonStats);
-
-    // free up the space used by the histogram
-    ~ArgumentRecord(){}
 };
 
 /* Implementations of functions that print to the console */
@@ -104,14 +136,14 @@ inline std::string ArgumentRecord<IN_TYPE>::to_string()
 {
   // avoid division by zero by printing nothing if the histogram is empty
   unsigned int peak_index=COMPUTE_INDEX(m_peak_arg);
-  if(mp_histogram[peak_index]==0)
+  if(mv_histogram[peak_index]==0)
     return "";
   
   // print out the histogram horizontally such that the longest row is 15 stars wide
   std::string hist_str;
   hist_str=std::to_string(m_minArg)+'\n';
   for(unsigned int i=0; i<m_histSize; i++){
-    for(unsigned int j=0; j<(unsigned int)(15*mp_histogram[i]/mp_histogram[peak_index]); j++)
+    for(unsigned int j=0; j<(unsigned int)(15*mv_histogram[i]/mv_histogram[peak_index]); j++)
       hist_str=hist_str+'*';
     hist_str=hist_str+'\n';
   }
@@ -122,20 +154,25 @@ inline std::string ArgumentRecord<IN_TYPE>::to_string()
 template <typename IN_TYPE>
 inline void ArgumentRecord<IN_TYPE>::print_details_json(nlohmann::json& jsonStats)
 {
+  // Assume the caller has the same max/min
   jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
   jsonStats["ArgumentRecord"]["histogramSize"] = m_histSize;
   for(unsigned int i=0; i<m_histSize; i++)
-    jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)]=mp_histogram[i];
+    jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)]=mv_histogram[i];
   jsonStats["ArgumentRecord"]["peak_arg"] = m_peak_arg;
-  // Assume the caller has the same max/min
-  // insert other statistics here
+  jsonStats["ArgumentRecord"]["m_min_recorded"] = m_min_recorded;
+  jsonStats["ArgumentRecord"]["m_max_recorded"] = m_max_recorded;
+  
+  // insert more statistics here
 }
 
 template <typename IN_TYPE>
 inline void ArgumentRecord<IN_TYPE>::print_details(std::ostream& out)
 {
-  out << "histogram: " << std::endl;
-  out << this->to_string() << std::endl;
+  out << "histogram: \n";
+  out << this->to_string() << "\n";
   out << "The peak_arg is located at x=" << m_peak_arg << " with ";
-  out << mp_histogram[COMPUTE_INDEX(m_peak_arg)] << " evaluations." << std::endl;
+  out << mv_histogram[COMPUTE_INDEX(m_peak_arg)] << " evaluations.\n";
+  out << "The largest argument recorded was x=" << m_max_recorded << "\n";
+  out << "The most negative argument recorded was x=" << m_min_recorded << std::endl;
 }
