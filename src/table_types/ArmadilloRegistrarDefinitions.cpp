@@ -1,4 +1,5 @@
 #include "UniformArmadilloPrecomputedInterpolationTable.hpp"
+#include "config.hpp" // FUNC_USE_BOOST_AUTODIFF, FUNC_USE_ARMADILLO
 
 FUNC_REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformArmadilloPrecomputedInterpolationTable,4);
 FUNC_REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformArmadilloPrecomputedInterpolationTable,5);
