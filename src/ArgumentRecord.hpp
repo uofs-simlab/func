@@ -46,6 +46,10 @@ class ArgumentRecord
   IN_TYPE m_peak_index; // the index of the bucket with the largest count
   std::mutex m_peak_mutex;
 
+  // the sum of histogram elements and args outside the histogram's range
+  unsigned int m_out_of_bounds;
+  std::mutex m_out_of_bounds_mutex;
+
   // Record the extreme args so the user
   // knows what bounds to use for their tables
   IN_TYPE m_max_recorded;
@@ -107,6 +111,10 @@ class ArgumentRecord
           if(mv_histogram[x_index] > mv_histogram[m_peak_index])
             m_peak_index = x_index;
         } 
+      }else{
+        // count x if it doesn't qualify
+        std::lock_guard<std::mutex> lock(m_out_of_bounds_mutex);
+        m_out_of_bounds++;
       }
 
       {
@@ -171,11 +179,16 @@ inline void ArgumentRecord<IN_TYPE>::print_details_json(nlohmann::json& jsonStat
 template <typename IN_TYPE>
 inline void ArgumentRecord<IN_TYPE>::print_details(std::ostream& out)
 {
+  unsigned int total_recorded = 0.0;
+  for(unsigned int i=0; i<m_histSize; i++)
+    total_recorded += mv_histogram[i];
+
   out << "histogram: \n";
   out << this->to_string() << "\n";
-  out << "Args within the histogram's range were sampled"
-      << "the most often from the subinterval\n"
-  out << "["
+  out << m_out_of_bounds + total_recorded << " total args were sampled. Of those, "
+      << total_recorded << " were recorded by the histogram.\n"
+  out << "Recorded args were sampled the most often from the subinterval"
+      << "["
       << m_minArg + (m_maxArg - m_minArg)*m_peak_index/m_histSize << ", "
       << m_minArg + (m_maxArg - m_minArg)*(m_peak_index+1)/m_histSize << ") "
       << "with " << mv_histogram[m_peak_index] << " evaluations.\n";
