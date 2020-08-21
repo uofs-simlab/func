@@ -102,8 +102,7 @@ public:
 
   void print_details(std::ostream& out) override
   {
-    out << "arcsinh transfer function approximating g_inv with ";
-    out << m_method_of_approx;
+    out << NUM_COEFS;
   }
 };
 

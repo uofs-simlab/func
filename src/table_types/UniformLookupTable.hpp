@@ -54,6 +54,8 @@ class UniformLookupTable : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
 {
 protected:
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+
+  // TODO discuss having m_grid exclusive to NonUniformTables
   std::unique_ptr<IN_TYPE[]> m_grid;  // pointers to grid and evaluation data
   // a polynomial (above) array needs to be provided by each implementation
 
@@ -146,14 +148,13 @@ public:
     return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
   }
 
-
   /* Write table data to the provided ostream in the form of json. Virtual in case derived
      classes need to save their own member vars. eg. NonuniformLUTs will store their
      grid and rebuild their transfer function */
   virtual void print_details_json(std::ostream& out)
   {
     // TODO if FunC gets a namespace we should consider renaming our json
-    // functions to to_json() and from_json functions as seen here
+    // functions to to_json() and from_json() functions as seen here
     // https://github.com/nlohmann/json
     using nlohmann::json;
     json jsonStats;
@@ -193,6 +194,7 @@ public:
   UniformLookupTableFactory<float,float,std::string>::
   UniformLookupTableFactory<double,float,std::string>::
   UniformLookupTableFactory<float,double,std::string>::
+  and NonUniformTables just add to the pile
   TODO desperately need a dev flag for this
 
   Usage example:

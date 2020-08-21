@@ -1,11 +1,14 @@
 /*
-  Generate a FunC UniformLookupTable by name
-  and with a given stepsize, tolerance, or memory size limit
+  Generate a FunC UniformLookupTable when given that table's name
+  and one of the following:
+  - stepsize
+  - tolerance
+  - memory size limit
+  - filename
 
-  NOTES:
-    Also equipped to
-    - compute table error estimates at a given stepsize
-    - plot a table implementation against the exact function
+  Also equipped to
+  - compute table error estimates at a given stepsize
+  - plot a table implementation against the exact function
 */
 #pragma once
 #include "UniformLookupTable.hpp"
@@ -60,12 +63,11 @@ public:
     return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
   }
 
-  /* TODO Another wrapper for the UniformLookupTableFactory */
+  /* Another wrapper for the UniformLookupTableFactory for building tables from a file */
   std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string tableKey, std::string filename)
   {
     return UniformLookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
   }
-
 
   /* Generate a table that is accurate to desiredTolerance */
   std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_tol(std::string tableKey, double desiredTolerance);

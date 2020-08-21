@@ -50,6 +50,14 @@ public:
     return std::make_pair(m_grid[intervalNumber], m_grid[intervalNumber+1]);
   }
 
+  void print_details(std::ostream &out) override
+  {
+    out << m_name << "<";
+    m_transferFunction.print_details(out);
+    out << "> " << m_minArg << " " << m_maxArg << " "
+        << m_stepSize << " " << m_numIntervals << " ";
+  }
+
   virtual ~NonUniformLookupTable(){};
 };
 

@@ -11,12 +11,13 @@
   Notes:
   - ownership of the original table is moved to this class upon construction
   (not a problem since tables don't have move constructors for unique_ptr)
+  - specify the LUT_TYPE in the third template arg is recommended because it
+  avoids a virtual operator() call, and doing so lets you built this table like
+  any other FunC lookup table
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
   - specify the NDEBUG flag to turn off argument recording for args outside
   the table's range.
-  - Args outside the table's range are printed to stderr upon table destruction
-  (so you could redirect that output to a file with '2> foo.txt' if it's a lot)
 */
 #pragma once
 #include "EvaluationImplementation.hpp"
