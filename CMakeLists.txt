@@ -18,9 +18,19 @@ find_package(Boost COMPONENTS
         # system
         REQUIRED)
 
+message(STATUS "Version of Boost found: ${Boost_VERSION}")
 message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
 message(STATUS "Boost libs to link: ${Boost_LIBRARIES}")
 message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
+
+if(Boost_VERSION VERSION_LESS 1.71.0)
+  set(USE_BOOST_AUTODIFF OFF)
+  message(WARNING "The version of Boost found is less than 1.71.0
+If you wish to use Taylor, Pade, and Hermite tables then you will need
+a newer version of Boost.")
+else()
+  set(USE_BOOST_AUTODIFF ON)
+endif()
 
 # Find Armadillo for the degree 4-7 polynomial interpolation and Pade tables
 option(USE_ARMADILLO "Use Armadillo library" OFF)

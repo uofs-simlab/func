@@ -21,7 +21,6 @@ class NonUniformLookupTable : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 protected:
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  //std::unique_ptr<TRANSFER_FUNC_TYPE> mp_transferFunction;
   TRANSFER_FUNC_TYPE m_transferFunction;
   virtual OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override=0;
   virtual unsigned int get_num_coefs() override=0;
@@ -54,8 +53,27 @@ public:
   virtual ~NonUniformLookupTable(){};
 };
 
-// TODO default register TRANSFER_FUNC_TYPE as TransferFunctionSinh and have each table templated on an unsigned int
-#define REGISTER_NONUNIFORM_IMPL(classname,IN_TYPE,OUT_TYPE,TRANSFER_FUNC) \
+// We'll register TRANSFER_FUNC_TYPE as TransferFunctionSinh and each key will seemingly be
+// templated on an unsigned int. That way we still have flexible NonUniform LUTs but it's not
+// so stiff to write out
+#define FUNC_REGISTER_NONUNIFORM_IMPL(classname,IN_TYPE,OUT_TYPE,N) \
   template<> const \
-    UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,TRANSFER_FUNC>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE,TRANSFER_FUNC>::registrar(STR(classname))
+    UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>>,IN_TYPE,OUT_TYPE> \
+    classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>>::registrar(FUNC_STR(classname<N>))
+
+#define FUNC_REGISTER_TEMPLATE_NONUNIFORM_IMPL(classname,IN_TYPE,OUT_TYPE,N,other...) \
+  template<> const \
+    UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>>,IN_TYPE,OUT_TYPE> \
+    classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>,other>::registrar(FUNC_STR(classname<N,other>))
+
+#define FUNC_REGISTER_DOUBLE_AND_FLOAT_NONUNIFORM_IMPL(classname,N) \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,double,N); \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,float,N);  \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,double,N);  \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,float,N);
+
+#define FUNC_REGISTER_TEMPLATED_NONUNIFORM_IMPL(classname,N,other...) \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,double,N); \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,float,N);  \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,double,N);  \
+  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,float,N);

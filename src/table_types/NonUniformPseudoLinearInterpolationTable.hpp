@@ -19,7 +19,7 @@ class NonUniformPseudoLinearInterpolationTable final : public NonUniformLookupTa
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
   INHERIT_NONUNIFORM_LUT(IN_TYPE,OUT_TYPE);
 
-  REGISTER_LUT(NonUniformPseudoLinearInterpolationTable);
+  FUNC_REGISTER_LUT(NonUniformPseudoLinearInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
   OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
@@ -31,7 +31,7 @@ public:
     NonUniformLookupTable<IN_TYPE,OUT_TYPE,TRANSFER_FUNC_TYPE>(func_container, par)
   {
     /* Base class variables */
-    m_name = STR(NonUniformPseudoLinearInterpolationTable);
+    m_name = FUNC_STR(NonUniformPseudoLinearInterpolationTable);
     m_order = 2;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -85,5 +85,3 @@ public:
     return y1+dx*(y2-y1);
   }
 };
-
-REGISTER_NONUNIFORM_IMPL(NonUniformPseudoLinearInterpolationTable,double,double,TransferFunctionSinh<double>);
