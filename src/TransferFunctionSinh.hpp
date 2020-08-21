@@ -18,12 +18,24 @@
   fairly general
  */
 #pragma once
+#include "config.hpp" // FUNC_USE_BOOST_AUTODIFF, FUNC_USE_ARMADILLO
 #include <cmath> // sqrt
 #include <string>
 #include <limits> // std::numeric_limits<T>::max
 #include <functional> // std::function
+
+#ifndef FUNC_USE_BOOST_AUTODIFF
+#error "TransferFunctionSinh needs boost version >= 1.71"
+#endif
+
+#ifndef FUNC_USE_ARMADILLO
+#error "TransferFunctionSinh needs Armadillo"
+#endif
+
 #define ARMA_USE_CXX11
 #include <armadillo>
+#define FUNC_TRANSFER_FUNCTION_SOLVE_OPTS arma::solve_opts::refine
+
 #include "TransferFunctionInterface.hpp"
 #include "FunctionContainer.hpp"
 
@@ -265,7 +277,7 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inver
   // between 0 and 1
   y.rows(0,NUM_COEFS-1) = gspace(NUM_COEFS, g, gp);
 
-  y = arma::solve(A,y);
+  y = arma::solve(A,y,FUNC_TRANSFER_FUNCTION_SOLVE_OPTS);
 
   // move from arma's vector to a std::unique_ptr<double[]>
   auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[NUM_COEFS]);
@@ -311,7 +323,7 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inver
     y[M-1+i] = 1.0/gp(y[i]); // requires f(y[i])\neq\pm\infy
   }
 
-  y = arma::solve(A,y);
+  y = arma::solve(A,y,FUNC_TRANSFER_FUNCTION_SOLVE_OPTS);
 
   // move from arma's vector to a std::unique_ptr<double[]>
   auto coefs = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[NUM_COEFS]);
@@ -372,7 +384,7 @@ inline std::unique_ptr<IN_TYPE[]> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inver
   y[M] = 1.0/gp(y[0]); // requires f(y[i])\neq\pm\infy
   y[M+1] = 1.0/gp(y[M-1]); // requires f(y[i])\neq\pm\infy
 
-  y = arma::solve(A,y);
+  y = arma::solve(A,y,FUNC_TRANSFER_FUNCTION_SOLVE_OPTS);
 
   if(abs(y[0]) > tol)
     throw std::runtime_error("inverse_hermite_interp() failed to"

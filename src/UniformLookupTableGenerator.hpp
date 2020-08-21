@@ -9,6 +9,7 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "config.hpp" // FUNC_USE_QUADMATH
 #include <iostream>
 #include <memory>
 #include <limits>
@@ -18,7 +19,7 @@
 #include <boost/math/special_functions/next.hpp>
 
 // If quadmath is used, work in the boost::multiprecision namespace
-#ifdef USE_QUADMATH
+#ifdef FUNC_USE_QUADMATH
 #include <boost/multiprecision/float128.hpp>
 using namespace boost::multiprecision;
 using errprecision = float128;
@@ -59,10 +60,10 @@ public:
     return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
   }
 
-  /* TODO A wrapper for the UniformLookupTableFactory */
-  std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, std::string filename)
+  /* TODO Another wrapper for the UniformLookupTableFactory */
+  std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string tableKey, std::string filename)
   {
-    //return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, filename);
+    return UniformLookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
   }
 
 

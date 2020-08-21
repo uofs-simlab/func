@@ -1,5 +1,17 @@
-# FunC library
-add_library(func SHARED empty.cpp)
+# Build the portion of FunC's source code that will be used
+file(WRITE config.hpp "#pragma once\n")
+if(USE_QUADMATH AND QUADMATH_FOUND)
+  file(APPEND config.hpp "#define FUNC_USE_QUADMATH\n")
+endif()
+
+if(USE_BOOST_AUTODIFF)  
+  file(APPEND config.hpp "#define FUNC_USE_BOOST_AUTODIFF\n")
+endif()
+
+# fill our lookup table factory with constructors
+list(APPEND func_src
+  table_types/StandardRegistrarDefinitions.cpp
+)
 
 # Implementations are separated out into their own library
 list(APPEND func_include_dirs ./ table_types)
@@ -8,24 +20,23 @@ if(USE_ARMADILLO AND ARMADILLO_FOUND)
   # link with Armadillo add all the table types that use Armadillo
   list(APPEND func_include_dirs ${ARMADILLO_INCLUDE_DIR})
   list(APPEND func_link_libs ${ARMADILLO_LIBRARIES})
-  target_compile_definitions(func PUBLIC -DUSE_ARMADILLO)
+
+  # set our config file to use armadillo tables and 
+  # fill our lookup table factory with armadillo exclusive table constructors
+  file(APPEND config.hpp "#define FUNC_USE_ARMADILLO\n")
+  list(APPEND func_src
+    table_types/ArmadilloRegistrarDefinitions.cpp
+  )
 endif()
 
 # add the func lib with the lists we built above
+add_library(func SHARED ${func_src})
 target_link_libraries(func PUBLIC ${func_link_libs})
 target_include_directories(func PUBLIC ${func_include_dirs})
-
 target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} Boost::boost)
-if(USE_QUADMATH AND QUADMATH_FOUND)
-  target_compile_definitions(func PUBLIC -DUSE_QUADMATH)
-endif()
-
-if(FUNC_RECORD)
-  target_compile_definitions(func PUBLIC -DFUNC_RECORD)
-endif()
 
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
-func.hpp;func_impls.hpp;\
+config.hpp;func.hpp;\
 FunctionContainer.hpp;EvaluationImplementation.hpp;\
 DirectEvaluation.hpp;ArgumentRecord.hpp;\
 ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
