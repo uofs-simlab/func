@@ -5,6 +5,7 @@
 
   - takes ownership of the vector of implementations passed to it
 */
+#pragma once
 #include "Timer.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"

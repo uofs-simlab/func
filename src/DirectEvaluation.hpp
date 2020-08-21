@@ -54,6 +54,7 @@ public:
     (void) histSize; // ignore histSize if -DFUNC_RECORD isn't specified
   }
 
+  /* rebuild this class and it's arg record from a file */
   DirectEvaluation(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
     std::string filename)
   {
@@ -70,7 +71,6 @@ public:
     mp_recorder = std::unique_ptr<ArgumentRecord<IN_TYPE>>(new ArgumentRecord<IN_TYPE>(jsonStats));
   #endif
   }
-
 
   // Evaluate the underlying std::function and optionally record the arg
   OUT_TYPE operator()(IN_TYPE x) override
