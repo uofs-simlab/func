@@ -13,13 +13,18 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "config.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
+#ifndef FUNC_USE_BOOST_AUTODIFF
+#error "UniformCubicHermiteTable needs boost version >= 1.71"
+#endif
+
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformCubicHermiteTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformCubicHermiteTable);
+  FUNC_REGISTER_LUT(UniformCubicHermiteTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,4>[]> m_table;
   std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> mp_boost_func;
@@ -32,7 +37,7 @@ public:
   {
     using boost::math::differentiation::make_fvar;
     /* Base class default variables */
-    m_name = STR(UniformCubicHermiteTable);
+    m_name = FUNC_STR(UniformCubicHermiteTable);
     m_order = 4;
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -94,5 +99,3 @@ public:
 
   std::function<adVar<OUT_TYPE,1>(adVar<OUT_TYPE,1>)> boost_function(){ return mp_boost_func; }
 };
-
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformCubicHermiteTable);

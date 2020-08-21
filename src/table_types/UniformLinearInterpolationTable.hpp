@@ -12,12 +12,12 @@
 #pragma once
 #include "UniformLookupTable.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformLinearInterpolationTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformLinearInterpolationTable);
+  FUNC_REGISTER_LUT(UniformLinearInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
   OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
@@ -28,7 +28,7 @@ public:
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
   {
     /* Base class variables */
-    m_name = STR(UniformLinearInterpolationTable);
+    m_name = FUNC_STR(UniformLinearInterpolationTable);
     m_order = 2;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -77,5 +77,3 @@ public:
     return y1+dx*(y2-y1);
   }
 };
-
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformLinearInterpolationTable);

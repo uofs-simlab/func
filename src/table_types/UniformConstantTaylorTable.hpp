@@ -12,13 +12,13 @@
 #pragma once
 #include "UniformLookupTable.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformConstantTaylorTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
 
-  REGISTER_LUT(UniformConstantTaylorTable);
+  FUNC_REGISTER_LUT(UniformConstantTaylorTable);
 
   __attribute__((aligned)) std::unique_ptr<OUT_TYPE[]> m_table;
   OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i]; (void) j; }
@@ -29,7 +29,7 @@ public:
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
   {
     /* Base class default variables */
-    m_name = STR(UniformConstantTaylorTable);
+    m_name = FUNC_STR(UniformConstantTaylorTable);
     m_order = 1;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(OUT_TYPE) * m_numTableEntries;
@@ -70,5 +70,3 @@ public:
     return m_table[(unsigned)((x-m_minArg)/m_stepSize+0.5)];
   }
 };
-
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformConstantTaylorTable);

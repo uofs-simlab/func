@@ -15,6 +15,16 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "config.hpp"
+
+#ifndef FUNC_USE_BOOST_AUTODIFF
+#error "UniformPadeTable needs boost version >= 1.71"
+#endif
+
+#ifndef FUNC_USE_ARMADILLO
+#error "UniformPadeTable needs Armadillo"
+#endif
+
 #include <armadillo>
 #include <iostream>
 #include <stdexcept>
@@ -27,7 +37,7 @@ class UniformPadeTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformPadeTable);
+  FUNC_REGISTER_LUT(UniformPadeTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE, M+N+1>[]> m_table;
   std::function<adVar<OUT_TYPE,M+N>(adVar<OUT_TYPE,M+N>)> mp_boost_func;
@@ -192,18 +202,3 @@ public:
 
   std::function<adVar<OUT_TYPE,M+N>(adVar<OUT_TYPE,M+N>)> boost_function(){ return mp_boost_func; }
 };
-
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,1,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,2,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,3,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,4,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,5,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,6,1);
-
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,2,2);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,3,2);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,4,2);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,5,2);
-
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,3,3);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,4,3);

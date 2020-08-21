@@ -11,13 +11,18 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "config.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
+#ifndef FUNC_USE_BOOST_AUTODIFF
+#error "UniformQuadraticTaylorTable needs boost version >= 1.71"
+#endif
+
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformQuadraticTaylorTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformQuadraticTaylorTable);
+  FUNC_REGISTER_LUT(UniformQuadraticTaylorTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,3>[]> m_table;
   std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> mp_boost_func;
@@ -31,7 +36,7 @@ public:
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
-    m_name = STR(UniformQuadraticTaylorTable);
+    m_name = FUNC_STR(UniformQuadraticTaylorTable);
     m_order = 3;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -86,5 +91,3 @@ public:
 
   std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> boost_function(){ return mp_boost_func; }
 };
-
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformQuadraticTaylorTable);

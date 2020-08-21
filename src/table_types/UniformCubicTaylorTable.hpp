@@ -11,13 +11,18 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "config.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
+#ifndef FUNC_USE_BOOST_AUTODIFF
+#error "UniformLinearTaylorTable needs boost version >= 1.71"
+#endif
+
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformCubicTaylorTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformCubicTaylorTable);
+  FUNC_REGISTER_LUT(UniformCubicTaylorTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,4>[]> m_table;
   std::function<adVar<OUT_TYPE,3>(adVar<OUT_TYPE,3>)> mp_boost_func;
@@ -31,7 +36,7 @@ public:
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
-    m_name = STR(UniformCubicTaylorTable);
+    m_name = FUNC_STR(UniformCubicTaylorTable);
     m_order = 4;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -88,5 +93,3 @@ public:
 
   std::function<adVar<OUT_TYPE,3>(adVar<OUT_TYPE,3>)> boost_function(){ return mp_boost_func; }
 };
-
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformCubicTaylorTable);
