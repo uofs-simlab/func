@@ -61,8 +61,8 @@ class ArgumentRecord
       mp_histogram_mutex = std::unique_ptr<std::mutex[]>(new std::mutex[histSize]);
 
       // naive initial member arg values
-      m_peak_arg=0;
-      m_max_recorded=std::numeric_limits<IN_TYPE>::min();
+      m_peak_arg=m_minArg;
+      m_max_recorded=-std::numeric_limits<IN_TYPE>::max();
       m_min_recorded=std::numeric_limits<IN_TYPE>::max();
     }
 
@@ -115,7 +115,7 @@ class ArgumentRecord
 
       {
         std::lock_guard<std::mutex> lock(m_min_recorded_mutex);
-        if(m_min_recorded < x)
+        if(x < m_min_recorded)
           m_min_recorded = x;
       }
     }
