@@ -21,9 +21,14 @@
 template <typename IN_TYPE>
 struct UniformLookupTableParameters
 {
-  IN_TYPE minArg = 0;
-  IN_TYPE maxArg = 1;
-  IN_TYPE stepSize = 1;
+  IN_TYPE minArg;
+  IN_TYPE maxArg;
+  IN_TYPE stepSize;
+
+  // support initializer lists
+  UniformLookupTableParameters(IN_TYPE min, IN_TYPE max, IN_TYPE step) :
+    minArg(min), maxArg(max), stepSize(step) {}
+  UniformLookupTableParameters(){}
 };
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
@@ -179,11 +184,16 @@ public:
   UniformLookupTableFactory: singleton class responsible for
   - creating Derived classes of UniformLookupTable
   - keeping a registry of derived classes
-  - It's usage throughout FunC implies 4 namespaces are made.
+  - It's usage throughout FunC implies 8 namespaces are made.
   UniformLookupTableFactory<double>::
   UniformLookupTableFactory<float>::
   UniformLookupTableFactory<double,float>::
   UniformLookupTableFactory<float,double>::
+  UniformLookupTableFactory<double,double,std::string>::
+  UniformLookupTableFactory<float,float,std::string>::
+  UniformLookupTableFactory<double,float,std::string>::
+  UniformLookupTableFactory<float,double,std::string>::
+  TODO desperately need a dev flag for this
 
   Usage example:
   // given the fc is an initialized function container
@@ -191,18 +201,15 @@ public:
   std::unique_ptr<EvaluationImplementation<double>> p_table = 
     UniformLookupTableFactory<double>::Create("UniformCubicPrecomputedInterpolationTable",fc, par);
 
-  TODO need a read from file variant
-
 //////////////////////////////////////////////////////////////////////////// */
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class OTHER = UniformLookupTableParameters<IN_TYPE>>
 class UniformLookupTableFactory
 {
 public:
   // Only ever hand out unique pointers
-  // TODO overload with a filename
   static std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> Create(
       std::string name, FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-      UniformLookupTableParameters<IN_TYPE> par)
+      OTHER args)
   {
     // Create a UniformLookupTable
     UniformLookupTable<IN_TYPE,OUT_TYPE> *instance = nullptr;
@@ -210,7 +217,7 @@ public:
     // find the name in the registry and call factory method.
     auto it = get_registry().find(name);
     if(it != get_registry().end())
-      instance = it->second(fc,par);
+      instance = it->second(fc, args);
 
     // wrap instance in a unique ptr and return (if created)
     if(instance == nullptr)
@@ -222,7 +229,7 @@ public:
   static void RegisterFactoryFunction(std::string name,
       std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
         FunctionContainer<IN_TYPE,OUT_TYPE>*, 
-        UniformLookupTableParameters<IN_TYPE>
+        OTHER
       )> classFactoryFunction)
   {
     // register a derived class factory function
@@ -242,11 +249,11 @@ public:
 private:
   // the actual registry is private to this class
   static std::map<std::string, std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
-			FunctionContainer<IN_TYPE,OUT_TYPE>*, UniformLookupTableParameters<IN_TYPE>)>>& get_registry()
+			FunctionContainer<IN_TYPE,OUT_TYPE>*, OTHER)>>& get_registry()
   {
     // Get the singleton instance of the registry map
     static std::map<std::string, std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
-               FunctionContainer<IN_TYPE,OUT_TYPE>*,UniformLookupTableParameters<IN_TYPE>)>> registry;
+               FunctionContainer<IN_TYPE,OUT_TYPE>*,OTHER)>> registry;
     return registry;
   }
 
@@ -262,51 +269,53 @@ private:
   NOTE: implementation defined in this header so that templates get
   instantiated in derived LUT class files
 */
-template <class T, typename IN_TYPE, typename OUT_TYPE>
+template <class T, typename IN_TYPE, typename OUT_TYPE, class OTHER = UniformLookupTableParameters<IN_TYPE>>
 class UniformLookupTableRegistrar {
 public:
   UniformLookupTableRegistrar(std::string className)
   {
     UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::RegisterFactoryFunction(className,
       [](FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-         UniformLookupTableParameters<IN_TYPE> par
-      ) -> UniformLookupTable<IN_TYPE,OUT_TYPE>* { return new T(fc, par); }
+         OTHER args
+      ) -> UniformLookupTable<IN_TYPE,OUT_TYPE>* { return new T(fc, args); }
     );
   }
 };
 
 /*
    Macros for class registration:
-   - REGISTER_LUT goes inside class definition
-   - REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS goes underneath the class definition.
+   - FUNC_REGISTER_LUT goes inside class definition
+   - FUNC_REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS goes underneath the class definition.
    Several different versions of this macro exist for registering templated classes
    - other... is for template parameters unrelated to the tables IN_TYPE and OUT_TYPE
 */
-#define REGISTER_LUT(classname) \
+#define FUNC_REGISTER_LUT(classname) \
 private: \
-  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar
-#define STR_EXPAND(x...) #x
-#define STR(x...) STR_EXPAND(x)
+  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar; \
+  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE,std::string> str_registrar
 
-#define REGISTER_LUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
+#define FUNC_STR_EXPAND(x...) #x
+#define FUNC_STR(x...) FUNC_STR_EXPAND(x)
+
+#define FUNC_REGISTER_LUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
   template<> const \
   UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE>::registrar(STR(classname))
+    classname<IN_TYPE,OUT_TYPE>::registrar(FUNC_STR(classname))
 
-#define REGISTER_TEMPLATED_LUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
+#define FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
   template<> const \
     UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,other>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE,other>::registrar(STR(classname<other>))
+    classname<IN_TYPE,OUT_TYPE,other>::registrar(FUNC_STR(classname<other>))
 
 // macros used in each class to quickly register 4 different template instantiations
-#define REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(classname)\
-  REGISTER_LUT_IMPL(classname,double,double); \
-  REGISTER_LUT_IMPL(classname,float,double); \
-  REGISTER_LUT_IMPL(classname,double,float); \
-  REGISTER_LUT_IMPL(classname,float,float);
+#define FUNC_REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(classname)\
+  FUNC_REGISTER_LUT_IMPL(classname,double,double); \
+  FUNC_REGISTER_LUT_IMPL(classname,float,double);  \
+  FUNC_REGISTER_LUT_IMPL(classname,double,float);  \
+  FUNC_REGISTER_LUT_IMPL(classname,float,float);
 
-#define REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(classname,other...) \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,double,double,other); \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,float,double,other);  \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,double,float,other);  \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,float,float,other)
+#define FUNC_REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(classname,other...) \
+  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,double,double,other); \
+  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,float,double,other);  \
+  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,double,float,other);  \
+  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,float,float,other)
