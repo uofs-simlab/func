@@ -11,6 +11,7 @@
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
 #include "json.hpp"
+#include "config.hpp" // FUNC_USE_SMALL_REGISTRY
 
 #include <map>
 #include <memory>
@@ -287,10 +288,11 @@ public:
 /*
    Macros for class registration:
    - FUNC_REGISTER_LUT goes inside class definition
-   - FUNC_REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS goes underneath the class definition.
+   - FUNC_REGISTER_EACH_ULUT_IMPL goes underneath the class definition.
    Several different versions of this macro exist for registering templated classes
    - other... is for template parameters unrelated to the tables IN_TYPE and OUT_TYPE
 */
+// this macro is used for nonuniform tables
 #define FUNC_REGISTER_LUT(classname) \
 private: \
   static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar; \
@@ -299,25 +301,37 @@ private: \
 #define FUNC_STR_EXPAND(x...) #x
 #define FUNC_STR(x...) FUNC_STR_EXPAND(x)
 
-#define FUNC_REGISTER_LUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
+// everything after this point is specialized to uniform LUTs.
+#define FUNC_REGISTER_ULUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
   template<> const \
   UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE>,IN_TYPE,OUT_TYPE> \
     classname<IN_TYPE,OUT_TYPE>::registrar(FUNC_STR(classname))
 
-#define FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
+#define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
   template<> const \
     UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,other>,IN_TYPE,OUT_TYPE> \
     classname<IN_TYPE,OUT_TYPE,other>::registrar(FUNC_STR(classname<other>))
 
+#ifndef FUNC_USE_SMALL_REGISTRY
 // macros used in each class to quickly register 4 different template instantiations
-#define FUNC_REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(classname)\
-  FUNC_REGISTER_LUT_IMPL(classname,double,double); \
-  FUNC_REGISTER_LUT_IMPL(classname,float,double);  \
-  FUNC_REGISTER_LUT_IMPL(classname,double,float);  \
-  FUNC_REGISTER_LUT_IMPL(classname,float,float);
+#define FUNC_REGISTER_EACH_ULUT_IMPL(classname)\
+  FUNC_REGISTER_ULUT_IMPL(classname,double,double); \
+  FUNC_REGISTER_ULUT_IMPL(classname,float,double);  \
+  FUNC_REGISTER_ULUT_IMPL(classname,double,float);  \
+  FUNC_REGISTER_ULUT_IMPL(classname,float,float);
 
-#define FUNC_REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(classname,other...) \
-  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,double,double,other); \
-  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,float,double,other);  \
-  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,double,float,other);  \
-  FUNC_REGISTER_TEMPLATED_LUT_IMPL(classname,float,float,other)
+#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...) \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,double,other); \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,double,other);  \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,float,other);  \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,float,other)
+
+#else // just build double -> double tables
+
+#define FUNC_REGISTER_EACH_ULUT_IMPL(classname)\
+  FUNC_REGISTER_ULUT_IMPL(classname,double,double); \
+
+#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...) \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,double,other); \
+
+#endif // FUNC_USE_SMALL_REGISTRY

@@ -64,24 +64,48 @@ public:
 // We'll register TRANSFER_FUNC_TYPE as TransferFunctionSinh and each key will seemingly be
 // templated on an unsigned int. That way we still have flexible NonUniform LUTs but it's not
 // so stiff to write out
-#define FUNC_REGISTER_NONUNIFORM_IMPL(classname,IN_TYPE,OUT_TYPE,N) \
+#define FUNC_REGISTER_NONULUT_IMPL(classname,IN_TYPE,OUT_TYPE,N) \
   template<> const \
     UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>>,IN_TYPE,OUT_TYPE> \
     classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>>::registrar(FUNC_STR(classname<N>))
 
-#define FUNC_REGISTER_TEMPLATE_NONUNIFORM_IMPL(classname,IN_TYPE,OUT_TYPE,N,other...) \
+#define FUNC_REGISTER_TEMPLATED_NONULUT_IMPL(classname,IN_TYPE,OUT_TYPE,N,other...) \
   template<> const \
     UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>>,IN_TYPE,OUT_TYPE> \
     classname<IN_TYPE,OUT_TYPE,TransferFunctionSinh<IN_TYPE,N>,other>::registrar(FUNC_STR(classname<N,other>))
 
-#define FUNC_REGISTER_DOUBLE_AND_FLOAT_NONUNIFORM_IMPL(classname,N) \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,double,N); \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,float,N);  \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,double,N);  \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,float,N);
+#ifndef FUNC_USE_SMALL_REGISTRY
+  #define FUNC_REGISTER_NONULUT_IMPL_PRECISIONS(classname,N) \
+    FUNC_REGISTER_NONULUT_IMPL(classname,double,double,N); \
+    FUNC_REGISTER_NONULUT_IMPL(classname,double,float,N);  \
+    FUNC_REGISTER_NONULUT_IMPL(classname,float,double,N);  \
+    FUNC_REGISTER_NONULUT_IMPL(classname,float,float,N)
 
-#define FUNC_REGISTER_TEMPLATED_NONUNIFORM_IMPL(classname,N,other...) \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,double,N); \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,double,float,N);  \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,double,N);  \
-  FUNC_REGISTER_NONUNIFORM_IMPL(classname,float,float,N);
+  #define FUNC_REGISTER_TEMPLATED_NONULUT_IMPL_PRECISIONS(classname,N,other...) \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL(classname,double,double,N,other); \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL(classname,double,float,N,other);  \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL(classname,float,double,N,other);  \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL(classname,float,float,N,other)
+
+  #define FUNC_REGISTER_EACH_NONUNIFORM_IMPL_TYPE(classname) \
+    FUNC_REGISTER_NONULUT_IMPL_PRECISIONS(classname,3); \
+    FUNC_REGISTER_NONULUT_IMPL_PRECISIONS(classname,4); \
+    FUNC_REGISTER_NONULUT_IMPL_PRECISIONS(classname,5); \
+    FUNC_REGISTER_NONULUT_IMPL_PRECISIONS(classname,6); \
+    FUNC_REGISTER_NONULUT_IMPL_PRECISIONS(classname,7); \
+    FUNC_REGISTER_NONULUT_IMPL_PRECISIONS(classname,8)
+
+  #define FUNC_REGISTER_EACH_TEMPLATED_NONUNIFORM_IMPL_TYPE(classname, other...) \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL_PRECISIONS(classname,3,other); \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL_PRECISIONS(classname,4,other); \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL_PRECISIONS(classname,5,other); \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL_PRECISIONS(classname,6,other); \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL_PRECISIONS(classname,7,other); \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL_PRECISIONS(classname,8,other)
+#else
+  #define FUNC_REGISTER_EACH_NONUNIFORM_IMPL_TYPE(classname) \
+    FUNC_REGISTER_NONULUT_IMPL(classname,double,double,4)
+
+  #define FUNC_REGISTER_EACH_TEMPLATED_NONUNIFORM_IMPL_TYPE(classname,other...) \
+    FUNC_REGISTER_TEMPLATED_NONULUT_IMPL(classname,double,double,4,other)
+#endif // FUNC_USE_SMALL_REGISTRY

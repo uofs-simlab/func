@@ -1,4 +1,4 @@
-# Build the portion of FunC's source code that will be used
+# build our config file from the given cmake options
 file(WRITE config.hpp "#pragma once\n")
 if(USE_QUADMATH AND QUADMATH_FOUND)
   file(APPEND config.hpp "#define FUNC_USE_QUADMATH\n")
@@ -6,6 +6,12 @@ endif()
 
 if(USE_BOOST_AUTODIFF)  
   file(APPEND config.hpp "#define FUNC_USE_BOOST_AUTODIFF\n")
+endif()
+
+# limit our lookup table factory so each compile error only shows
+# up once rather than 4-6 times
+if(USE_SMALL_REGISTRY)
+  file(APPEND config.hpp "#define FUNC_USE_SMALL_REGISTRY\n")
 endif()
 
 # fill our lookup table factory with constructors
