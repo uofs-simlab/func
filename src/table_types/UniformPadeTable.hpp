@@ -12,6 +12,7 @@
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
   - Available template values are all M,N such that 0 < N <= M and M+N<=7
+  - Template values where M < N are not supported
 */
 #pragma once
 #include "UniformLookupTable.hpp"
@@ -28,7 +29,7 @@
 #include <armadillo>
 #include <iostream>
 #include <stdexcept>
-#include <cmath>
+#include <cmath> //isinfite
 
 static double const fact[] = {1,1,2,6,24,120,720,5040};
 
@@ -78,30 +79,31 @@ public:
 
       // find the coefficients of Q.
       arma::mat Q = arma::null(T.rows(M+1, M+N));
+      if(Q.n_rows > 1)
+        throw std::range_error(m_name + " is too poorly conditioned");
 
       // scale Q such that its first entry equals 1.
       Q=Q/Q[0];
-      if(!std::isfinite(Q[1]))
-        std::cerr << "Q = " << Q << std::endl << std::endl;
+      for(unsigned int i=1; i<M+N+1; i++)
+        if(!std::isfinite(Q[i]))
+          throw std::range_error(m_name + " is too poorly conditioned");
 
       // find the coefficients of P
       arma::vec P = T.rows(0,M)*Q;
 
-      // Check if the denominator Q has any roots
-      // within the subinterval [-m_stepSize/2,m_stepSize/2).
-      // If any roots exist, then lower the degree of the denominator.
-      //
-      // We'll check for the existence of a root by building a bracket,
-      // using Q(0)=1 as our 
-      // positive endpoint. Thus, we just need to find a point where
-      // Q is negative.
-      // Helper function:
+      /* Check if the denominator Q has any roots
+         within the subinterval [-m_stepSize/2,m_stepSize/2).
+         If any roots exist, then lower the degree of the denominator.
+        
+         We'll check for the existence of a root by building a bracket,
+         using Q(0)=1 as our positive endpoint. Thus, we just need
+         to find a point where Q is negative. Hence this helper function: */
       auto Q_is_negative = [this, &Q, &ii](IN_TYPE x) -> bool {
         // Tell us if this point is within this subinterval's range
         if(((ii == 0 && x < 0.0) || (ii == m_numIntervals - 1 && x > 0.0)))
           return false;
 
-        // compute Q(x)
+        // compute Q(x) using horners, evaluating from the inside out
         OUT_TYPE sum = x*Q[N];
         for (int k=N-1; k>0; k--)
           sum = x*(Q[k] + sum);
@@ -114,7 +116,7 @@ public:
         // check Q at the subinterval endpoints
         bool Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
 
-        // Check Q at any of its vertexes if they exist
+        // Check Q for negativity at any of its vertexes
         double desc = 0.0;
         if(!Q_has_root)
           switch(k){
