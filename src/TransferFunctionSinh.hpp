@@ -434,8 +434,8 @@ inline arma::vec TransferFunctionSinh<IN_TYPE,NUM_COEFS>::gspace(unsigned int N,
         // if g prime is undefined, do a hard switch to bisection
         boost::uintmax_t MAX_IT = MAX_BISECTION;
         x0 = x = toms748_solve(
-            [g, linear_pts, &i](IN_TYPE z) -> IN_TYPE { return g(z) - linear_pts[i]; }, // shift g
-            a, b, a-linear_pts[i], b-linear_pts[i], eps_tolerance<IN_TYPE>(), MAX_IT).first;
+            [g, linear_pts, &i](IN_TYPE z) -> IN_TYPE { return g(z) - (IN_TYPE) linear_pts[i]; }, // shift g
+            a, b, a-(IN_TYPE)linear_pts[i], b-(IN_TYPE)linear_pts[i], eps_tolerance<IN_TYPE>(), MAX_IT).first;
       }else{
         x = x-(g(x)-linear_pts[i])/gp(x);
       }
