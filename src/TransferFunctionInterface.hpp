@@ -1,7 +1,7 @@
 /* 
    Interface for a class that builds and contains FunC transfer
-   function pairs g and g^{-1}. These are the backbones of
-   NonUniformLookupTables and are used to map a uniform grid
+   function pairs g and g^{-1}. These are the backbones of every
+   NonUniformLookupTable and are used to map a uniform grid
    in [a,b] to a non-uniform grid in [a,b].
    The new grid will ideally do a better job of distributing error
    when used for grid points.
@@ -9,6 +9,11 @@
    g(a) = a;
    g(b) = b;
    x <= y implies g(x) <= g(y) (ie, g must be monotone increasing).
+
+   Another important stipulation is that the encapsulating nonuniform
+   table's hash should be baked into g_inv. This will obfustcate the nonuniform
+   lookup tables, but this way the the cost of using a transfer
+   function just boils down to an indirection.
 
   Notes:
     - g^{-1} must be quick to evaluate to see any speedup compared to uniform
