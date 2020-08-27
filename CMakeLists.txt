@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.1)
 # Default to "Release" build
 SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
 # options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) DEBUG RELEASE
-# RELWITHDEBINFO MINSIZEREL.")
+# RELWITHDEBINFO MINSIZEREL DEV.")
 
 project(FunC)
 
@@ -38,26 +38,39 @@ option(USE_ARMADILLO "Use Armadillo library" OFF)
 find_package(Armadillo COMPONENTS)
 
 if(ARMADILLO_FOUND)
+  message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
+  message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
+  message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
   if(NOT USE_ARMADILLO)
     message(WARNING "Armadillo found but not requested.
 If you wish to use Armadillo (NEEDED FOR HIGHER ORDER AND PADE TABLES),
  reconfigure with -DUSE_ARMADILLO=ON")
   endif()
-  message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
-  message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
-  message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
 endif()
 
 # Use quadmath if possible. Don't make a fuss if it's not there
 # Could be reconfigured if the user really doesn't want quadmath
 # even if they have it
 find_package(Quadmath)
-if(QUADMATH_FOUND)  
+if(QUADMATH_FOUND)
   option(USE_QUADMATH "Use quadmath library" ON)
 else()
   # we'll just use long double instead
   option(USE_QUADMATH "Use quadmath library" OFF)
 endif()
+
+find_package(OpenMP)
+if(OpenMP_FOUND)
+  if(APPLE AND ${CMAKE_VERSION} VERSION_LESS 3.12.0)
+    message(WARNING "Must have at least CMake version 3.12 to use openmp on MacOS")
+  else()
+    option(USE_OPENMP "Use OpenMP for thread safety and to parallelize the table building process" ON)
+  endif()
+else()
+  # use std::lib instead
+  option(USE_OPENMP "Use OpenMP for thread safety and to parallelize the table building process" OFF)
+endif()
+
 
 # Add an option for turning on argument recording
 option(FUNC_RECORD "Enable recording of arguments for DirectEvaluation" OFF)

@@ -35,10 +35,12 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
+    
+    #pragma omp parallel for schedule(static)
     for (int ii=0; ii<m_numIntervals; ++ii) {
       const IN_TYPE x = m_minArg + ii*m_stepSize;
       m_grid[ii]  = x;
-      m_table[ii].coefs[0] = (mp_func)(x);
+      m_table[ii].coefs[0] = mp_func(x);
     }
   }
 

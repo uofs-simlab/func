@@ -62,20 +62,11 @@ int main(int argc, char* argv[])
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-    //"UniformArmadilloPrecomputedInterpolationTable<4>",
-    //"UniformArmadilloPrecomputedInterpolationTable<5>",
-    //"UniformArmadilloPrecomputedInterpolationTable<6>",
-    //"UniformArmadilloPrecomputedInterpolationTable<7>",
-    //"UniformCubicHermiteTable",
-    "UniformCubicPrecomputedInterpolationTable",
-    //"UniformCubicTaylorTable",
     "UniformLinearInterpolationTable",
-    //"UniformLinearPrecomputedInterpolationTable",
-    //"UniformLinearTaylorTable",
-    //"UniformQuadraticPrecomputedInterpolationTable",
-    //"UniformQuadraticTaylorTable",
-    "NonUniformLinearInterpolationTable",
-    "NonUniformCubicPrecomputedInterpolationTable"
+    //"NonUniformLinearInterpolationTable<4>",
+    //"NonUniformPseudoLinearInterpolationTable<4>",
+    //"NonUniformCubicPrecomputedInterpolationTable<4>",
+    //"NonUniformPseudoCubicPrecomputedInterpolationTable<4>",
   };
 
   std::vector<std::string> padeNames {
@@ -90,7 +81,7 @@ int main(int argc, char* argv[])
     "UniformPadeTable<4,2>",
     "UniformPadeTable<5,2>",
     "UniformPadeTable<3,3>",
-    "UniformPadeTable<4,3>"
+    "UniformPadeTable<4,3>",
   };
 
   UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
@@ -98,7 +89,7 @@ int main(int argc, char* argv[])
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
-    cout << "about to build " << itName << endl;
+    cout << "Build " << itName << endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
 
@@ -119,6 +110,7 @@ int main(int argc, char* argv[])
   //impls.emplace_back(unique_ptr<EvaluationImplementation>(
   //      new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),
   //        gen2.generate_by_tol(implNames[7],tableTol*(tableMax-mid)/(tableMax-tableMin))})));
+  cout << "Running timings" << endl;
  
   ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
