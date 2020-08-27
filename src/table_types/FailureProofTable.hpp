@@ -7,6 +7,11 @@
       new UniformCubicPrecomputedInterpolationTable<double>(&function,0,10,0.0001))
     );
     double val = failsafe(0.87354);
+    // or
+    FailureProofTable<double,double,UniformCubicPrecomputedInterpolationTable<double>> failsafe(
+      &function,{0,10,0.0001}
+    );
+    double val = failsafe(0.87354);
 
   Notes:
   - ownership of the original table is moved to this class upon construction
@@ -74,7 +79,6 @@ public:
     #endif
   }
 
-
   /* if x isn't contained within the tables bounds,
    * then resort to evaluating the original function */
   OUT_TYPE operator()(IN_TYPE x) override
@@ -112,7 +116,7 @@ public:
       // have our ArgumentRecord add it's own data
       mp_recorder->print_details_json(jsonStats);
     #endif
-
+    
     out << jsonStats.dump(2) << std::endl;
   }  
 };
