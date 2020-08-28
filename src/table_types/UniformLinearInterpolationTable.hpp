@@ -24,6 +24,7 @@ class UniformLinearInterpolationTable final : public UniformLookupTable<IN_TYPE,
   unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
   
 public:
+  //#pragma omp declare simd
   UniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
   {
@@ -36,9 +37,11 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
     
-    // assuming each iteration will take about the same amount of time
+    /* I think it would be nice to have simd table generation so something like the LUT generator can use actual
+     * parallelism. The alignment of m_table might also give us a big speedup from simd */
     //#pragma omp simd aligned(m_table:sizeof(OUT_TYPE)) // needs the constructor to be declared simd
-    #pragma omp parallel for schedule(static)
+    // assuming each iteration will take about the same amount of time
+    //#pragma omp parallel for schedule(static)
     for (int ii=0; ii<m_numIntervals; ++ii) {
       const IN_TYPE x = m_minArg + ii*m_stepSize;
       m_grid[ii]  = x;
