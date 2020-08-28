@@ -36,12 +36,15 @@
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class SpecialPoint
 {
+protected:
   // coordinate such that (x,y) = (x,f(x))
   std::pair<IN_TYPE,OUT_TYPE> m_point;
 
+public:
   // explain why this point is special
   enum DiscontType { Discont=0, FirstDiscont=1, SecondDiscont=2, ThirdDiscont=3, None=8 };
   enum LimitType { Equals=2, Approaches=0, Inf = 1, NegInf = -1 };
+protected:
   DiscontType m_discType;
   LimitType m_limType;
 
@@ -123,6 +126,10 @@ public:
       lut->print_details(out);
   }
 
+  // TODO
+  void print_details_json(std::ostream &out) override
+  {}
+
   std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> get_table(unsigned int table_idx)
   {
     return mv_LUT[table_idx];
@@ -147,10 +154,10 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
     throw std::invalid_argument("The " + std::to_string(names.size()) + " given table(s) need(s) "
         "a corresponding stepsize but " + std::to_string(stepSizes.size()) + " stepsizes were given");
 
-  if(names.size() != special_points.size() + 1)
+  if(names.size() != special_points.size() - 1)
     throw std::invalid_argument("Function behaviour for the " + std::to_string(names.size() + 1) + 
         " breakpoints and endpoints need to be defined with SpecialPoints but "
-        "only " + std::to_string(special_points.size()) + "SpecialPoints were given");
+        "only " + std::to_string(special_points.size()) + " SpecialPoints were given");
 
   // make sure special_points is ordered (the parameters don't make sense otherwise)
   for(unsigned int i=0; i<special_points.size()-1; i++)
@@ -165,7 +172,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
   this->m_dataSize = 0;
   this->m_order = 0;
 
-  IN_TYPE closeness = 0.001; // TODO something more robust and related to each intervals stepsizes
+  const IN_TYPE closeness = 0.001; // TODO something more robust and related to each intervals stepsizes
 
   /* -- actually build the given tables and update cumulative member vars -- */
   for(unsigned int i=0; i<names.size(); i++){
@@ -174,15 +181,15 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 
     // if the discType is "+/- Inf" or "approaches" then we want to be careful w/ table bounds
     par.minArg = mv_special_points[i].get_x();
-    if(mv_special_points[i].discType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Inf ||
-        mv_special_points[i].discType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
-        mv_special_points[i].discType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Approaches)
+    if(mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Inf ||
+        mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
+        mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Approaches)
       par.minArg += closeness;
     
     par.maxArg = mv_special_points[i+1].get_x();
-    if(mv_special_points[i+1].discType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Inf ||
-        mv_special_points[i+1].discType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
-        mv_special_points[i+1].discType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Approaches)
+    if(mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Inf ||
+        mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
+        mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Approaches)
       par.maxArg -= closeness;
 
     par.stepSize = stepSizes[i];
@@ -208,10 +215,10 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
   EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "CompositeLookupTable"), 
   mv_special_points(special_points)
 {
-  // TODO decide how the special points affect table generation
-  // Will want to preserve any discontinuity present in the given function
-  // Pade tables for explosions? Also have to be conscious of how we approach points
-  // equality is easy, but the other two will require care
+  /* TODO decide how the special points affect table generation
+     Will want to preserve any discontinuity present in the given function
+     Pade tables for explosions? Also have to be conscious of how we approach points
+     equality is easy, but the other two will require care */
   // make sure special_points is ordered
   if(special_points.size() < 2)
     throw std::invalid_argument("At least 2 special points must be provided");
@@ -254,7 +261,7 @@ template <typename IN_TYPE, typename OUT_TYPE>
 inline std::string CompositeLookupTable<IN_TYPE,OUT_TYPE>::chooseName(SpecialPoint<IN_TYPE,OUT_TYPE> p1, SpecialPoint<IN_TYPE,OUT_TYPE> p2)
 {
   /* Decide what table to use on this interval
-     TODO initial implementation: because this table's operator() uses so many conditional statements
+     TODO because this table's operator() uses so many conditional statements
      we won't save time by using lower order tables with tons of subintervals.
      That would require much more memory and there's no way their coefs will stay in cache for long.
      Thus, use the highest order precomputed interpolation table less than or equal to cubic, and use
@@ -313,7 +320,7 @@ inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::linearSearchLeft(IN_TYPE
   // Assuming this function is called with all the correct parameters and 
   // mv_LUT[i] is defined
   if(x < mv_LUT[i]->min_arg())
-    return linearSearch(x, i-1);
+    return linearSearchLeft(x, i-1);
   if(abs(x - mv_LUT[i]->min_arg()) < std::numeric_limits<IN_TYPE>::epsilon())
     return mv_special_points[i].get_y(); // use the left special point's value
   return (*mv_LUT[i])(x);
