@@ -63,10 +63,10 @@ int main(int argc, char* argv[])
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
     "UniformLinearInterpolationTable",
-    //"NonUniformLinearInterpolationTable<4>",
-    //"NonUniformPseudoLinearInterpolationTable<4>",
-    //"NonUniformCubicPrecomputedInterpolationTable<4>",
-    //"NonUniformPseudoCubicPrecomputedInterpolationTable<4>",
+    "NonUniformLinearInterpolationTable<4>",
+    "NonUniformPseudoLinearInterpolationTable<4>",
+    "NonUniformCubicPrecomputedInterpolationTable<4>",
+    "NonUniformPseudoCubicPrecomputedInterpolationTable<4>",
   };
 
   std::vector<std::string> padeNames {
@@ -89,34 +89,30 @@ int main(int argc, char* argv[])
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
-    cout << "Build " << itName << endl;
+    cout << "Building " << itName << " ..." << endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
-
-  //implsf.emplace_back(unique_ptr<EvaluationImplementation<float>>(new DirectEvaluation<float>(&func_container_f,tableMin,tableMax)));
-  //for(auto itName : implNames){
-  //  implsf.emplace_back(genf.generate_by_tol(itName,tableTol));
-  //}
-  //for (auto itName : padeNames) {
-  //  impls.emplace_back(gen.generate_by_tol(itName,tableTol));
-  //}
-  
+ 
   //add a composite table. The generator doesn't converge with mid = the root 
   //and also this is far too specific for this experiment.
   //double mid = exp(7.7/13.0287)+1;
-  //UniformLookupTableGenerator gen1(&func_container, tableMin, mid);
-  //UniformLookupTableGenerator gen2(&func_container, mid, tableMax);
 
-  //impls.emplace_back(unique_ptr<EvaluationImplementation>(
-  //      new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),
-  //        gen2.generate_by_tol(implNames[7],tableTol*(tableMax-mid)/(tableMax-tableMin))})));
-  cout << "Running timings" << endl;
+  cout << "Building composite" << " ..." << endl;
+  impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(
+        new CompositeLookupTable<double>(&func_container,
+          {"UniformCubicPrecomputedInterpolationTable", "UniformCubicPrecomputedInterpolationTable"}, // names
+          {0.01, 0.1}, // stepsizes
+          { // special points
+            {tableMin,              MyFunction(tableMin)},
+            {(tableMin+tableMax)/2, MyFunction((tableMin+tableMax)/2)},
+            {tableMax,              MyFunction(tableMax)}
+          }
+        )));
+
+  cout << "Running timings ..." << endl;
  
   ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
-
-  //ImplementationComparator<float> implComparef(implsf, nEvals, seed);
-  //implComparef.run_timings(nExperiments);
 
   /* Summarize the results */
   cout << "# Function:  " << FUNCNAME << endl;
@@ -125,10 +121,6 @@ int main(int argc, char* argv[])
   implCompare.compute_timing_statistics();
   implCompare.sort_timings("max");
   implCompare.print_summary(std::cout);
-
-  //implComparef.compute_timing_statistics();
-  //implComparef.sort_timings("max");
-  //implComparef.print_summary(std::cout);
 
   return 0;
 }
