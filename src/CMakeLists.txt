@@ -1,5 +1,10 @@
 # build our config file from the given cmake options
 file(WRITE config.hpp "#pragma once\n")
+if(USE_OPENMP)
+  # currently just a nice option to have for profiling
+  #file(APPEND config.hpp "#define FUNC_USE_OPENMP\n")
+  list(APPEND func_link_openmp "OpenMP::OpenMP_CXX")
+endif()
 
 if(USE_QUADMATH AND QUADMATH_FOUND)
   file(APPEND config.hpp "#define FUNC_USE_QUADMATH\n")
@@ -38,9 +43,8 @@ endif()
 
 # add the func lib with the lists we built above
 add_library(func SHARED ${func_src})
-target_link_libraries(func PUBLIC ${func_link_arma})
 target_include_directories(func PUBLIC ${func_include_dirs})
-target_link_libraries(func PUBLIC ${func_link_arma} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
+target_link_libraries(func PUBLIC ${func_link_arma} ${QUADMATH_LIBRARIES} Boost::boost ${func_link_openmp})
 
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
 config.hpp;func.hpp;\
