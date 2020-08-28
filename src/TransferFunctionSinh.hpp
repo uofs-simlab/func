@@ -38,6 +38,7 @@ Notes:
 
 #define ARMA_USE_CXX11
 #include <armadillo>
+// change how armadillo solves these systems
 #define FUNC_TRANSFER_FUNCTION_SOLVE_OPTS arma::solve_opts::refine
 
 #include "TransferFunctionInterface.hpp"
@@ -47,7 +48,7 @@ Notes:
 #include <boost/math/quadrature/gauss_kronrod.hpp> // gauss_kronrod::integrate
 #include <boost/math/tools/toms748_solve.hpp> // toms748_solve
 
-static double tol = 1e-8;
+static double tol = 1e-4;
 
 template <typename IN_TYPE, unsigned int NUM_COEFS = 4>
 class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
@@ -61,7 +62,11 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
   std::function<IN_TYPE(IN_TYPE)> m_g_inv;
   std::function<IN_TYPE(IN_TYPE)> m_g_inv_prime;
 
+  // aligned array of g_inv coefs. The meat of this class
   __attribute__((aligned)) std::array<IN_TYPE,NUM_COEFS> m_inv_coefs;
+
+  // name of the method being used to approximate g_inv
+  std::string m_approx_method;
 
   /* --- Private Functions for approximating g^{-1} --- */
   /* Approximate g^{-1} using inverse polynomial interpolation */
@@ -76,7 +81,7 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
       IN_TYPE a, IN_TYPE b);
 
   /* Approximate g^{-1} using inverse polynomial interpolation
-   * and specifying slopes at function endpoints */
+   * and specifying slopes at endpoints */
   static std::array<IN_TYPE,NUM_COEFS> inverse_hermite_interp(
       std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp,
       IN_TYPE a, IN_TYPE b);
@@ -90,7 +95,7 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
   /* Make a std::array of coefs into a polynomial evaluated using horners
    * Note: std::array does deep copy's by default */
   template<unsigned long N>
-  std::function<IN_TYPE(IN_TYPE)> make_horners(std::array<IN_TYPE,N> coefs);
+  std::function<IN_TYPE(IN_TYPE)> make_horners(std::array<IN_TYPE,N>& coefs);
 
   /* Use Newton's method to build g's inverse function,
    * or use bisection if things go south */
@@ -120,7 +125,7 @@ public:
 
   void print_details(std::ostream& out) override
   {
-    out << NUM_COEFS;
+    out << m_approx_method << " " << NUM_COEFS;
   }
 };
 
@@ -168,16 +173,22 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
      approximation of g_inv that is monotone. Currently there's no error est. */
   std::function<IN_TYPE(IN_TYPE)> formal_g_inv;
 
-  // an array of each approximation method
-  // rather than do an error est. we'll just hope the theoretically
-  // better approximations are well conditioned
+  /* Here we cycle through many ways to approximate g_inv.
+     Rather than do an error est. we'll just use the
+     theoretically "better" approximations. If they're poorly
+     conditioned then we'll fall back on more naive methods. New
+     methods can just be appended to the list as long as the function is static. */
   const std::array<std::function<std::array<IN_TYPE,NUM_COEFS>(
       std::function<IN_TYPE(IN_TYPE)>,std::function<IN_TYPE(IN_TYPE)>, IN_TYPE, IN_TYPE
       )>, 2> approx_methods {inverse_poly_interior_slopes_interp, inverse_poly_interp};
 
+  const std::array<std::string, approx_methods.size()>
+    approx_names{"inverse_poly_interior_slopes_interp", "inverse_poly_interp"};
+
   bool is_terrible = true; // assume every estimate is terrible unless proven otherwise
   for(unsigned int k=0; k<approx_methods.size(); k++){
     m_inv_coefs = approx_methods[k](m_g, g_prime, m_minArg, m_maxArg);
+    m_approx_method = approx_names[k];
 
     // lets scope out the quality of this polynomial with a quick copy
     formal_g_inv = make_horners(m_inv_coefs);
@@ -187,13 +198,17 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
     if(abs(formal_g_inv(m_minArg) - m_minArg) > tol || abs(formal_g_inv(m_maxArg) - m_maxArg) > tol){
       continue; // this estimate is terrible
     }
-    // check g_inv at N linearly spaced points
+
+    // check g_inv for monotonicity at N linearly spaced points.
+    // The good news is that this is a quick function to evaluate.
     unsigned int const N = 50;
     for(unsigned int i=1; i<=N; i++){
       // check for monotonicity
-      if(formal_g_inv((i-1)/(IN_TYPE)N) > formal_g_inv(i/(IN_TYPE)N))
+      if(formal_g_inv((i-1)/(IN_TYPE)N) > formal_g_inv(i/(IN_TYPE)N)){
         continue; // this estimate is also terrible
-      // TODO error estimate
+      }
+
+      // TODO error est?
       //std::function<IN_TYPE(IN_TYPE)> slow_g_inv = newtons_inv(m_g, g_prime, m_minArg, m_maxArg);
     }
     is_terrible = false; // this estimate is at least passable
@@ -230,10 +245,15 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
     std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp, IN_TYPE a, IN_TYPE b)
 {
   using arma::span;
-  // check if this is possible
-  if(NUM_COEFS < 2)
-    throw std::invalid_argument("inverse_poly_coefs() must"
-      " produce at least 2 polynomial coefficients");
+  // init return value
+  auto coefs = std::array<IN_TYPE,NUM_COEFS>();
+
+  // If we're being asked for an incompatible number of coefs
+  // then return a terrible decreasing solution
+  if(NUM_COEFS < 2){
+    coefs.fill(0);
+    return coefs;
+  }
 
   // generate vandermonde system
   arma::mat A = arma::ones(NUM_COEFS,NUM_COEFS);
@@ -250,27 +270,29 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
   y = arma::solve(A,y,FUNC_TRANSFER_FUNCTION_SOLVE_OPTS);
 
   // move from arma's vector to a std::array<IN_TYPE,NUM_COEFS>
-  auto coefs = std::array<IN_TYPE,NUM_COEFS>();
   for(unsigned int i = 0; i < NUM_COEFS; i++)
     coefs[i] = y[i];
 
   return coefs;
 }
 
-/* approximate g_inv with inverse polynomial interpolation and by specifying
- * slopes at interior points as 1/g_prime */
 template <typename IN_TYPE, unsigned int NUM_COEFS>
 inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inverse_poly_interior_slopes_interp(
     std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp, IN_TYPE a, IN_TYPE b)
 {
   using arma::span;
-  // generate vandermonde system
-  // assert the user is asking for an even number of coefficients
-  if(NUM_COEFS % 2 != 0)
-    throw std::invalid_argument("NUM_COEFS is odd"
-      " but inverse_poly_interior_slopes_coefs() can only produce an"
-      " even number of polynomial coefficients");
 
+  // init return value
+  auto coefs = std::array<IN_TYPE,NUM_COEFS>();
+
+  // If we're being asked for an incompatible number of coefs
+  // then return a terrible decreasing solution
+  if(NUM_COEFS % 2 != 0){
+    coefs.fill(0);
+    return coefs;
+  }
+
+  // generate vandermonde system
   unsigned int M = NUM_COEFS/2+1; // number of unique points being sampled from
   arma::mat A = arma::ones(NUM_COEFS,NUM_COEFS);
 
@@ -294,7 +316,6 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
   y = arma::solve(A,y,FUNC_TRANSFER_FUNCTION_SOLVE_OPTS);
 
   // move from arma's vector to a std::array<IN_TYPE,NUM_COEFS>
-  auto coefs = std::array<IN_TYPE,NUM_COEFS>();
   for(unsigned int i = 0; i < NUM_COEFS; i++)
     coefs[i] = y[i];
 
@@ -308,29 +329,35 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
   // move from arma's vector to a std::array<IN_TYPE,NUM_COEFS>
   auto coefs = std::array<IN_TYPE,NUM_COEFS>();
   for(unsigned int i = 0; i < NUM_COEFS; i++)
-    coefs[i] = 1;
+    coefs.fill(0);
   
   return coefs;
 }
 
-/* approximate g_inv with inverse hermite interpolation. ie specify
- * slopes at the endpoints as 1/g_prime */
 template <typename IN_TYPE, unsigned int NUM_COEFS>
 inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inverse_hermite_interp(
     std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp, IN_TYPE a, IN_TYPE b)
 {
-  // TODO this is outdated and I don't there are
-  // many situations where this will be useful...
+  // TODO I don't there are many situations where this will be useful since
+  // I assume table endpoints are where functions explode the most often
+  // so it's currently unused
   using arma::span;
+
+  // init return value
+  auto coefs = std::array<IN_TYPE,NUM_COEFS>();
+
+  // If we're being asked for an incompatible number of coefs
+  // then return a terrible decreasing solution
+  if(NUM_COEFS < 4){
+    coefs.fill(0);
+    return coefs;
+  }
+
   // generate vandermonde system
-  // assert the user is asking for at least 4 coefs
-  if(NUM_COEFS < 4)
-      throw std::invalid_argument("NUM_COEFS is too small."
-      " inverse_hermite_interp() can only produce 4 or more coefs");
   unsigned int M = NUM_COEFS-2; // number of unique points being sampled from
   arma::mat A = arma::ones(NUM_COEFS,NUM_COEFS);
 
-  A(span(0,M-1), 1)=arma::linspace(0,1,M);
+  A(span(0,M-1), 1)=arma::linspace(a,b,M);
   for(unsigned int i=2; i<NUM_COEFS; i++)
     A(span(0,M-1),i) = A(span(0,M-1),i-1) % A(span(0,M-1),1);
 
@@ -351,7 +378,6 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
   y = arma::solve(A,y,FUNC_TRANSFER_FUNCTION_SOLVE_OPTS);
 
   // move from arma's vector to a std::array<IN_TYPE,NUM_COEFS>
-  auto coefs = std::array<IN_TYPE,NUM_COEFS>(new IN_TYPE[NUM_COEFS]);
   for(unsigned int i = 0; i < NUM_COEFS; i++)
     coefs[i] = y[i];
   
@@ -361,11 +387,8 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
 template <typename IN_TYPE, unsigned int NUM_COEFS>
 template <unsigned long N>
 inline std::function<IN_TYPE(IN_TYPE)> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::make_horners(
-    std::array<IN_TYPE,N> coefs)
+    std::array<IN_TYPE,N>& coefs)
 {
-  // We need the coefs by reference so that make_horners doesn't
-  // return a function with a dangling stack value. But the lambda takes
-  // a 
   return [coefs](IN_TYPE x) -> IN_TYPE {
     IN_TYPE sum = x*coefs[N-1];
     for (unsigned int k = N-2; k > 0; k--)
