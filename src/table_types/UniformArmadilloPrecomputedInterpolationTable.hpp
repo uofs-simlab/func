@@ -80,7 +80,7 @@ public:
       // build the vector of coefficients from uniformly spaced function values
       arma::vec y = arma::linspace(x,x+m_stepSize,N+1);
       for (unsigned int k=0; k<N+1; k++)
-        y[k] = mp_func(y[k]);
+        y[k] = m_func(y[k]);
       
       // make y the coefficients of the polynomial interpolant
 #ifdef DO_LU_FACTOR

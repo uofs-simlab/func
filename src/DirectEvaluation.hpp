@@ -49,7 +49,7 @@ public:
   {
     m_minArg = min, m_maxArg = max, m_dataSize = 0;
     #ifdef FUNC_RECORD
-      mp_recorder = std::unique_ptr<ArgumentRecord<IN_TYPE>>(new ArgumentRecord<IN_TYPE>(histSize, min, max));
+      mp_recorder = std::unique_ptr<ArgumentRecord<IN_TYPE>>(new ArgumentRecord<IN_TYPE>(min, max, histSize));
     #endif
     (void) histSize; // ignore histSize if -DFUNC_RECORD isn't specified
   }
@@ -78,7 +78,7 @@ public:
     #ifdef FUNC_RECORD
       mp_recorder->record_arg(x);
     #endif
-    return mp_func(x);
+    return m_func(x);
   }
 
   void print_details(std::ostream& out) override;

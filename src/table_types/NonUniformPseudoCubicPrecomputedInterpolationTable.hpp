@@ -44,11 +44,12 @@ public:
       const IN_TYPE h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
       // grid points
       m_grid[ii] = x;
-      // polynomial coefficients
-      const OUT_TYPE y0 = mp_func(x);
-      const OUT_TYPE y1 = mp_func(x+h/3);
-      const OUT_TYPE y2 = mp_func(x+2*h/3);
-      const OUT_TYPE y3 = mp_func(x+h);
+      // polynomial coefficients. subgrids will be uniform b/c it's simpler
+      // and seems to be more well behaved in the end.
+      const OUT_TYPE y0 = m_func(x);
+      const OUT_TYPE y1 = m_func(x+h/3);
+      const OUT_TYPE y2 = m_func(x+2*h/3);
+      const OUT_TYPE y3 = m_func(x+h);
       m_table[ii].coefs[0] = y0;
       m_table[ii].coefs[1] = -11*y0/2+9*y1-9*y2/2+y3;
       m_table[ii].coefs[2] = 9*y0-45*y1/2+18*y2-9*y3/2;
@@ -80,6 +81,10 @@ public:
 
   OUT_TYPE operator()(IN_TYPE x) override
   {
+    // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
+    // and dx = fractional((g_inv(x)-m_minArg)/m_stepSize)
+    // where each of the above member vars are encoded into g_inv
+    // The source of the pseudolinearity is from the way we compute dx
     // find the subinterval x lives in
     OUT_TYPE dx = m_transferFunction.g_inv(x);
     unsigned x0 = (unsigned) dx;

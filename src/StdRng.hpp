@@ -11,8 +11,8 @@
     // uniform_real_distribution<double> generated from std::mt19937 
     // within the range 0.0 to 1.0
     StdRng<double> rng(0.0,1.0); // build a std::uniform_real_distribution<double>
-    rng->init(2020);             // build a std::mt19937
-    rng->get_point();            // return a random number
+    rng.init(2020);             // build a std::mt19937
+    rng.get_point();            // return a random number
 
     // or if you want to get fancy and use a faster generator, here's
     // a normal distribution with mean 0.0 and standard deviation 1.0,

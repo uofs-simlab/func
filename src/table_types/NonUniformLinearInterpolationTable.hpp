@@ -1,4 +1,20 @@
 /*
+  TODO add an enum template paramter to every non uniform table which changes operator()
+  Potential implemetation:
+    enum class hashType {standard, pseudo};
+    template <typename T, TABLE_HASH = hashType::standard>
+    NonUniformLinearInterpolationTable ...
+    {
+      ...
+      T operator()(T x){ return operator()(x,TABLE_HASH); }
+      T operator()(T x, hashType::standard){ ... } // this table's hash
+      T operator()(T x, hashType::pseudo){ ... } // the pseudo table's hash
+    }
+
+  Then alias the following
+    template<typename T>
+    using NonUniformPseudoLinearInterpolationTable = NonUniformLinearInterpolationTable<T,hashType::pseudo>
+
   Linear Interpolation LUT with nonuniform sampling
 
   Usage example:
@@ -41,7 +57,7 @@ public:
       // transform the previously used uniform grid to a nonuniform grid
       const IN_TYPE x = m_transferFunction.g(m_minArg + ii*m_stepSize);
       m_grid[ii]  = x;
-      m_table[ii].coefs[0] = mp_func(x);
+      m_table[ii].coefs[0] = m_func(x);
     }
   }
 

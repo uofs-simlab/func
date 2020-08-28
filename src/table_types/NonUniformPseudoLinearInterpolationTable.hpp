@@ -42,7 +42,7 @@ public:
       // transform the previously used uniform grid to a nonuniform grid
       const IN_TYPE x = m_transferFunction.g(m_minArg + ii*m_stepSize);
       m_grid[ii]  = x;
-      m_table[ii].coefs[0] = mp_func(x);
+      m_table[ii].coefs[0] = m_func(x);
     }
   }
 

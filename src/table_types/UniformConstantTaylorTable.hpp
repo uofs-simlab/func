@@ -39,7 +39,7 @@ public:
     for (int ii=0; ii<m_numTableEntries; ++ii) {
       IN_TYPE x = m_minArg + ii*m_stepSize;
       m_grid[ii] = x;
-      m_table[ii] = mp_func(x);
+      m_table[ii] = m_func(x);
     }
   }
 

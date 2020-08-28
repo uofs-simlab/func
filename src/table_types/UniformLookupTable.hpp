@@ -27,6 +27,8 @@ struct UniformLookupTableParameters
   IN_TYPE stepSize;
 
   // support initializer lists
+  // still some unfortunate redundancy b/c std::string also takes a templated
+  // initializer list...
   UniformLookupTableParameters(IN_TYPE min, IN_TYPE max, IN_TYPE step) :
     minArg(min), maxArg(max), stepSize(step) {}
   UniformLookupTableParameters(){}

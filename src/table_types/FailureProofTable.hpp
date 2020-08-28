@@ -21,8 +21,9 @@
   any other FunC lookup table
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
-  - specify the NDEBUG flag to turn off argument recording for args outside
+  - specify the FUNC_RECORD flag to turn on argument recording for args outside
   the table's range.
+  - optional ArgumentRecord args available if you want nicer looking output
 */
 #pragma once
 #include "EvaluationImplementation.hpp"
@@ -38,34 +39,48 @@
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class LUT_TYPE = UniformLookupTable<IN_TYPE,OUT_TYPE>>
 class FailureProofTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
+  std::unique_ptr<LUT_TYPE> mp_LUT;
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   #ifdef FUNC_RECORD
     std::unique_ptr<ArgumentRecord<IN_TYPE>> mp_recorder;
   #endif
-
-  std::unique_ptr<LUT_TYPE> mp_LUT;
 public:
   /* Steal the given LUTs identity */
-  FailureProofTable(std::unique_ptr<LUT_TYPE> LUT, unsigned int histSize = 10) :
-    mp_LUT(std::move(LUT)),
-    EvaluationImplementation<IN_TYPE,OUT_TYPE>(mp_LUT->function(), mp_LUT->name())
+  FailureProofTable(std::unique_ptr<LUT_TYPE> LUT,
+      IN_TYPE histMin = std::numeric_limits<IN_TYPE>::min(),
+      IN_TYPE histMax = std::numeric_limits<IN_TYPE>::max(),
+      unsigned int histSize = 10
+      ) :
+    mp_LUT(std::move(LUT))
   {
+    // m_func and m_name can't be set in the super class b/c the
+    // base class constructor would be evaluated before mp_LUT is set
+    m_func   = mp_LUT->function();
+    m_name   = mp_LUT->name();
     m_minArg = mp_LUT->min_arg();
     m_maxArg = mp_LUT->max_arg();
     m_order  = mp_LUT->order();
     m_dataSize = mp_LUT->size();
     #ifdef FUNC_RECORD
-      mp_recorder.reset(new ArgumentRecord<IN_TYPE>(histSize,
-            std::numeric_limits<IN_TYPE>::min(), std::numeric_limits::max()));
+      mp_recorder.reset(new ArgumentRecord<IN_TYPE>(
+            histMin, histMax, histSize
+            ));
     #endif
-    (void) histSize; // ignore histSize
+    // ignore hist parameters if they're unused
+    (void) histMin;
+    (void) histMax;
+    (void) histSize;
   }
 
   /* Build our own LUT_TYPE */
-  FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, UniformLookupTableParameters<IN_TYPE> par, unsigned int histSize = 10) :
-    FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,par)), histSize) {}
+  FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, UniformLookupTableParameters<IN_TYPE> par,
+      IN_TYPE histMin = std::numeric_limits<IN_TYPE>::min(),
+      IN_TYPE histMax = std::numeric_limits<IN_TYPE>::max(),
+      unsigned int histSize = 10) :
+    FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,par)), histMin, histMax, histSize) {}
 
   /* Build our own LUT_TYPE from a file */
+  // TODO test
   FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, std::string filename) :
     FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,filename)))
   {
@@ -84,18 +99,18 @@ public:
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // check if x is in the range of the table
-    if(x < this->m_minArg || this->m_maxArg < x){
+    if(x < m_minArg || m_maxArg < x){
       #ifdef FUNC_RECORD
         mp_recorder->record_arg(x);
       #endif
-      return this->mp_func(x);
+      return m_func(x);
     }
-    return (*(this->mp_LUT))(x);
+    return (*mp_LUT)(x);
   }
 
   void print_details(std::ostream &out) override 
   {
-    out << "FailureProof" << this->m_name << " " << this->m_minArg << " " << this->m_maxArg << " "
+    out << "FailureProof" << m_name << " " << m_minArg << " " << m_maxArg << " "
         << mp_LUT->step_size() << " " << mp_LUT->num_intervals() << " ";
   #ifdef FUNC_RECORD
     out << std::endl;
@@ -103,6 +118,7 @@ public:
   #endif
   }
 
+  // TODO test
   void print_details_json(std::ostream &out) override
   {
     using nlohmann::json;
@@ -116,6 +132,7 @@ public:
       // have our ArgumentRecord add it's own data
       mp_recorder->print_details_json(jsonStats);
     #endif
+    mp_LUT->print_details_json(out);
     
     out << jsonStats.dump(2) << std::endl;
   }  

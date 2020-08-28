@@ -19,7 +19,7 @@ class UniformLinearInterpolationTable final : public UniformLookupTable<IN_TYPE,
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
   FUNC_REGISTER_LUT(UniformLinearInterpolationTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
+  __attribute__((aligned(sizeof(OUT_TYPE)))) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
   OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
   
@@ -36,11 +36,13 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
     
+    // assuming each iteration will take about the same amount of time
+    //#pragma omp simd aligned(m_table:sizeof(OUT_TYPE)) // needs the constructor to be declared simd
     #pragma omp parallel for schedule(static)
     for (int ii=0; ii<m_numIntervals; ++ii) {
       const IN_TYPE x = m_minArg + ii*m_stepSize;
       m_grid[ii]  = x;
-      m_table[ii].coefs[0] = mp_func(x);
+      m_table[ii].coefs[0] = m_func(x);
     }
   }
 
