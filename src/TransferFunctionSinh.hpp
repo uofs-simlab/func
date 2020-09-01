@@ -12,14 +12,18 @@ Notes:
   to be the accurate inverse of our approximation to g^{-1} (that is, we'll be
   deepfrying g after approximating g^{-1}).
   - NUM_COEFS defines the number of coefficients used for approximating g^{-1}.
+  - Nonuniform lookup tables have a dependency on armadillo because this class
+  needs armadillo.
 
   Experimental atm.
   - TODO Make this class accept an arbitrary function which determines g from f
-  - TODO for the functions that use derivative info, we could pass a slow g^{-1}
-  and use g^{-1}' = (g'(g^{-1}))^{-1}
+  - TODO for the functions that use derivative info, we could have them build a
+  temporary slow g^{-1} and use g^{-1}' = (g'(g^{-1}))^{-1}
+  - TODO if we continue to just use g^{-1}'\approx 1/g' then we'll need
+  to check for g' = 0.
   - TODO quantify the conditioning of any given implementation of g^{-1}
-  - TODO if g'=0 where we need 1/g' then swap out that method as well
   - TODO it would be nice if this class didn't neeed Armadillo to operate
+  - TODO read coefs from a file
  */
 #pragma once
 #include "config.hpp" // FUNC_USE_BOOST_AUTODIFF, FUNC_USE_ARMADILLO
@@ -95,7 +99,7 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
   /* Make a std::array of coefs into a polynomial evaluated using horners
    * Note: std::array does deep copy's by default */
   template<unsigned long N>
-  std::function<IN_TYPE(IN_TYPE)> make_horners(std::array<IN_TYPE,N>& coefs);
+  static std::function<IN_TYPE(IN_TYPE)> make_horners(std::array<IN_TYPE,N>& coefs);
 
   /* Use Newton's method to build g's inverse function,
    * or use bisection if things go south */
@@ -322,15 +326,71 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
   return coefs;
 }
 
+
+/* TODO this method, inverse_polynomial_projection, is very unfinished.
+ * What is here *should* work for transfer functions g:[-1, 1] -> [-1, 1]
+ * but doesn't...
+ * This method of approximation projects g_inv onto the polynomial space of
+ * degree <= NUM_COEFS - 1.
+ * Let p be the polynomial returned by this function. Then p will
+ * be the polynomial of degree NUM_COEFS-1 such that the integral
+ * \int_a^b |g_inv(x)-p(x)|^2 dx
+ * That is, any area between p and g_inv is minimal. The hope is that
+ * will also translate to low absolute error.
+ *
+ * Note: This isn't interpolation, so we'll definitely have to check
+ * accuracy at the endpoints
+ */
 template <typename IN_TYPE, unsigned int NUM_COEFS>
 inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::inverse_polynomial_projection(
     std::function<IN_TYPE(IN_TYPE)> g, std::function<IN_TYPE(IN_TYPE)> gp, IN_TYPE a, IN_TYPE b)
 {
-  // move from arma's vector to a std::array<IN_TYPE,NUM_COEFS>
-  auto coefs = std::array<IN_TYPE,NUM_COEFS>();
-  for(unsigned int i = 0; i < NUM_COEFS; i++)
-    coefs.fill(0);
+  using boost::math::quadrature::gauss_kronrod;
+  /* let q_0,...,q_{NUM_COEFS-1} be an orthonomal basis
+    of the subspace of C[a,b] consisting of polynomials
+    of degree <= NUM_COEFS-1. Here's a hard coded orthogonal
+    basis of [-1,1] */
+  const static std::array<std::array<double,8>,8> legendre_coefs {{
+    {1/2.0,     0.0,       0.0,        0.0,        0.0,        0.0,        0.0,       0.0       }, // coefs of q_0
+    {0.0,       3/2.0,     0.0,        0.0,        0.0,        0.0,        0.0,       0.0       }, // coefs of q_1 ...
+    {-5/4.0,    0.0,       15/4.0,     0.0,        0.0,        0.0,        0.0,       0.0       },
+    {0.0,      -21/4.0,    0.0,        35/4.0,     0.0,        0.0,        0.0,       0.0       },
+    {27/16.0,   0.0,      -270/16.0,   0.0,        315/16.0,   0.0,        0.0,       0.0       },
+    {0.0,       165/16.0,  0.0,       -770/16.0,   0.0,        693/16.0,   0.0,       0.0       },
+    {-65/32.0,  0.0,       1365/32.0,  0.0,       -4095/32.0,  0.0,        3003/32.0, 0.0       },
+    {0.0,      -525/32.0,  0.0,        4725/32.0,  0.0,       -10395/32.0, 0.0,       6435/32.0 }
+  }};
+  /* This basis could be computed using the graham schmidt procedure.
+    A symbolic expression for this basis could be hard coded
+    ahead of time or it could be computed just fine at runtime.
+    That computation could've been skipped if we stipulated that g mapped
+    from, say, [0,1] -> [0,1] for example. However, we save
+    time in the table's hash by letting g map the domain of the
+    encapsulating lookup table to itself. */ 
   
+  // compute \int_a^b g_inv(x)q_i(x) dx
+  // for each i.
+  auto g_inv = newtons_inv(g, gp, a, b);
+  auto coefs = std::array<IN_TYPE,NUM_COEFS>();
+  std::array<IN_TYPE,NUM_COEFS> integrals;
+
+  for(unsigned int i = 0; i < NUM_COEFS; i++){
+    auto q_i = make_horners<double,8>(legendre_coefs[i]);
+    integrals[i] = gauss_kronrod<IN_TYPE, 15>::integrate(
+        [g_inv,q_i](IN_TYPE t) -> IN_TYPE { return g_inv(t)*q_i(t); }, a, b);
+  }
+
+  // set p = \sum_i integrals[i]*p_i
+  // I could be wrong, but I believe this is the
+  // general formula for the coefs of p given the
+  // values of these integrals
+  for(unsigned int i = 0; i < NUM_COEFS; i++){
+    coefs[i] = legendre_coefs[i][i]*integrals[i];
+    for(unsigned int j = i+1; j < NUM_COEFS; j++)
+      coefs[i] += legendre_coefs[j][i]*integrals[j];
+  }
+
+  //return the coefs of p 
   return coefs;
 }
 
