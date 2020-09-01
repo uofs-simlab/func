@@ -1,8 +1,8 @@
 # build our config file from the given cmake options
 file(WRITE config.hpp "#pragma once\n")
 if(USE_OPENMP)
-  # currently just a nice option to have for profiling
-  #file(APPEND config.hpp "#define FUNC_USE_OPENMP\n")
+  # just a nice option to have for profiling
+  # when we start building tables in parallel
   list(APPEND func_link_openmp "OpenMP::OpenMP_CXX")
 endif()
 

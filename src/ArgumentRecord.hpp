@@ -20,10 +20,14 @@
 #include <limits> // numeric_limits<IN_TYPE>::max() / min()
 #include "json.hpp"
 
+/* TODO 
+   Since the histogram will never have that many buckets,
+   I think we could get away with just making every one of
+   this class's member variables threadprivate. */
+
 // can change FuncMutex if we decide to use std::mutex in
 // the case where openmp isn't available
-// TODO user has to supply -lomp flag to make this link which sucks
-//#ifdef FUNC_USE_OPENMP
+#ifdef _OPENMP // defined when -fopenmp is used at compile time
 #include <omp.h>
 class FuncMutex
 {
@@ -47,6 +51,27 @@ public:
   // release the lock when FuncScopedLock goes out of scope
   ~FuncScopedLock(){ m_mutex.unlock(); }
 };
+#else
+// just use empty locks for now
+class FuncMutex
+{
+public:
+  FuncMutex(){}
+  ~FuncMutex(){}
+  void lock(){}
+  void unlock(){}
+};
+
+class FuncScopedLock
+{
+  // prevent copying
+  void operator=(const FuncScopedLock&);
+  FuncScopedLock(const FuncScopedLock&);
+public:
+  explicit FuncScopedLock(FuncMutex& mutex){}
+  ~FuncScopedLock(){}
+};
+#endif // _OPENMP
 
 // macro used to decide where an arg should be placed in the histogram
 #define COMPUTE_INDEX(X) \
@@ -70,7 +95,7 @@ class ArgumentRecord
   unsigned int m_peak_index;
 
   // the number of elements outside the histogram's range
-  unsigned int m_out_of_bounds;
+  unsigned int m_num_out_of_bounds;
 
   // Record the extreme args to help the user
   // decide what bounds to use for their tables
@@ -88,7 +113,7 @@ class ArgumentRecord
 
       // naive initial member arg values
       m_peak_index = 0;
-      m_out_of_bounds = 0;
+      m_num_out_of_bounds = 0;
       m_max_recorded = -std::numeric_limits<IN_TYPE>::max();
       m_min_recorded =  std::numeric_limits<IN_TYPE>::max();
     }
@@ -123,18 +148,20 @@ class ArgumentRecord
 
         // manually lock bucket x_index until we leave this scope
         FuncScopedLock lock(mv_histogram_mutex[x_index]);
+        //#pragma omp critical
         mv_histogram[x_index]++;
-        if(mv_histogram[x_index] > mv_histogram[m_peak_index]){
-          #pragma omp critical
-          m_peak_index = x_index;
+
+        #pragma omp critical
+        {
+          if(mv_histogram[x_index] > mv_histogram[m_peak_index]){
+            m_peak_index = x_index;
+          }
         }
 
       }else{
         // x is out of bounds
         #pragma omp critical
-        {
-          m_out_of_bounds++;
-        }
+        m_num_out_of_bounds++;
       }
 
       #pragma omp critical
@@ -207,7 +234,7 @@ inline void ArgumentRecord<IN_TYPE>::print_details(std::ostream& out)
 
   out << "histogram: \n";
   out << this->to_string() << "\n";
-  out << m_out_of_bounds + total_recorded << " total args were sampled. Of those, "
+  out << m_num_out_of_bounds + total_recorded << " total args were sampled. Of those, "
       << total_recorded << " were recorded by the histogram.\n";
   out << "Recorded args were sampled the most often from the subinterval"
       << "["

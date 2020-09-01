@@ -63,14 +63,14 @@ find_package(OpenMP)
 if(OpenMP_FOUND)
   if(APPLE AND ${CMAKE_VERSION} VERSION_LESS 3.12.0)
     message(WARNING "Must have at least CMake version 3.12 to add openmp to FunC on MacOS")
-    option(USE_OPENMP "Use OpenMP for thread safety and to parallelize the table building process" OFF)
+    option(USE_OPENMP "Use OpenMP" OFF)
   else()
-    message(STATUS "Using OpenMP for threadsafety and building tables")
-    option(USE_OPENMP "Use OpenMP for thread safety and to parallelize the table building process" ON)
+    message(STATUS "Using OpenMP for threadsafety")
+    option(USE_OPENMP "Use OpenMP" ON)
   endif()
 else()
   # use std::lib instead
-  option(USE_OPENMP "Use OpenMP for thread safety and to parallelize the table building process" OFF)
+  option(USE_OPENMP "Use OpenMP" OFF)
 endif()
 
 
