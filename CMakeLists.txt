@@ -25,9 +25,12 @@ message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
 option(USE_QUADMATH "Use quadmath library" ON)
 find_package(Quadmath)
 
+option(BUILD_EXAMPLES "Build the example codes" OFF)
 
 # Primary source subdirectory
 add_subdirectory("src")
 
-# Examples subdirectory
-add_subdirectory("examples")
+# Examples subdirectory, if enabled
+if(BUILD_EXAMPLES)
+  add_subdirectory("examples")
+endif()
