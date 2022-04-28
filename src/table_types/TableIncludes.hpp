@@ -31,17 +31,17 @@
 
 /* ---- NonUniform Tables ---- */
 // Currently an armadillo and boost extension
-#ifdef FUNC_USE_ARMADILLO
-#ifdef FUNC_USE_BOOST_AUTODIFF
-  #include "NonUniformLookupTable.hpp"
-  #include "NonUniformLinearInterpolationTable.hpp"
-  #include "NonUniformPseudoLinearInterpolationTable.hpp"
-  #include "NonUniformCubicPrecomputedInterpolationTable.hpp"
-  #include "NonUniformPseudoCubicPrecomputedInterpolationTable.hpp"
-#endif
-#endif
+//#ifdef FUNC_USE_ARMADILLO
+//#ifdef FUNC_USE_BOOST_AUTODIFF
+//  #include "NonUniformLookupTable.hpp"
+//  #include "NonUniformLinearInterpolationTable.hpp"
+//  #include "NonUniformPseudoLinearInterpolationTable.hpp"
+//  #include "NonUniformCubicPrecomputedInterpolationTable.hpp"
+//  #include "NonUniformPseudoCubicPrecomputedInterpolationTable.hpp"
+//#endif
+//#endif
 
 
-/* ---- Meta Tables ---- */
+/* ---- Table Containers ---- */
 #include "FailureProofTable.hpp"
 #include "CompositeLookupTable.hpp"

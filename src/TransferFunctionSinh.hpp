@@ -335,8 +335,8 @@ inline std::array<IN_TYPE,NUM_COEFS> TransferFunctionSinh<IN_TYPE,NUM_COEFS>::in
  * Let p be the polynomial returned by this function. Then p will
  * be the polynomial of degree NUM_COEFS-1 such that the integral
  * \int_a^b |g_inv(x)-p(x)|^2 dx
- * That is, any area between p and g_inv is minimal. The hope is that
- * will also translate to low absolute error.
+ * is minimized. That is, any area between p and g_inv is minimal.
+ * The hope is that will also translate to low absolute error.
  *
  * Note: This isn't interpolation, so we'll definitely have to check
  * accuracy at the endpoints

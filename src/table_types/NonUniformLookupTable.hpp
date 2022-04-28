@@ -1,6 +1,11 @@
 /*
+  TODO
+  Do we actually want to template the transfer function?
+  Might be much more preferable to set up a way to get the nonuniform tables from the uniform ones
+  Can add metaprogramming stuff to this
+
   An extension of the abstract class UniformLookupTable. Tables that
-  inherit from this class will be equiped with a transfer function which
+  inherit from this class will be equipped with a transfer function which
   will allow for nonuniform grid spacing.
   Ideally, the transfer function is constructed such that table error
   is equidistributed throughout the interval [a,b]

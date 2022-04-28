@@ -10,76 +10,57 @@
   - evaluate by using parentheses, just like a function
 */
 #pragma once
-#include "UniformLookupTable.hpp"
+#include "MetaTable.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
-class UniformLinearInterpolationTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
+template <typename TIN, typename TOUT = TIN>
+class UniformLinearInterpolationTable final : public MetaTable<TIN,TOUT,1,HORNER>
 {
-  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
-  INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
+  INHERIT_EVALUATION_IMPL(TIN,TOUT);
+  INHERIT_UNIFORM_LUT(TIN,TOUT);
+  INHERIT_META(TIN,TOUT,1,HORNER);
   FUNC_REGISTER_LUT(UniformLinearInterpolationTable);
-
-  __attribute__((aligned(sizeof(OUT_TYPE)))) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
-  OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
-  unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
-  
+ 
 public:
   //#pragma omp declare simd
-  UniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
-    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
+  UniformLinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
+    MetaTable<TIN,TOUT,1,HORNER>(func_container, par)
   {
     /* Base class variables */
-    m_name = FUNC_STR(UniformLinearInterpolationTable);
-    m_order = 2;
+    m_name = "UniformLinearInterpolationTable";
+    m_order = 1;
     m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
+    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
     /* Allocate and set table */
-    m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
-    
+    m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
+
     /* I think it would be nice to have simd table generation so something like the LUT generator can use actual
      * parallelism. The alignment of m_table might also give us a big speedup from simd */
-    //#pragma omp simd aligned(m_table:sizeof(OUT_TYPE)) // needs the constructor to be declared simd
+    //#pragma omp simd aligned(m_table:sizeof(TOUT)) // needs the constructor to be declared simd
     // assuming each iteration will take about the same amount of time
     //#pragma omp parallel for schedule(static)
     for (int ii=0; ii<m_numIntervals; ++ii) {
-      const IN_TYPE x = m_minArg + ii*m_stepSize;
+      const TIN x = m_minArg + ii*m_stepSize;
       m_grid[ii]  = x;
       m_table[ii].coefs[0] = m_func(x);
     }
   }
 
-  /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
-  UniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::string filename) :
-    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, filename)
-  {
-    std::ifstream file_reader(filename);
-    using nlohmann::json;
-    json jsonStats;
-    file_reader >> jsonStats;
+  /* build this table from a file. Everything other than m_table is built by MetaTable */
+  UniformLinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
+    MetaTable<TIN,TOUT,1,HORNER>(func_container, filename, "UniformLinearInterpolationTable") {}
 
-    // double check the names match
-    std::string temp_name = jsonStats["name"].get<std::string>();
-    if(temp_name != "UniformLinearInterpolationTable")
-      throw std::invalid_argument("Error while reading " + filename + ": "
-          "Cannot build a " + temp_name + " from a UniformLinearInterpolationTable");
-
-    m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
-    for(unsigned int i=0; i<m_numTableEntries; i++)
-      for(unsigned int j=0; j<m_table[i].num_coefs; j++)
-        m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<OUT_TYPE>();
-  }
-
-  OUT_TYPE operator()(IN_TYPE x) override
+  // operator() is slightly different from MetaTable's HORNER method
+  TOUT operator()(TIN x) override
   {
     // nondimensionalized x position, scaled by step size
-    OUT_TYPE dx = (x-m_minArg)/m_stepSize;
+    TOUT dx = (x-m_minArg)/m_stepSize;
     // index of previous table entry
-    unsigned x1 = (unsigned) dx;
+    unsigned x0 = (unsigned) dx;
     // value of table entries around x position
-    dx -= x1;
-    OUT_TYPE y1  = m_table[x1].coefs[0];
-    OUT_TYPE y2  = m_table[x1+1].coefs[0];
+    dx -= x0;
+    TOUT y1  = m_table[x0].coefs[0];
+    TOUT y2  = m_table[x0+1].coefs[0];
     // linear interpolation
     return y1+dx*(y2-y1);
   }

@@ -1,4 +1,5 @@
 /*
+  TODO explain how this links up with MetaTable & each other implementation
   Intermediate abstract class for LUTs with uniformly spaced grid points.
   Outfits tables with enough tools to sample from a nonuniform
   grid efficiently.
@@ -19,67 +20,67 @@
 #include <functional>
 #include <fstream>
 
-template <typename IN_TYPE>
+template <typename TIN>
 struct UniformLookupTableParameters
 {
-  IN_TYPE minArg;
-  IN_TYPE maxArg;
-  IN_TYPE stepSize;
+  TIN minArg;
+  TIN maxArg;
+  TIN stepSize;
 
   // support initializer lists
   // still some unfortunate redundancy b/c std::string also takes a templated
   // initializer list...
-  UniformLookupTableParameters(IN_TYPE min, IN_TYPE max, IN_TYPE step) :
+  UniformLookupTableParameters(TIN min, TIN max, TIN step) :
     minArg(min), maxArg(max), stepSize(step) {}
   UniformLookupTableParameters(){}
 };
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
 
-template <typename OUT_TYPE, unsigned int N>
-struct alignas(sizeof(OUT_TYPE)*alignments[N]) polynomial{
+template <typename TOUT, unsigned int N>
+struct alignas(sizeof(TOUT)*alignments[N]) polynomial{
   static const unsigned int num_coefs = N;
-  OUT_TYPE coefs[N];
+  TOUT coefs[N];
 };
 
 /* Use to inherit UniformLookupTable's member variables 
    without having to put "this->" everywhere. */
-#define INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE) \
-  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_grid; \
-  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_numIntervals; \
-  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_numTableEntries; \
-  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_stepSize; \
-  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_stepSize_inv; \
-  using UniformLookupTable<IN_TYPE,OUT_TYPE>::m_tableMaxArg
+#define INHERIT_UNIFORM_LUT(TIN,TOUT) \
+  using UniformLookupTable<TIN,TOUT>::m_grid; \
+  using UniformLookupTable<TIN,TOUT>::m_numIntervals; \
+  using UniformLookupTable<TIN,TOUT>::m_numTableEntries; \
+  using UniformLookupTable<TIN,TOUT>::m_stepSize; \
+  using UniformLookupTable<TIN,TOUT>::m_stepSize_inv; \
+  using UniformLookupTable<TIN,TOUT>::m_tableMaxArg
 
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
-class UniformLookupTable : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
+template <typename TIN, typename TOUT = TIN>
+class UniformLookupTable : public EvaluationImplementation<TIN,TOUT>
 {
 protected:
-  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+  INHERIT_EVALUATION_IMPL(TIN,TOUT);
 
   // TODO discuss having m_grid exclusive to NonUniformTables
-  std::unique_ptr<IN_TYPE[]> m_grid;  // pointers to grid and evaluation data
+  std::unique_ptr<TIN[]> m_grid;  // pointers to grid and evaluation data
   // a polynomial (above) array needs to be provided by each implementation
 
   // get the ith polynomial's jth coefficient
-  virtual OUT_TYPE get_table_entry(unsigned int i, unsigned int j)=0;
+  virtual TOUT get_table_entry(unsigned int i, unsigned int j)=0;
   // get the number of coefficients used
   virtual unsigned int get_num_coefs()=0;
 
   unsigned int m_numIntervals;   // sizes of grid and evaluation data
   unsigned int m_numTableEntries;
 
-  IN_TYPE  m_stepSize;    // fixed grid spacing (and its inverse)
-  IN_TYPE  m_stepSize_inv;
+  TIN  m_stepSize;    // fixed grid spacing (and its inverse)
+  TIN  m_stepSize_inv;
 
-  IN_TYPE  m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
+  TIN  m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
 public:
 
-  UniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
-      UniformLookupTableParameters<IN_TYPE> par) :
-    EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "uniform_lookup_table")
+  UniformLookupTable(FunctionContainer<TIN,TOUT> *func_container,
+      UniformLookupTableParameters<TIN> par) :
+    EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "uniform_lookup_table")
   {
     /* Base class variables */
     m_minArg = par.minArg; m_maxArg = par.maxArg;
@@ -99,13 +100,13 @@ public:
     m_tableMaxArg = m_maxArg;
     if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
-    m_grid.reset(new IN_TYPE[m_numIntervals]);
+    m_grid.reset(new TIN[m_numIntervals]);
   }
 
   /* Set every generic member variable from a json file */
-  UniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+  UniformLookupTable(FunctionContainer<TIN,TOUT> *func_container,
       std::string filename) :
-    EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "uniform_lookup_table")
+    EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "uniform_lookup_table")
   {
     // Assuming we're still using the same function container as before
     // Also kinda inefficient since the derived class will also make its own
@@ -114,10 +115,11 @@ public:
     using nlohmann::json;
     json jsonStats;
     file_reader >> jsonStats;
-    m_name = jsonStats["name"].get<std::string>();
-    m_minArg = jsonStats["minArg"].get<IN_TYPE>();
-    m_maxArg = jsonStats["maxArg"].get<IN_TYPE>();
-    m_stepSize = jsonStats["stepSize"].get<IN_TYPE>();
+
+    // name checking happens in MetaTable
+    m_minArg = jsonStats["minArg"].get<TIN>();
+    m_maxArg = jsonStats["maxArg"].get<TIN>();
+    m_stepSize = jsonStats["stepSize"].get<TIN>();
     m_stepSize_inv = 1.0/m_stepSize;
     m_order = jsonStats["order"].get<unsigned int>();
     m_dataSize = jsonStats["dataSize"].get<unsigned int>();
@@ -130,13 +132,13 @@ public:
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
 
     // Not recomputing m_grid so the NonuniformLUTs can use this code.
-    // the array of polynomials must now be built by each table implementation
+    // the array of polynomials will now be built by the MetaTable
   }
 
   virtual ~UniformLookupTable(){};
 
   /* public access of protected data */
-  IN_TYPE step_size(){ return m_stepSize; };
+  TIN step_size(){ return m_stepSize; };
   unsigned num_table_entries(){ return m_numTableEntries; };
   unsigned num_intervals(){ return m_numIntervals; };
 
@@ -146,7 +148,7 @@ public:
         << m_stepSize << " " << m_numIntervals << " ";
   }
 
-  virtual std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(unsigned intervalNumber)
+  virtual std::pair<TIN,TIN> arg_bounds_of_interval(unsigned intervalNumber)
   {
     return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
   }
@@ -207,17 +209,17 @@ public:
     UniformLookupTableFactory<double>::Create("UniformCubicPrecomputedInterpolationTable",fc, par);
 
 //////////////////////////////////////////////////////////////////////////// */
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class OTHER = UniformLookupTableParameters<IN_TYPE>>
+template <typename TIN, typename TOUT = TIN, class OTHER = UniformLookupTableParameters<TIN>>
 class UniformLookupTableFactory
 {
 public:
   // Only ever hand out unique pointers
-  static std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> Create(
-      std::string name, FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
+  static std::unique_ptr<UniformLookupTable<TIN,TOUT>> Create(
+      std::string name, FunctionContainer<TIN,TOUT> *fc,
       OTHER args)
   {
     // Create a UniformLookupTable
-    UniformLookupTable<IN_TYPE,OUT_TYPE> *instance = nullptr;
+    UniformLookupTable<TIN,TOUT> *instance = nullptr;
 
     // find the name in the registry and call factory method.
     auto it = get_registry().find(name);
@@ -227,13 +229,13 @@ public:
     // wrap instance in a unique ptr and return (if created)
     if(instance == nullptr)
       throw std::invalid_argument(name + " not found in registry.");
-    return std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>>(instance);
+    return std::unique_ptr<UniformLookupTable<TIN,TOUT>>(instance);
   }
 
   // Actual registration function
   static void RegisterFactoryFunction(std::string name,
-      std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
-        FunctionContainer<IN_TYPE,OUT_TYPE>*, 
+      std::function<UniformLookupTable<TIN,TOUT>*(
+        FunctionContainer<TIN,TOUT>*, 
         OTHER
       )> classFactoryFunction)
   {
@@ -253,19 +255,19 @@ public:
 
 private:
   // the actual registry is private to this class
-  static std::map<std::string, std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
-			FunctionContainer<IN_TYPE,OUT_TYPE>*, OTHER)>>& get_registry()
+  static std::map<std::string, std::function<UniformLookupTable<TIN,TOUT>*(
+			FunctionContainer<TIN,TOUT>*, OTHER)>>& get_registry()
   {
     // Get the singleton instance of the registry map
-    static std::map<std::string, std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
-               FunctionContainer<IN_TYPE,OUT_TYPE>*,OTHER)>> registry;
+    static std::map<std::string, std::function<UniformLookupTable<TIN,TOUT>*(
+               FunctionContainer<TIN,TOUT>*,OTHER)>> registry;
     return registry;
   }
 
   // Do NOT implement copy methods
   UniformLookupTableFactory(){};
-  UniformLookupTableFactory(UniformLookupTableFactory<IN_TYPE,OUT_TYPE> const& copy);
-  UniformLookupTableFactory& operator=(UniformLookupTableFactory<IN_TYPE,OUT_TYPE> const& copy);
+  UniformLookupTableFactory(UniformLookupTableFactory<TIN,TOUT> const& copy);
+  UniformLookupTableFactory& operator=(UniformLookupTableFactory<TIN,TOUT> const& copy);
 };
 
 /*
@@ -274,15 +276,15 @@ private:
   NOTE: implementation defined in this header so that templates get
   instantiated in derived LUT class files
 */
-template <class T, typename IN_TYPE, typename OUT_TYPE, class OTHER = UniformLookupTableParameters<IN_TYPE>>
+template <class T, typename TIN, typename TOUT, class OTHER = UniformLookupTableParameters<TIN>>
 class UniformLookupTableRegistrar {
 public:
   UniformLookupTableRegistrar(std::string className)
   {
-    UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::RegisterFactoryFunction(className,
-      [](FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
+    UniformLookupTableFactory<TIN,TOUT>::RegisterFactoryFunction(className,
+      [](FunctionContainer<TIN,TOUT> *fc,
          OTHER args
-      ) -> UniformLookupTable<IN_TYPE,OUT_TYPE>* { return new T(fc, args); }
+      ) -> UniformLookupTable<TIN,TOUT>* { return new T(fc, args); }
     );
   }
 };
@@ -292,27 +294,27 @@ public:
    - FUNC_REGISTER_LUT goes inside class definition
    - FUNC_REGISTER_EACH_ULUT_IMPL goes underneath the class definition.
    Several different versions of this macro exist for registering templated classes
-   - other... is for template parameters unrelated to the tables IN_TYPE and OUT_TYPE
+   - other... is for template parameters unrelated to the tables TIN and TOUT
 */
 // this macro is used for nonuniform tables
 #define FUNC_REGISTER_LUT(classname) \
 private: \
-  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar; \
-  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE,std::string> str_registrar
+  static const UniformLookupTableRegistrar<classname,TIN,TOUT> registrar; \
+  static const UniformLookupTableRegistrar<classname,TIN,TOUT,std::string> str_registrar
 
 #define FUNC_STR_EXPAND(x...) #x
 #define FUNC_STR(x...) FUNC_STR_EXPAND(x)
 
 // everything after this point is specialized to uniform LUTs.
-#define FUNC_REGISTER_ULUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
+#define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
   template<> const \
-  UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE>::registrar(FUNC_STR(classname))
+  UniformLookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT> \
+    classname<TIN,TOUT>::registrar(FUNC_STR(classname))
 
-#define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
+#define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
   template<> const \
-    UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,other>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE,other>::registrar(FUNC_STR(classname<other>))
+    UniformLookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT> \
+    classname<TIN,TOUT,other>::registrar(FUNC_STR(classname<other>))
 
 #ifndef FUNC_USE_SMALL_REGISTRY
 // macros used in each class to quickly register 4 different template instantiations

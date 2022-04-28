@@ -56,25 +56,25 @@ TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\
 UniformLookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/UniformLookupTable.hpp;\
+table_types/UniformLinearPrecomputedInterpolationTable.hpp;\
 table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;\
 table_types/UniformConstantTaylorTable.hpp;\
 table_types/UniformCubicHermiteTable.hpp;\
 table_types/UniformCubicPrecomputedInterpolationTable.hpp;\
 table_types/UniformCubicTaylorTable.hpp;\
 table_types/UniformLinearInterpolationTable.hpp;\
-table_types/UniformLinearPrecomputedInterpolationTable.hpp;\
 table_types/UniformLinearTaylorTable.hpp;\
 table_types/UniformPadeTable.hpp;\
 table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;\
-table_types/UniformQuadraticTaylorTable.hpp;\
-table_types/CompositeLookupTable.hpp;\
-table_types/FailureProofTable.hpp;\
-table_types/NonUniformLookupTable.hpp;\
-table_types/NonUniformLinearInterpolationTable.hpp;\
-table_types/NonUniformPseudoLinearInterpolationTable.hpp;\
-table_types/NonUniformCubicPrecomputedInterpolationTable.hpp;\
-table_types/NonUniformPseudoCubicPrecomputedInterpolationTable.hpp;\
-")
+table_types/UniformQuadraticTaylorTable.hpp;")
+#table_types/CompositeLookupTable.hpp;\
+#table_types/FailureProofTable.hpp;\
+#table_types/NonUniformLookupTable.hpp;\
+#table_types/NonUniformLinearInterpolationTable.hpp;\
+#table_types/NonUniformPseudoLinearInterpolationTable.hpp;\
+#table_types/NonUniformCubicPrecomputedInterpolationTable.hpp;\
+#table_types/NonUniformPseudoCubicPrecomputedInterpolationTable.hpp;\
+#")
 
 install(TARGETS func
     LIBRARY DESTINATION lib
