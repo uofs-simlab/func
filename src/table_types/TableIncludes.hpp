@@ -5,6 +5,7 @@
 
 /* ---- Uniform Tables ---- */
 #include "UniformLookupTable.hpp"
+#include "MetaTable.hpp"
 
 // differentiation tables
 #ifdef FUNC_USE_BOOST_AUTODIFF

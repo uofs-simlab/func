@@ -56,6 +56,7 @@ TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\
 UniformLookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/UniformLookupTable.hpp;\
+table_types/MetaTable.hpp;\
 table_types/UniformLinearPrecomputedInterpolationTable.hpp;\
 table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;\
 table_types/UniformConstantTaylorTable.hpp;\
@@ -66,9 +67,9 @@ table_types/UniformLinearInterpolationTable.hpp;\
 table_types/UniformLinearTaylorTable.hpp;\
 table_types/UniformPadeTable.hpp;\
 table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;\
-table_types/UniformQuadraticTaylorTable.hpp;")
-#table_types/CompositeLookupTable.hpp;\
-#table_types/FailureProofTable.hpp;\
+table_types/UniformQuadraticTaylorTable.hpp;\
+table_types/CompositeLookupTable.hpp;\
+table_types/FailureProofTable.hpp;")
 #table_types/NonUniformLookupTable.hpp;\
 #table_types/NonUniformLinearInterpolationTable.hpp;\
 #table_types/NonUniformPseudoLinearInterpolationTable.hpp;\
