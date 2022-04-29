@@ -45,8 +45,6 @@ int main(int argc, char* argv[])
   unsigned int seed   = std::stoi(argv[6]);
 
   FunctionContainer<double> func_container{SET_F(MyFunction,double)};
-  FunctionContainer<float> func_container_f{SET_F(MyFunction,float)};
-
   double stepSize;
 
   /* Check which implementations are available */
@@ -58,56 +56,30 @@ int main(int argc, char* argv[])
 
   /* Fill in the implementations */
   std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
-  std::vector<unique_ptr<EvaluationImplementation<float>>> implsf;
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
+    "UniformArmadilloPrecomputedInterpolationTable<4>",
+    "UniformArmadilloPrecomputedInterpolationTable<5>",
+    "UniformArmadilloPrecomputedInterpolationTable<6>",
+    "UniformArmadilloPrecomputedInterpolationTable<7>",
+    "UniformCubicHermiteTable",
+    "UniformCubicPrecomputedInterpolationTable",
+    "UniformCubicTaylorTable",
     "UniformLinearInterpolationTable",
-    "NonUniformLinearInterpolationTable<4>",
-    "NonUniformPseudoLinearInterpolationTable<4>",
-    "NonUniformCubicPrecomputedInterpolationTable<4>",
-    "NonUniformPseudoCubicPrecomputedInterpolationTable<4>",
-  };
-
-  std::vector<std::string> padeNames {
-    "UniformPadeTable<1,1>",
-    "UniformPadeTable<2,1>",
-    "UniformPadeTable<3,1>",
-    "UniformPadeTable<4,1>",
-    "UniformPadeTable<5,1>",
-    "UniformPadeTable<6,1>",
-    "UniformPadeTable<2,2>",
-    "UniformPadeTable<3,2>",
-    "UniformPadeTable<4,2>",
-    "UniformPadeTable<5,2>",
-    "UniformPadeTable<3,3>",
-    "UniformPadeTable<4,3>",
+    "UniformLinearPrecomputedInterpolationTable",
+    "UniformLinearTaylorTable",
+    "UniformQuadraticPrecomputedInterpolationTable",
+    "UniformQuadraticTaylorTable"
   };
 
   UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
-  UniformLookupTableGenerator<float> genf(&func_container_f, tableMin, tableMax);
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
-    cout << "Building " << itName << " ..." << endl;
+    cerr << "Building " << itName << " ..." << endl; 
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
- 
-  //add a composite table. The generator doesn't converge with mid = the root 
-  //and also this is far too specific for this experiment.
-  //double mid = exp(7.7/13.0287)+1;
-
-  cout << "Building composite" << " ..." << endl;
-  impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(
-        new CompositeLookupTable<double>(&func_container,
-          {"UniformCubicPrecomputedInterpolationTable", "UniformCubicPrecomputedInterpolationTable"}, // names
-          {0.01, 0.1}, // stepsizes
-          { // special points
-            {tableMin,              MyFunction(tableMin)},
-            {(tableMin+tableMax)/2, MyFunction((tableMin+tableMax)/2)},
-            {tableMax,              MyFunction(tableMax)}
-          }
-        )));
 
   cout << "Running timings ..." << endl;
  
