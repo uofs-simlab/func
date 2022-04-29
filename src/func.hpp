@@ -12,6 +12,6 @@
 
 #ifdef FUNC_USE_ARMADILLO
 #ifdef FUNC_USE_BOOST_AUTODIFF
-#include "TransferFunctionSinh.hpp"
+//#include "TransferFunctionSinh.hpp"
 #endif
 #endif

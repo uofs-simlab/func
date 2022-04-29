@@ -182,11 +182,11 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
      theoretically "better" approximations. If they're poorly
      conditioned then we'll fall back on more naive methods. New
      methods can just be appended to the list as long as the function is static. */
-  const std::array<std::function<std::array<IN_TYPE,NUM_COEFS>(
+  constexpr std::array<std::function<std::array<IN_TYPE,NUM_COEFS>(
       std::function<IN_TYPE(IN_TYPE)>,std::function<IN_TYPE(IN_TYPE)>, IN_TYPE, IN_TYPE
       )>, 2> approx_methods {inverse_poly_interior_slopes_interp, inverse_poly_interp};
 
-  const std::array<std::string, approx_methods.size()>
+  constexpr std::array<std::string, approx_methods.size()>
     approx_names{"inverse_poly_interior_slopes_interp", "inverse_poly_interp"};
 
   bool is_terrible = true; // assume every estimate is terrible unless proven otherwise

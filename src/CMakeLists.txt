@@ -52,7 +52,6 @@ FunctionContainer.hpp;EvaluationImplementation.hpp;\
 DirectEvaluation.hpp;ArgumentRecord.hpp;\
 ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
 json.hpp;\
-TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\
 UniformLookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/UniformLookupTable.hpp;\
@@ -68,13 +67,14 @@ table_types/UniformPadeTable.hpp;\
 table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;\
 table_types/UniformQuadraticTaylorTable.hpp;\
 table_types/CompositeLookupTable.hpp;\
-table_types/FailureProofTable.hpp;\
-table_types/NonUniformLookupTable.hpp;\
-table_types/NonUniformLinearInterpolationTable.hpp;\
-table_types/NonUniformPseudoLinearInterpolationTable.hpp;\
-table_types/NonUniformCubicPrecomputedInterpolationTable.hpp;\
-table_types/NonUniformPseudoCubicPrecomputedInterpolationTable.hpp;\
-")
+table_types/FailureProofTable.hpp;")
+#TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\
+#table_types/NonUniformLookupTable.hpp;\
+#table_types/NonUniformLinearInterpolationTable.hpp;\
+#table_types/NonUniformPseudoLinearInterpolationTable.hpp;\
+#table_types/NonUniformCubicPrecomputedInterpolationTable.hpp;\
+#table_types/NonUniformPseudoCubicPrecomputedInterpolationTable.hpp;\
+#")
 
 install(TARGETS func
     LIBRARY DESTINATION lib
