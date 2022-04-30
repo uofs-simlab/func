@@ -9,6 +9,13 @@
 #define INHERIT_META(TIN,TOUT,N,HT) \
   using MetaTable<TIN,TOUT,N,HT>::m_table;
 
+/* Parallelization macro. Play around with this to see which OpenMP option for parallelizing a for loop is best
+ * Might be nice to have simd table generation so something like the LUT generator can use actual
+ * parallelism. The alignment of m_table might also give us a big speedup from simd */
+//#pragma omp simd aligned(m_table:sizeof(TOUT)) // needs the constructor to be declared simd
+// assuming each iteration will take about the same amount of time
+//#pragma omp parallel for schedule(static)
+
 enum HashTypes {HORNER, TAYLOR};
 
 template <typename TIN, typename TOUT, unsigned int N, HashTypes HT>
@@ -45,6 +52,8 @@ public:
     for(unsigned int i=0; i<m_numTableEntries; i++)
       for(unsigned int j=0; j<m_table[i].num_coefs; j++)
         m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<TOUT>();
+
+    // build the transfer function here as well? Could be in the more general LUT file
   }
 
   /* Provide the most common hash types. The compiler should simplify this when templates are specialized */
