@@ -109,8 +109,8 @@ public:
     EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "uniform_lookup_table")
   {
     // Assuming we're still using the same function container as before
-    // Also kinda inefficient since the derived class will also make its own
-    // jsonStats but oh well
+    // We'll end up making 2 jsonStats objects because the MetaTable needs
+    // to check the table name and construct m_table. Not a big deal
     std::ifstream file_reader(filename);
     using nlohmann::json;
     json jsonStats;

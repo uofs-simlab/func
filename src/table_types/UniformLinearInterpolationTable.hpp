@@ -12,7 +12,7 @@
 #pragma once
 #include "MetaTable.hpp"
 
-enum IsUniform = {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO}
+enum IsUniform {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
 
 template <typename TIN, typename TOUT, IsUniform IU>
 class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,HORNER>
@@ -92,8 +92,8 @@ public:
 };
 
 template <typename TIN, typename TOUT=TIN>
-using UniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,UNIFORM>
+using UniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,NONUNIFORM>
+using NonUniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>
+using NonUniformPseudoLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
