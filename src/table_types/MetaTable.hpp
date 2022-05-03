@@ -11,14 +11,16 @@
 
 /* Parallelization macro. Play around with this to see which OpenMP option for parallelizing a for loop is best
  * Might be nice to have simd table generation so something like the LUT generator can use actual
- * parallelism. The alignment of m_table might also give us a big speedup from simd */
+ * parallelism. We also know the alignment of m_table so that might give some speedup. */
+//_Pragma("omp simd aligned(m_table:sizeof(TOUT))")
 //#pragma omp simd aligned(m_table:sizeof(TOUT)) // needs the constructor to be declared simd
 // assuming each iteration will take about the same amount of time
 //#pragma omp parallel for schedule(static)
 
 enum HashTypes {HORNER, TAYLOR};
+enum GridType {UNIFORM, NONUNIFORM, PSEUDO_NONUNIFORM}
 
-template <typename TIN, typename TOUT, unsigned int N, HashTypes HT>
+template <typename TIN, typename TOUT, unsigned int N, HashTypes HT, GridType GT>
 class MetaTable : public UniformLookupTable<TIN,TOUT>
 {
 protected:
@@ -68,29 +70,43 @@ public:
         TOUT x0r = dx/m_stepSize+0.5;
         // index of previous table entry
         unsigned  x0 = (unsigned) x0r;
-        dx -= x0*m_stepSize;
-
-        // general degree horners method, evaluated from the inside out.
-        TOUT sum = 0;
-        for (int k=N-1; k>0; k--)
-          sum = dx*(m_table[x0].coefs[k] + sum);
-        return m_table[x0].coefs[0]+sum;
+        dx -= x0*m_stepSize; 
       }
     case HORNER:
       {
-        // nondimensionalized x position, scaled by step size
-        TOUT dx = (TOUT) m_stepSize_inv*(x-m_minArg);
-        // index of previous table entry
-        unsigned x0  = (unsigned) dx;
-        // value of table entries around x position
-        dx -= x0;
-        
-        // general degree horners method, evaluated from the inside out.
-        TOUT sum = 0;
-        for (int k=N-1; k>0; k--)
-          sum = dx*(m_table[x0].coefs[k] + sum);
-        return m_table[x0].coefs[0]+sum;
+        switch(GT){
+          case UNIFORM:
+            {
+              // nondimensionalized x position, scaled by step size
+              TOUT dx = (TOUT) m_stepSize_inv*(x-m_minArg);
+              // index of previous table entry
+              unsigned x0  = (unsigned) dx;
+              // value of table entries around x position
+              dx -= x0;
+            }
+          case NONUNIFORM:
+            {
+              // find the subinterval x lives in
+              unsigned x0 = m_transferFunction.g_inv(x);
+              // find where x is within that interval
+              IN_TYPE h   = m_grid[x0+1] - m_grid[x0];
+              OUT_TYPE dx = (x - m_grid[x0])/h;
+            }
+          case NONUNIFORM_PSEUDO:
+            {
+              // find the subinterval x lives in
+              OUT_TYPE dx = m_transferFunction.g_inv(x);
+              // just take the fractional part of dx as x's location in this interval
+              unsigned x0 = (unsigned) dx;
+              dx -= x0;
+            }
+        }
       }
     }
+    // general degree horners method, evaluated from the inside out.
+    TOUT sum = 0;
+    for (int k=N-1; k>0; k--)
+      sum = dx*(m_table[x0].coefs[k] + sum);
+    return m_table[x0].coefs[0]+sum;
   }
 };
