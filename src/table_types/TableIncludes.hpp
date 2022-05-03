@@ -21,7 +21,7 @@
 
 // standard interpolation tables
 #include "UniformConstantTaylorTable.hpp"
-#include "UniformLinearInterpolationTable.hpp"
+//#include "UniformLinearInterpolationTable.hpp"
 #include "UniformLinearPrecomputedInterpolationTable.hpp"
 #include "UniformQuadraticPrecomputedInterpolationTable.hpp"
 #include "UniformCubicPrecomputedInterpolationTable.hpp"
