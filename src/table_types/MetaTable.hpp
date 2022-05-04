@@ -5,6 +5,7 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "TransferFunctionSinh.hpp"
 
 #define INHERIT_META(TIN,TOUT,N,HT) \
   using MetaTable<TIN,TOUT,N,HT>::m_table;
@@ -18,22 +19,38 @@
 //#pragma omp parallel for schedule(static)
 
 enum HashTypes {HORNER, TAYLOR};
-enum GridType {UNIFORM, NONUNIFORM, PSEUDO_NONUNIFORM}
+enum GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
 
-template <typename TIN, typename TOUT, unsigned int N, HashTypes HT, GridType GT>
+template <GridTypes GT>
+std::string grid_type_to_string() {
+  switch(GT){
+    case UNIFORM:
+      return "Uniform";
+    case NONUNIFORM:
+      return "NonUniform";
+    case NONUNIFORM_PSEUDO:
+      return "NonUniformPseudo";
+    default: { throw std::invalid_argument("Broken switch case in FunC"); }
+  } 
+}
+
+template <typename TIN, typename TOUT, unsigned int N, HashTypes HT, GridTypes GT=UNIFORM>
 class MetaTable : public UniformLookupTable<TIN,TOUT>
 {
 protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_UNIFORM_LUT(TIN,TOUT);
 
+  TransferFunctionSinh<TIN,4> m_transferFunction;
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table;
   TOUT get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return N; }
 
 public:
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
-    UniformLookupTable<TIN,TOUT>(func_container, par) { }
+    UniformLookupTable<TIN,TOUT>(func_container, par),
+    m_transferFunction(TransferFunctionSinh<TIN,4>(func_container,par.minArg,par.maxArg,par.stepSize))
+    { }
 
   /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename, std::string tablename) :
@@ -61,15 +78,16 @@ public:
   /* Provide the most common hash types. The compiler should simplify this when templates are specialized */
   TOUT operator()(TIN x) override
   {
-    // TODO figure out a default case
+    TOUT dx;
+    unsigned x0;
     switch(HT){
     case TAYLOR:
       {
         // nondimensionalized x position
-        TOUT dx  = (x-m_minArg);
+        dx = (x-m_minArg);
         TOUT x0r = dx/m_stepSize+0.5;
         // index of previous table entry
-        unsigned  x0 = (unsigned) x0r;
+        x0 = (unsigned) x0r;
         dx -= x0*m_stepSize; 
       }
     case HORNER:
@@ -78,26 +96,26 @@ public:
           case UNIFORM:
             {
               // nondimensionalized x position, scaled by step size
-              TOUT dx = (TOUT) m_stepSize_inv*(x-m_minArg);
+              dx = (TOUT) m_stepSize_inv*(x-m_minArg);
               // index of previous table entry
-              unsigned x0  = (unsigned) dx;
+              x0  = (unsigned) dx;
               // value of table entries around x position
               dx -= x0;
             }
           case NONUNIFORM:
             {
               // find the subinterval x lives in
-              unsigned x0 = m_transferFunction.g_inv(x);
+              x0 = m_transferFunction.g_inv(x);
               // find where x is within that interval
-              IN_TYPE h   = m_grid[x0+1] - m_grid[x0];
-              OUT_TYPE dx = (x - m_grid[x0])/h;
+              TIN h   = m_grid[x0+1] - m_grid[x0];
+              dx = (x - m_grid[x0])/h;
             }
           case NONUNIFORM_PSEUDO:
             {
               // find the subinterval x lives in
-              OUT_TYPE dx = m_transferFunction.g_inv(x);
+              dx = m_transferFunction.g_inv(x);
               // just take the fractional part of dx as x's location in this interval
-              unsigned x0 = (unsigned) dx;
+              x0 = (unsigned) dx;
               dx -= x0;
             }
         }

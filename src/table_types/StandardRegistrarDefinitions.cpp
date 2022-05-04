@@ -4,12 +4,14 @@
 #include "config.hpp" // FUNC_USE_BOOST_AUTODIFF
 
 #include "UniformConstantTaylorTable.hpp"
-//#include "UniformLinearInterpolationTable.hpp"
+#include "UniformLinearInterpolationTable.hpp"
 #include "UniformLinearPrecomputedInterpolationTable.hpp"
 #include "UniformQuadraticPrecomputedInterpolationTable.hpp"
 #include "UniformCubicPrecomputedInterpolationTable.hpp"
 
-//FUNC_REGISTER_EACH_ULUT_IMPL(UniformLinearInterpolationTable);
+FUNC_REGISTER_EACH_ULUT_IMPL(UniformLinearInterpolationTable);
+FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformLinearInterpolationTable);
+FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformPseudoLinearInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformLinearPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformQuadraticPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformCubicPrecomputedInterpolationTable);

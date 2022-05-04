@@ -12,25 +12,23 @@
 #pragma once
 #include "MetaTable.hpp"
 
-enum IsUniform {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
-
-template <typename TIN, typename TOUT, IsUniform IU>
-class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,HORNER>
+template <typename TIN, typename TOUT, GridTypes GT>
+class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,HORNER,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_UNIFORM_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,1,HORNER);
+
+  using MetaTable<TIN,TOUT,1,HORNER,GT>::m_table;
+  using MetaTable<TIN,TOUT,1,HORNER,GT>::m_transferFunction;
   FUNC_REGISTER_LUT(LinearInterpolationTable);
  
 public:
   //#pragma omp declare simd
   LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,1,HORNER>(func_container, par)
+    MetaTable<TIN,TOUT,1,HORNER,GT>(func_container, par)
   {
     /* Base class variables */
-    m_name = "LinearInterpolationTable";
-    //m_name = FUNC_STR(NonUniformLinearInterpolationTable);
-    //m_name = FUNC_STR(NonUniformPseudoLinearInterpolationTable);
+    m_name  = grid_type_to_string<GT>() + "LinearInterpolationTable";
     m_order = 1;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -40,10 +38,10 @@ public:
     for (int ii=0; ii<m_numIntervals; ++ii) {
       TIN x;
       // transform the uniform grid to a nonuniform grid
-      if (IU = NONUNIFORM)
-        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
-      else
+      if (GT == UNIFORM)
         x = m_minArg + ii*m_stepSize;
+      else
+        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
 
       m_grid[ii]  = x;
       m_table[ii].coefs[0] = m_func(x);
@@ -52,36 +50,46 @@ public:
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
   LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,1,HORNER>(func_container, filename, "LinearInterpolationTable") {}
+    MetaTable<TIN,TOUT,1,HORNER,GT>(func_container, filename,
+        grid_type_to_string<GT>() + "LinearInterpolationTable") {}
 
   // operator() is slightly different from MetaTable's HORNER method
   TOUT operator()(TIN x) override
   {
-    switch(IU){
+    //enum GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
+    TOUT dx;
+    unsigned int x0;
+    switch(GT){
     case UNIFORM:
+      {
       // nondimensionalized x position, scaled by step size
-      TOUT dx = (x-m_minArg)/m_stepSize;
+      dx = (x-m_minArg)/m_stepSize;
       // index of previous table entry
-      unsigned x0 = (unsigned) dx;
+      x0 = (unsigned) dx;
       // value of table entries around x position
       dx -= x0;
       break;
+      }
+    case NONUNIFORM:
+      {
+      // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
+      // where each of the above member vars are encoded into g_inv
+      x0 = m_transferFunction.g_inv(x);
+      TIN h   = m_grid[x0+1] - m_grid[x0];
+      dx = (x - m_grid[x0])/h;
+      break;
+      }
     case NONUNIFORM_PSEUDO:
+      {
       // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
       // and dx = fractional((g_inv(x)-m_minArg)/m_stepSize)
       // where each of the above member vars are encoded into g_inv
       // The source of the pseudolinearity is from the way we compute dx
-      OUT_TYPE dx = m_transferFunction.g_inv(x);
-      unsigned x0 = (unsigned) dx;
+      dx = m_transferFunction.g_inv(x);
+      x0 = (unsigned) dx;
       dx -= x0;
       break;
-    case NONUNIFORM:
-      // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
-      // where each of the above member vars are encoded into g_inv
-      unsigned x0 = m_transferFunction.g_inv(x);
-      IN_TYPE h   = m_grid[x0+1] - m_grid[x0];
-      OUT_TYPE dx = (x - m_grid[x0])/h;
-      break;
+      }
     }
 
     TOUT y1  = m_table[x0].coefs[0];
