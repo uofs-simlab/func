@@ -28,7 +28,7 @@
 /* inheritance macro */
 #define IMPLEMENT_TRANSFER_FUNCTION_INTERFACE(IN_TYPE) \
   using TransferFunctionInterface<IN_TYPE>::m_minArg; \
-  using TransferFunctionInterface<IN_TYPE>::m_maxArg; \
+  using TransferFunctionInterface<IN_TYPE>::m_tableMaxArg; \
   using TransferFunctionInterface<IN_TYPE>::m_stepSize;
 
 template <typename IN_TYPE>
@@ -38,21 +38,22 @@ protected:
   /* This min, max must be the same as the corresponding table's min and
   max resp. (though note that the table max is not necessarily equal to
   the function's max arg) */
-  IN_TYPE m_minArg, m_maxArg;
+  IN_TYPE m_minArg, m_tableMaxArg;
   IN_TYPE m_stepSize;
 
 public:
   // build the function pair
   template <typename OUT_TYPE>
-  TransferFunctionInterface(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize) :
-    m_minArg(minArg), m_maxArg(maxArg), m_stepSize(stepSize) {}
+  TransferFunctionInterface(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
+      IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
+    m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) {}
 
   virtual ~TransferFunctionInterface(){}
 
   virtual void print_details(std::ostream& out){};
 
   // public access to private vars
-  std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_maxArg); }
+  std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_tableMaxArg); }
 
   // getters used to ensure g and g_inv are implemented
   virtual IN_TYPE g(IN_TYPE x) = 0;

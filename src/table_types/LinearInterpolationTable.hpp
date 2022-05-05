@@ -1,5 +1,7 @@
 /*
-  Linear Interpolation LUT with uniform sampling
+  Linear Interpolation LUT. Coefficients are computed at lookup time.
+  Approx 50% less memory usage compared to LinearPrecomputedInterpolationTable
+  but the hash is slower.
 
   Usage example:
     LinearInterpolationTable look(&function,0,10,0.0001);
@@ -12,19 +14,18 @@
 #pragma once
 #include "MetaTable.hpp"
 
-template <typename TIN, typename TOUT, GridTypes GT>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,HORNER,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_UNIFORM_LUT(TIN,TOUT);
+  INHERIT_LUT(TIN,TOUT);
+  INHERIT_META(TIN,TOUT,1,HORNER,GT);
 
-  using MetaTable<TIN,TOUT,1,HORNER,GT>::m_table;
-  using MetaTable<TIN,TOUT,1,HORNER,GT>::m_transferFunction;
   FUNC_REGISTER_LUT(LinearInterpolationTable);
  
 public:
   //#pragma omp declare simd
-  LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
+  LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,1,HORNER,GT>(func_container, par)
   {
     /* Base class variables */
@@ -37,7 +38,7 @@ public:
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
     for (int ii=0; ii<m_numIntervals; ++ii) {
       TIN x;
-      // transform the uniform grid to a nonuniform grid
+      // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else

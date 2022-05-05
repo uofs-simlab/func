@@ -1,8 +1,8 @@
 /*
-  Cubic Interpolation LUT with uniform sampling (precomputed coefficients)
+  Cubic Interpolation LUT with precomputed polynomial coefficients
 
   Usage example:
-    UniformCubicHermiteTable look(&function,0,10,0.0001);
+    CubicHermiteTable look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -16,27 +16,27 @@
 #include "config.hpp"
 
 #ifndef FUNC_USE_BOOST_AUTODIFF
-#error "UniformCubicHermiteTable needs boost version >= 1.71"
+#error "CubicHermiteTable needs boost version >= 1.71"
 #endif
 
-template <typename TIN, typename TOUT = TIN>
-class UniformCubicHermiteTable final : public MetaTable<TIN,TOUT,4,HORNER>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,HORNER,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_UNIFORM_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,4,HORNER);
+  INHERIT_LUT(TIN,TOUT);
+  INHERIT_META(TIN,TOUT,4,HORNER,GT);
 
-  FUNC_REGISTER_LUT(UniformCubicHermiteTable);
+  FUNC_REGISTER_LUT(CubicHermiteTable);
 
   std::function<adVar<TOUT,1>(adVar<TIN,1>)> mp_boost_func;
 
 public:
-  UniformCubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
-      MetaTable<TIN,TOUT,4,HORNER>(func_container, par)
+  CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
+      MetaTable<TIN,TOUT,4,HORNER,GT>(func_container, par)
   {
     using boost::math::differentiation::make_fvar;
     /* Base class default variables */
-    m_name = "UniformCubicHermiteTable";
+    m_name = grid_type_to_string<GT>() + "CubicHermiteTable";
     m_order = 4;
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -47,7 +47,12 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
     for (int ii=0; ii<m_numIntervals; ++ii) {
-      const TIN x = m_minArg + ii*m_stepSize;
+      TIN x;
+      // (possibly) transform the uniform grid into a nonuniform grid
+      if (GT == UNIFORM)
+        x = m_minArg + ii*m_stepSize;
+      else
+        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
       m_grid[ii] = x;
 
       const auto derivs0 = (mp_boost_func)(make_fvar<TIN,1>(x));
@@ -65,9 +70,18 @@ public:
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
-  UniformCubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,4,HORNER>(func_container, filename, "UniformCubicHermiteTable") {}
+  CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
+    MetaTable<TIN,TOUT,4,HORNER,GT>(func_container, filename,
+        grid_type_to_string<GT>() + "CubicHermiteTable") {}
   // operator() comes straight from the MetaTable
 
   std::function<adVar<TOUT,1>(adVar<TOUT,1>)> boost_function(){ return mp_boost_func; }
 };
+
+// define friendlier names
+template <typename TIN, typename TOUT=TIN>
+using UniformCubicHermiteTable = CubicHermiteTable<TIN,TOUT,UNIFORM>;
+template <typename TIN, typename TOUT=TIN>
+using NonUniformCubicHermiteTable = CubicHermiteTable<TIN,TOUT,NONUNIFORM>;
+template <typename TIN, typename TOUT=TIN>
+using NonUniformPseudoCubicHermiteTable = CubicHermiteTable<TIN,TOUT,NONUNIFORM_PSEUDO>;

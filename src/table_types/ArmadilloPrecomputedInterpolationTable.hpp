@@ -3,7 +3,7 @@
   coefficients solved using Armadillo matrices)
 
   Usage example for a 4th degree interpolant:
-    UniformArmadilloPrecomputedInterpolationTable<4> look(&function,0,10,0.0001);
+    ArmadilloPrecomputedInterpolationTable<4> look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -19,7 +19,7 @@
 #include "config.hpp"
 
 #ifndef FUNC_USE_ARMADILLO
-#error "UniformArmadilloPrecomputedInterpolationTable needs Armadillo"
+#error "ArmadilloPrecomputedInterpolationTable needs Armadillo"
 #endif
 
 #define ARMA_USE_CXX11
@@ -35,22 +35,22 @@
 #define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::refine
 #endif
 
-template <typename TIN, typename TOUT, unsigned int N>
-class UniformArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N+1,HORNER>
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
+class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N+1,HORNER,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_UNIFORM_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,N+1,HORNER);
+  INHERIT_LUT(TIN,TOUT);
+  INHERIT_META(TIN,TOUT,N+1,HORNER,GT);
 
-  FUNC_REGISTER_LUT(UniformArmadilloPrecomputedInterpolationTable);
+  FUNC_REGISTER_LUT(ArmadilloPrecomputedInterpolationTable);
 
 public:
-  UniformArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container,
-      UniformLookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,N+1,HORNER>(func_container, par)
+  ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container,
+      LookupTableParameters<TIN> par) :
+    MetaTable<TIN,TOUT,N+1,HORNER,GT>(func_container, par)
   {
     /* Base class default variables */
-    m_name = "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
+    m_name = grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
     m_numTableEntries = m_numIntervals+1;
     m_order = N+1; // N is the degree of the polynomial interpolant so take the order as N+1
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -70,11 +70,16 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
-      const TIN x = m_minArg + ii*m_stepSize;
+      TIN x;
+      // (possibly) transform the uniform grid into a nonuniform grid
+      if (GT == UNIFORM)
+        x = m_minArg + ii*m_stepSize;
+      else
+        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+
       // grid points
-      m_grid[ii] = x;
-      
-      // build the vector of coefficients from uniformly spaced function values
+      m_grid[ii] = x;      
+      // build the vector of coefficients from function values
       arma::vec y = arma::linspace(x,x+m_stepSize,N+1);
       for (unsigned int k=0; k<N+1; k++)
         y[k] = m_func(y[k]);
@@ -93,7 +98,16 @@ public:
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
-  UniformArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,N+1,HORNER>(func_container, filename, "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">") {}
+  ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
+    MetaTable<TIN,TOUT,N+1,HORNER,GT>(func_container, filename,
+        grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">") {}
   // operator() comes straight from the MetaTable
 };
+
+// define friendlier names
+template <typename TIN, typename TOUT, unsigned int N>
+using UniformArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,UNIFORM>;
+template <typename TIN, typename TOUT, unsigned int N>
+using NonUniformArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,NONUNIFORM>;
+template <typename TIN, typename TOUT, unsigned int N>
+using NonUniformPseudoArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,NONUNIFORM_PSEUDO>;

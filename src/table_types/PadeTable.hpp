@@ -3,7 +3,7 @@
   Armadillo. 
 
   Usage example using [4/3] approximants:
-    UniformPadeTable<4,3> look(&function,0,10,0.0001);
+    PadeTable<4,3> look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -19,11 +19,11 @@
 #include "config.hpp"
 
 #ifndef FUNC_USE_BOOST_AUTODIFF
-#error "UniformPadeTable needs boost version >= 1.71"
+#error "PadeTable needs boost version >= 1.71"
 #endif
 
 #ifndef FUNC_USE_ARMADILLO
-#error "UniformPadeTable needs Armadillo"
+#error "PadeTable needs Armadillo"
 #endif
 
 #include <armadillo>
@@ -33,24 +33,24 @@
 
 static double const fact[] = {1,1,2,6,24,120,720,5040};
 
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N> 
-class UniformPadeTable final : public MetaTable<TIN,TOUT,M+N+1,TAYLOR>
+template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
+class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_UNIFORM_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,M+N+1,TAYLOR);
-  FUNC_REGISTER_LUT(UniformPadeTable);
+  INHERIT_LUT(TIN,TOUT);
+  INHERIT_META(TIN,TOUT,M+N+1,TAYLOR,GT);
+  FUNC_REGISTER_LUT(PadeTable);
 
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> mp_boost_func;
 
 public:
-  UniformPadeTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,M+N+1,TAYLOR>(func_container, par)
+  PadeTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
+    MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>(func_container, par)
   {
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
-    m_name = "UniformPadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
+    m_name = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
     m_order = M+N+1;  
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -61,7 +61,13 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,M+N+1>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
-      const TIN x = m_minArg + ii*m_stepSize;
+      TIN x;
+      // (possibly) transform the uniform grid into a nonuniform grid
+      if (GT == UNIFORM)
+        x = m_minArg + ii*m_stepSize;
+      else
+        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+
       // grid points
       m_grid[ii] = x;
       
@@ -157,8 +163,9 @@ public:
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
-  UniformPadeTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,M+N+1,TAYLOR>(func_container, filename, "UniformPadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">") {}
+  PadeTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
+    MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>(func_container, filename,
+        grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">") {}
 
   // override operator() from MetaTable so we work with rational functions instead
   TOUT operator()(TIN x) override
@@ -185,3 +192,10 @@ public:
 
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> boost_function(){ return mp_boost_func; }
 };
+
+template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
+using UniformPadeTable = PadeTable<TIN,TOUT,M,N,UNIFORM>;
+template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
+using NonUniformPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM>;
+template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
+using NonUniformPseudoPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM_PSEUDO>;

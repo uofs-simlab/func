@@ -1,4 +1,4 @@
-#include "UniformArmadilloPrecomputedInterpolationTable.hpp"
+#include "ArmadilloPrecomputedInterpolationTable.hpp"
 #include "config.hpp" // FUNC_USE_BOOST_AUTODIFF, FUNC_USE_ARMADILLO
 
 #ifndef FUNC_USE_ARMADILLO
@@ -11,12 +11,7 @@ FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationT
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable,7);
 
 #ifdef FUNC_USE_BOOST_AUTODIFF
-#include "UniformPadeTable.hpp"
-//#include "NonUniformLookupTable.hpp"
-//#include "NonUniformLinearInterpolationTable.hpp"
-//#include "NonUniformPseudoLinearInterpolationTable.hpp"
-//#include "NonUniformCubicPrecomputedInterpolationTable.hpp"
-//#include "NonUniformPseudoCubicPrecomputedInterpolationTable.hpp"
+#include "PadeTable.hpp"
 
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,1,1);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,2,1);
@@ -33,9 +28,4 @@ FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,5,2);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,3,3);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,4,3);
 
-// Register a whole load of different options for the nonuniform LUTs
-//FUNC_REGISTER_EACH_NONUNIFORM_IMPL_TYPE(NonUniformCubicPrecomputedInterpolationTable);
-//FUNC_REGISTER_EACH_NONUNIFORM_IMPL_TYPE(NonUniformLinearInterpolationTable);
-//FUNC_REGISTER_EACH_NONUNIFORM_IMPL_TYPE(NonUniformPseudoCubicPrecomputedInterpolationTable);
-//FUNC_REGISTER_EACH_NONUNIFORM_IMPL_TYPE(NonUniformPseudoLinearInterpolationTable);
 #endif

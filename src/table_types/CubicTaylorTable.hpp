@@ -1,8 +1,8 @@
 /*
-  Cubic Taylor LUT with uniform sampling
+  Cubic Taylor LUT
 
   Usage example:
-    UniformCubicTaylorTable look(&function,0,10,0.0001);
+    CubicTaylorTable look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -14,27 +14,27 @@
 #include "config.hpp"
 
 #ifndef FUNC_USE_BOOST_AUTODIFF
-#error "UniformLinearTaylorTable needs boost version >= 1.71"
+#error "CubicTaylorTable needs boost version >= 1.71"
 #endif
 
-template <typename TIN, typename TOUT = TIN>
-class UniformCubicTaylorTable final : public MetaTable<TIN,TOUT,4,TAYLOR>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+class CubicTaylorTable final : public MetaTable<TIN,TOUT,4,TAYLOR,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_UNIFORM_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,4,TAYLOR);
-  FUNC_REGISTER_LUT(UniformCubicTaylorTable);
+  INHERIT_LUT(TIN,TOUT);
+  INHERIT_META(TIN,TOUT,4,TAYLOR,GT);
+  FUNC_REGISTER_LUT(CubicTaylorTable);
 
   std::function<adVar<TOUT,3>(adVar<TOUT,3>)> mp_boost_func;
 
 public:
-  UniformCubicTaylorTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,4,TAYLOR>(func_container, par)
+  CubicTaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
+    MetaTable<TIN,TOUT,4,TAYLOR,GT>(func_container, par)
   {
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
-    m_name = "UniformCubicTaylorTable";
+    m_name = grid_type_to_string<GT>() + "CubicTaylorTable";
     m_order = 4;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -45,7 +45,13 @@ public:
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
-      TIN x = (m_minArg + ii*m_stepSize);
+      TIN x;
+      // (possibly) transform the uniform grid into a nonuniform grid
+      if (GT == UNIFORM)
+        x = m_minArg + ii*m_stepSize;
+      else
+        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+
       m_grid[ii] = x;
       auto const derivs = (mp_boost_func)(make_fvar<TIN,3>(x));
 
@@ -57,9 +63,14 @@ public:
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
-  UniformCubicTaylorTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,4,TAYLOR>(func_container, filename, "UniformCubicTaylorTable") {}
+  CubicTaylorTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
+    MetaTable<TIN,TOUT,4,TAYLOR,GT>(func_container, filename,
+        grid_type_to_string<GT>() + "CubicTaylorTable") {}
   // operator() comes from MetaTable
 
   std::function<adVar<TOUT,3>(adVar<TOUT,3>)> boost_function(){ return mp_boost_func; }
 };
+
+// define friendlier names
+template <typename TIN, typename TOUT=TIN>
+using UniformCubicTaylorTable = CubicTaylorTable<TIN,TOUT,UNIFORM>;

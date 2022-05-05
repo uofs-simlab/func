@@ -28,7 +28,7 @@
 #pragma once
 #include "EvaluationImplementation.hpp"
 #include "FunctionContainer.hpp"
-#include "UniformLookupTable.hpp"
+#include "LookupTable.hpp"
 #include "json.hpp"
 #include <fstream> //ifstream
 #include <limits> // std::numeric_limits<IN_TYPE>::max() / lowest()
@@ -37,7 +37,7 @@
   #include "ArgumentRecord.hpp"
 #endif
 
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class LUT_TYPE = UniformLookupTable<IN_TYPE,OUT_TYPE>>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class LUT_TYPE = LookupTable<IN_TYPE,OUT_TYPE>>
 class FailureProofTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
   std::unique_ptr<LUT_TYPE> mp_LUT;
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
@@ -79,7 +79,7 @@ public:
 
   /* Build our own LUT_TYPE */
   FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-      UniformLookupTableParameters<IN_TYPE> par,
+      LookupTableParameters<IN_TYPE> par,
       IN_TYPE histMin = 1, IN_TYPE histMax = 0, unsigned int histSize = 10) :
     FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,par)), histMin, histMax, histSize) {}
 

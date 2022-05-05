@@ -4,7 +4,7 @@
 #include "DirectEvaluation.hpp"
 #include "TableIncludes.hpp"
 
-#include "UniformLookupTableGenerator.hpp"
+#include "LookupTableGenerator.hpp"
 #include "ImplementationComparator.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"

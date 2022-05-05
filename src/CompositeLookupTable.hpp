@@ -20,8 +20,8 @@
 */
 #pragma once
 #include "EvaluationImplementation.hpp"
-#include "UniformLookupTable.hpp"
-#include "UniformLookupTableGenerator.hpp"
+#include "LookupTable.hpp"
+#include "LookupTableGenerator.hpp"
 #include <vector> // store LUTs, names, special points
 #include <memory> // shared_ptr
 #include <utility> // std::pair
@@ -74,7 +74,7 @@ class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_T
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
 
   // collection of FunC lookup tables used to sample from
-  std::vector<std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
+  std::vector<std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
 
   // names of each lookup table used
   std::vector<std::string> mv_LUT_names;
@@ -130,7 +130,7 @@ public:
   void print_details_json(std::ostream &out) override
   {}
 
-  std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> get_table(unsigned int table_idx)
+  std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>> get_table(unsigned int table_idx)
   {
     return mv_LUT[table_idx];
   }
@@ -177,7 +177,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
   /* -- actually build the given tables and update cumulative member vars -- */
   for(unsigned int i=0; i<names.size(); i++){
     // build a table from 
-    UniformLookupTableParameters<IN_TYPE> par;
+    LookupTableParameters<IN_TYPE> par;
 
     // if the discType is "+/- Inf" or "approaches" then we want to be careful w/ table bounds
     par.minArg = mv_special_points[i].get_x();
@@ -193,7 +193,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
       par.maxArg -= closeness;
 
     par.stepSize = stepSizes[i];
-    mv_LUT.push_back(UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(mv_LUT_names[i], func_container, par));
+    mv_LUT.push_back(LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(mv_LUT_names[i], func_container, par));
 
     // update the smallest interval and data size
     if(par.maxArg - par.minArg < m_len_smallest_interval)
@@ -231,7 +231,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 
   this->m_minArg = mv_special_points.front().get_x();
   this->m_maxArg = mv_special_points.back().get_x();
-  // We have everything but the names of tables needed to use our UniformLookupTableGenerator
+  // We have everything but the names of tables needed to use our LookupTableGenerator
   // TODO could this be parallelized?
   for(unsigned int i=0; i < mv_special_points.size()-1; i++){
     IN_TYPE ith_min_arg = mv_special_points[i];
@@ -239,7 +239,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 
     // divvy up the tolerance based on how large this interval is
     double ith_tol = global_tol*(ith_max_arg - ith_min_arg)/(m_maxArg-m_minArg);
-    UniformLookupTableGenerator<IN_TYPE,OUT_TYPE> gen(func_container, ith_min_arg, ith_max_arg);
+    LookupTableGenerator<IN_TYPE,OUT_TYPE> gen(func_container, ith_min_arg, ith_max_arg);
 
     // now we just need to decide which of our tables to use
     std::string ith_table_name = chooseName(mv_special_points[i], mv_special_points[i+1]);
@@ -342,7 +342,7 @@ template <typename IN_TYPE, typename OUT_TYPE>
 inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::operator()(IN_TYPE x)
 {
   // If x is close, use a linear search. Otherwise, use a binary search
-  std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> recentTable = mv_LUT[mostRecentlyUsed_idx];
+  std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>> recentTable = mv_LUT[mostRecentlyUsed_idx];
 
   if(x < recentTable->min_arg() - LENIENCE_FACTOR*m_len_smallest_interval){
     // x is far away, do binary search on the left

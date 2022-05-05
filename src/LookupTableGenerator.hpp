@@ -1,5 +1,5 @@
 /*
-  Generate a FunC UniformLookupTable when given that table's name
+  Generate a FunC LookupTable when given that table's name
   and one of the following:
   - stepsize
   - tolerance
@@ -11,7 +11,7 @@
   - plot a table implementation against the exact function
 */
 #pragma once
-#include "UniformLookupTable.hpp"
+#include "LookupTable.hpp"
 #include "config.hpp" // FUNC_USE_QUADMATH
 #include <iostream>
 #include <memory>
@@ -31,7 +31,7 @@ using errprecision = long double;
 #endif
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
-class UniformLookupTableGenerator
+class LookupTableGenerator
 {
 private:
   FunctionContainer<IN_TYPE,OUT_TYPE> *mp_func_container;
@@ -47,33 +47,33 @@ private:
 
 public:
   /* set member variables */
-  UniformLookupTableGenerator(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+  LookupTableGenerator(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
       IN_TYPE minArg, IN_TYPE maxArg) :
     mp_func_container(func_container), m_min(minArg), m_max(maxArg) {}
 
-  ~UniformLookupTableGenerator(){}
+  ~LookupTableGenerator(){}
 
-  /* A wrapper for the UniformLookupTableFactory */
-  std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, IN_TYPE stepSize)
+  /* A wrapper for the LookupTableFactory */
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, IN_TYPE stepSize)
   {
-    UniformLookupTableParameters<IN_TYPE> par;
+    LookupTableParameters<IN_TYPE> par;
     par.minArg = m_min; 
     par.maxArg = m_max; 
     par.stepSize = stepSize;
-    return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+    return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
   }
 
-  /* Another wrapper for the UniformLookupTableFactory for building tables from a file */
-  std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string tableKey, std::string filename)
+  /* Another wrapper for the LookupTableFactory for building tables from a file */
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string tableKey, std::string filename)
   {
-    return UniformLookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
+    return LookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
   }
 
   /* Generate a table that is accurate to desiredTolerance */
-  std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_tol(std::string tableKey, double desiredTolerance);
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_tol(std::string tableKey, double desiredTolerance);
 
   /* Generate a table takes up desiredSize bytes */
-  std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize);
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize);
 
   /* Return the approx error in tableKey at stepSize */
   double error_at_step_size(std::string tableKey, IN_TYPE stepSize);
@@ -89,9 +89,9 @@ public:
    Nested Functor used for computing error in a given lookup table
 */
 template <typename IN_TYPE, typename OUT_TYPE>
-struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::LookupTableErrorFunctor
+struct LookupTableGenerator<IN_TYPE,OUT_TYPE>::LookupTableErrorFunctor
 {
-  LookupTableErrorFunctor(UniformLookupTable<IN_TYPE,OUT_TYPE>* impl) : m_impl(impl) {}
+  LookupTableErrorFunctor(LookupTable<IN_TYPE,OUT_TYPE>* impl) : m_impl(impl) {}
   /* operator() always returns a negative value */
   errprecision operator()(errprecision const& x)
   {
@@ -103,25 +103,25 @@ struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::LookupTableErrorFunctor
 
 private:
 
-  UniformLookupTable<IN_TYPE,OUT_TYPE> *m_impl;
+  LookupTable<IN_TYPE,OUT_TYPE> *m_impl;
 };
 
 /* Nested Functor used for finding optimal stepsize that satisfies TOL */
 template <typename IN_TYPE, typename OUT_TYPE>
-struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
+struct LookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
 {
-  OptimalStepSizeFunctor(UniformLookupTableGenerator<IN_TYPE,OUT_TYPE> &parent, std::string tableKey, double tol) :
+  OptimalStepSizeFunctor(LookupTableGenerator<IN_TYPE,OUT_TYPE> &parent, std::string tableKey, double tol) :
     m_parent(parent), m_tableKey(tableKey), m_tol(tol) {}
 
   double operator()(IN_TYPE const& stepSize)
   {
     using namespace boost::math::tools;
 
-    UniformLookupTableParameters<IN_TYPE> par;
+    LookupTableParameters<IN_TYPE> par;
     par.minArg = m_parent.m_min;
 		par.maxArg = m_parent.m_max;
 		par.stepSize = stepSize;
-    auto impl = UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(m_tableKey, m_parent.mp_func_container, par);
+    auto impl = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(m_tableKey, m_parent.mp_func_container, par);
 
     boost::uintmax_t max_it = 20;
 
@@ -134,7 +134,7 @@ struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
     double eps = std::numeric_limits<double>::epsilon();
 
     /*
-      for each interval in the uniform table, compute the maximum error
+      for each interval in the table, compute the maximum error
       - be careful about the top most interval, it may reach beyond the
       table range due to rounding errors
     */
@@ -163,7 +163,7 @@ struct UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
 
 private:
 
-  UniformLookupTableGenerator<IN_TYPE,OUT_TYPE> &m_parent;
+  LookupTableGenerator<IN_TYPE,OUT_TYPE> &m_parent;
   std::string m_tableKey;
   double m_tol;
 
@@ -172,11 +172,11 @@ private:
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*
-  UniformLookupTableGenerator functions
+  LookupTableGenerator functions
 */
 
 template <typename IN_TYPE, typename OUT_TYPE>
-inline std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_impl_size(
+inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_impl_size(
     std::string tableKey, unsigned long desiredSize)
 {
   /* Use 2 query points to get relationship */
@@ -185,20 +185,20 @@ inline std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> UniformLookupTableG
   const unsigned long N2  = 10;
   const double step2 = (m_max-m_min)/N2;
 
-  UniformLookupTableParameters<IN_TYPE> par1;
+  LookupTableParameters<IN_TYPE> par1;
   par1.minArg = m_min;
   par1.maxArg = m_max;
   par1.stepSize = step1;
 
-  UniformLookupTableParameters<IN_TYPE> par2;
+  LookupTableParameters<IN_TYPE> par2;
   par2.minArg = m_min;
   par2.maxArg = m_max;
   par2.stepSize = step2;
 
   std::unique_ptr<EvaluationImplementation<IN_TYPE,OUT_TYPE>> impl1 =
-   UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
+    LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
   std::unique_ptr<EvaluationImplementation<IN_TYPE,OUT_TYPE>> impl2 =
-    UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par2);
+    LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par2);
 
   unsigned long size1 = impl1->size();
   unsigned long size2 = impl2->size();
@@ -211,19 +211,18 @@ inline std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> UniformLookupTableG
      (assuming linear relationship of num_intervals to size */
   par1.stepSize = 1.0/((double)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
 
-  return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
+  return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
-inline std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_tol(std::string tableKey, double desiredTolerance)
+inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_tol(std::string tableKey, double desiredTolerance)
 {
-  UniformLookupTableParameters<IN_TYPE> par;
+  LookupTableParameters<IN_TYPE> par;
   par.minArg = m_min;
   par.maxArg = m_max;
   par.stepSize =  (m_max-m_min)/1000.0;
   /* generate a first approximation for the implementation */
-  auto impl =
-    UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+  auto impl = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
   /* And initialize the functor used for refinement */
   OptimalStepSizeFunctor f(*this,tableKey,0);
   IN_TYPE stepSize  = impl->step_size();
@@ -316,11 +315,11 @@ inline std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> UniformLookupTableG
 
   /* Finally, return the implementation with the desired stepSize*/
   par.stepSize = r.first;
-  return UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
+  return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
-inline double UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::error_at_step_size(
+inline double LookupTableGenerator<IN_TYPE,OUT_TYPE>::error_at_step_size(
     std::string tableKey, IN_TYPE stepSize)
 {
   /*
@@ -333,19 +332,18 @@ inline double UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::error_at_step_size(
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
-inline void UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_size(
+inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_size(
     std::string tableKey, IN_TYPE stepSize)
 {
   /*
     Can be implemented in terms of the Functor used in solving for a specific
     tolerance, so that is reused.
   */
-  UniformLookupTableParameters<IN_TYPE> par;
+  LookupTableParameters<IN_TYPE> par;
   par.minArg = m_min;
   par.maxArg = m_max; 
   par.stepSize = stepSize;
-  auto impl =
-    UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+  auto impl = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
 
   std::cout << "# x func impl" << std::endl;
   for (double x=impl->min_arg();
@@ -356,3 +354,7 @@ inline void UniformLookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_a
       (*impl)(x) << std::endl;
   }
 }
+
+// Legacy func typedef
+template <typename IN_TYPE, typename OUT_TYPE=IN_TYPE>
+using UniformLookupTableGenerator = LookupTableGenerator<IN_TYPE,OUT_TYPE>;

@@ -4,11 +4,12 @@
    make actual LUTs succinctly
 */
 #pragma once
-#include "UniformLookupTable.hpp"
+#include "LookupTable.hpp"
 #include "TransferFunctionSinh.hpp"
 
-#define INHERIT_META(TIN,TOUT,N,HT) \
-  using MetaTable<TIN,TOUT,N,HT>::m_table;
+#define INHERIT_META(TIN,TOUT,N,HT,GT) \
+  using MetaTable<TIN,TOUT,N,HT,GT>::m_table; \
+  using MetaTable<TIN,TOUT,N,HT,GT>::m_transferFunction
 
 /* Parallelization macro. Play around with this to see which OpenMP option for parallelizing a for loop is best
  * Might be nice to have simd table generation so something like the LUT generator can use actual
@@ -35,26 +36,34 @@ std::string grid_type_to_string() {
 }
 
 template <typename TIN, typename TOUT, unsigned int N, HashTypes HT, GridTypes GT=UNIFORM>
-class MetaTable : public UniformLookupTable<TIN,TOUT>
+class MetaTable : public LookupTable<TIN,TOUT>
 {
 protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_UNIFORM_LUT(TIN,TOUT);
+  INHERIT_LUT(TIN,TOUT);
 
+#ifdef FUNC_USE_BOOST_AUTODIFF
   TransferFunctionSinh<TIN,4> m_transferFunction;
+#else
+  TransferFunctionIdentity<TIN> m_transferFunction;
+#endif
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table;
   TOUT get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return N; }
 
 public:
-  MetaTable(FunctionContainer<TIN,TOUT> *func_container, UniformLookupTableParameters<TIN> par) :
-    UniformLookupTable<TIN,TOUT>(func_container, par),
-    m_transferFunction(TransferFunctionSinh<TIN,4>(func_container,par.minArg,par.maxArg,par.stepSize))
-    { }
 
-  /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
+#ifdef FUNC_USE_BOOST_AUTODIFF
+  MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
+    LookupTable<TIN,TOUT>(func_container, par), m_transferFunction(TransferFunctionSinh<TIN,4>(func_container,m_minArg,m_tableMaxArg,m_stepSize)) {}
+#else
+  MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
+    LookupTable<TIN,TOUT>(func_container, par), m_transferFunction(TransferFunctionIdentity<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize)) {}
+#endif
+
+  /* build this table from a file. Everything other than m_table is built by LookupTable */
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename, std::string tablename) :
-    UniformLookupTable<TIN,TOUT>(func_container, filename)
+    LookupTable<TIN,TOUT>(func_container, filename)
   {
     std::ifstream file_reader(filename);
     using nlohmann::json;

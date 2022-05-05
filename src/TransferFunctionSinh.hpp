@@ -116,7 +116,7 @@ public:
   /* public constructor */
   template<typename OUT_TYPE>
   TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-      IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize);
+      IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize);
 
   IN_TYPE g(IN_TYPE x) override { return m_g(x); }
   IN_TYPE g_inv(IN_TYPE x) override
@@ -136,8 +136,8 @@ public:
 template <typename IN_TYPE, unsigned int NUM_COEFS>
 template <typename OUT_TYPE>
 inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
-    FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE maxArg, IN_TYPE stepSize) :
-  TransferFunctionInterface<IN_TYPE>(fc,minArg,maxArg,stepSize)
+    FunctionContainer<IN_TYPE,OUT_TYPE> *fc, IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
+  TransferFunctionInterface<IN_TYPE>(fc,minArg,tableMaxArg,stepSize)
 {
   using boost::math::quadrature::gauss_kronrod;
   using boost::math::differentiation::make_fvar;
@@ -155,13 +155,13 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
 
   // perform adaptive quadrature with a default tol of sqrt(epsilon).
   // Used to scale the actual g such that g(b)=b
-  IN_TYPE c = gauss_kronrod<IN_TYPE, 15>::integrate(m_g, m_minArg, m_maxArg);
+  IN_TYPE c = gauss_kronrod<IN_TYPE, 15>::integrate(m_g, m_minArg, m_tableMaxArg);
 
   // build m_g = a + \frac{b-a}{c}\int_a^x\frac{dt}{\sqrt{1+[f'(t)]^2}} which maps from [a,b] -> [a,b]
   // Note: m_g will be changed in a moment!
   m_g = [this,f_prime,c](IN_TYPE x) -> IN_TYPE {
     if(x <= m_minArg) return m_minArg; // boost gets upset if we don't do this
-    return m_minArg + (m_maxArg - m_minArg)*gauss_kronrod<IN_TYPE, 15>::integrate(
+    return m_minArg + (m_tableMaxArg - m_minArg)*gauss_kronrod<IN_TYPE, 15>::integrate(
         [f_prime](IN_TYPE t) -> IN_TYPE { return 1 / ((IN_TYPE)sqrt(1 + f_prime(t)*f_prime(t))); },
         m_minArg, x) / c;
   };
@@ -169,7 +169,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
   // build m_g_prime. Only used for generating g_inv in a bit
   std::function<IN_TYPE(IN_TYPE)> g_prime = [this, f_prime, c](IN_TYPE x) -> IN_TYPE
   {
-    return (m_maxArg-m_minArg) / (IN_TYPE) sqrt(1 + f_prime(x)*f_prime(x)) / c;
+    return (m_tableMaxArg-m_minArg) / (IN_TYPE) sqrt(1 + f_prime(x)*f_prime(x)) / c;
   };
 
   /* We'll build g_inv by using some form of inverse polynomial interpolantion.
@@ -191,7 +191,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
 
   bool is_terrible = true; // assume every estimate is terrible unless proven otherwise
   for(unsigned int k=0; k<approx_methods.size(); k++){
-    m_inv_coefs = approx_methods[k](m_g, g_prime, m_minArg, m_maxArg);
+    m_inv_coefs = approx_methods[k](m_g, g_prime, m_minArg, m_tableMaxArg);
     m_approx_method = approx_names[k];
 
     // lets scope out the quality of this polynomial with a quick copy
@@ -199,7 +199,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
 
     /* check if this version of g_inv is any good and make a fuss if it's terrible */
     // base conditions
-    if(abs(formal_g_inv(m_minArg) - m_minArg) > tol || abs(formal_g_inv(m_maxArg) - m_maxArg) > tol){
+    if(abs(formal_g_inv(m_minArg) - m_minArg) > tol || abs(formal_g_inv(m_tableMaxArg) - m_tableMaxArg) > tol){
       continue; // this estimate is terrible
     }
 
@@ -213,7 +213,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
       }
 
       // TODO error est?
-      //std::function<IN_TYPE(IN_TYPE)> slow_g_inv = newtons_inv(m_g, g_prime, m_minArg, m_maxArg);
+      //std::function<IN_TYPE(IN_TYPE)> slow_g_inv = newtons_inv(m_g, g_prime, m_minArg, m_tableMaxArg);
     }
     is_terrible = false; // this estimate is at least passable
     break;
@@ -240,7 +240,7 @@ inline TransferFunctionSinh<IN_TYPE,NUM_COEFS>::TransferFunctionSinh(
   /* Now that we have a fast approx to g_inv, we'll make it more "accurate" by
      setting our original g to g_inv_inv. This Newton's method is the reason why
      we computed all those derivatives earlier */
-  m_g = newtons_inv(formal_g_inv, m_g_inv_prime, m_minArg, m_maxArg);
+  m_g = newtons_inv(formal_g_inv, m_g_inv_prime, m_minArg, m_tableMaxArg);
 }
 
 

@@ -3,11 +3,11 @@
 #include "TableIncludes.hpp"
 #include "config.hpp" // FUNC_USE_BOOST_AUTODIFF
 
-#include "UniformConstantTaylorTable.hpp"
-#include "UniformLinearInterpolationTable.hpp"
-#include "UniformLinearPrecomputedInterpolationTable.hpp"
-#include "UniformQuadraticPrecomputedInterpolationTable.hpp"
-#include "UniformCubicPrecomputedInterpolationTable.hpp"
+#include "ConstantTaylorTable.hpp"
+#include "LinearInterpolationTable.hpp"
+#include "LinearPrecomputedInterpolationTable.hpp"
+#include "QuadraticPrecomputedInterpolationTable.hpp"
+#include "CubicPrecomputedInterpolationTable.hpp"
 
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformLinearInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformLinearInterpolationTable);
@@ -18,10 +18,10 @@ FUNC_REGISTER_EACH_ULUT_IMPL(UniformCubicPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformConstantTaylorTable);
 
 #ifdef FUNC_USE_BOOST_AUTODIFF
-#include "UniformLinearTaylorTable.hpp"
-#include "UniformQuadraticTaylorTable.hpp"
-#include "UniformCubicTaylorTable.hpp"
-#include "UniformCubicHermiteTable.hpp"
+#include "LinearTaylorTable.hpp"
+#include "QuadraticTaylorTable.hpp"
+#include "CubicTaylorTable.hpp"
+#include "CubicHermiteTable.hpp"
 
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformLinearTaylorTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformQuadraticTaylorTable);
