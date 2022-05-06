@@ -6,12 +6,14 @@
 #pragma once
 #include "LookupTable.hpp"
 #include "TransferFunctionSinh.hpp"
+#include <array>
 
 #define INHERIT_META(TIN,TOUT,N,HT,GT) \
   using MetaTable<TIN,TOUT,N,HT,GT>::m_table; \
   using MetaTable<TIN,TOUT,N,HT,GT>::m_transferFunction
 
-/* Parallelization macro. Play around with this to see which OpenMP option for parallelizing a for loop is best
+/* Parallelization macro.
+ * Play around with this to see which OpenMP option for parallelizing a for loop is best
  * Might be nice to have simd table generation so something like the LUT generator can use actual
  * parallelism. We also know the alignment of m_table so that might give some speedup. */
 //_Pragma("omp simd aligned(m_table:sizeof(TOUT))")
@@ -42,28 +44,24 @@ protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
 
-#ifdef FUNC_USE_BOOST_AUTODIFF
-  TransferFunctionSinh<TIN,4> m_transferFunction;
-#else
-  TransferFunctionIdentity<TIN> m_transferFunction;
-#endif
+  TransferFunctionSinh<TIN> m_transferFunction;
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table;
   TOUT get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return N; }
 
 public:
 
-#ifdef FUNC_USE_BOOST_AUTODIFF
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    LookupTable<TIN,TOUT>(func_container, par), m_transferFunction(TransferFunctionSinh<TIN,4>(func_container,m_minArg,m_tableMaxArg,m_stepSize)) {}
-#else
-  MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    LookupTable<TIN,TOUT>(func_container, par), m_transferFunction(TransferFunctionIdentity<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize)) {}
-#endif
+    LookupTable<TIN,TOUT>(func_container, par), m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
+  {
+    // initialize the transfer function to something useful
+    if(GT != UNIFORM)
+      m_transferFunction = TransferFunctionSinh<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
+  }
 
   /* build this table from a file. Everything other than m_table is built by LookupTable */
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename, std::string tablename) :
-    LookupTable<TIN,TOUT>(func_container, filename)
+    LookupTable<TIN,TOUT>(func_container, filename), m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
   {
     std::ifstream file_reader(filename);
     using nlohmann::json;
@@ -73,15 +71,21 @@ public:
     // check that the names match
     m_name = jsonStats["name"].get<std::string>();
     if(m_name != tablename)
-      throw std::invalid_argument("Error while reading " + filename + ": "
-          "Cannot build a " + m_name + " from a " + tablename);
+      throw std::invalid_argument("Error while reading " + filename +
+          ": Cannot build a " + m_name + " from a " + tablename);
 
     m_table.reset(new polynomial<TOUT,N>[m_numTableEntries]);
     for(unsigned int i=0; i<m_numTableEntries; i++)
       for(unsigned int j=0; j<m_table[i].num_coefs; j++)
         m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<TOUT>();
 
-    // build the transfer function here as well? Could be in the more general LUT file
+    // rebuild the transfer function here as well
+    if(GT != UNIFORM){
+      std::array<TIN,4> inv_coefs;
+      for(unsigned int i=0; i<4; i++)
+        inv_coefs[i] = jsonStats["inv_coefs"][std::to_string(i)].get<TOUT>();
+      m_transferFunction = TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize,inv_coefs);
+    }
   }
 
   /* Provide the most common hash types. The compiler should simplify this when templates are specialized */

@@ -11,6 +11,15 @@ FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationT
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable,7);
 
 #ifdef FUNC_USE_BOOST_AUTODIFF
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformArmadilloPrecomputedInterpolationTable,4);
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformArmadilloPrecomputedInterpolationTable,5);
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformArmadilloPrecomputedInterpolationTable,6);
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformArmadilloPrecomputedInterpolationTable,7);
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformPseudoArmadilloPrecomputedInterpolationTable,4);
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformPseudoArmadilloPrecomputedInterpolationTable,5);
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformPseudoArmadilloPrecomputedInterpolationTable,6);
+FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformPseudoArmadilloPrecomputedInterpolationTable,7);
+
 #include "PadeTable.hpp"
 
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,1,1);
@@ -27,5 +36,7 @@ FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,5,2);
 
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,3,3);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,4,3);
+
+// TODO Add nonuniform versions of the Pade tables
 
 #endif

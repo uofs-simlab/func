@@ -1,4 +1,7 @@
 /* 
+   TODO We don't really need a transfer function interface for
+   our use case
+
    Interface for a class that builds and contains FunC transfer
    function pairs g and g^{-1}. These are the backbones of every
    NonUniformLookupTable and are used to map a uniform grid
@@ -43,9 +46,7 @@ protected:
 
 public:
   // build the function pair
-  template <typename OUT_TYPE>
-  TransferFunctionInterface(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-      IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
+  TransferFunctionInterface(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
     m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) {}
 
   virtual ~TransferFunctionInterface(){}
