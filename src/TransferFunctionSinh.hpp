@@ -1,4 +1,12 @@
 /*
+  Accepts an array of polynomial coefficients.
+  We only mandate that a TransferFunction is a monotonically increasing
+  cubic polynomial, and the table hash much be baked into those coefficients.
+
+  If this class is given a function container then it will use
+  Boost's autodifferentiation to generate a cubic monotone Hermite
+  interpolating polynomial which will be a decent TransferFunction.
+
   Given a function f and its domain [a,b], build a pair of functions
   g: [a,b] -> [a,b] and it's inverse g^{-1}.
   g is formally defined as
@@ -9,19 +17,11 @@
   a Newton's method/ bisection mix.
 
 Notes:
-  We seem to get better grids if f' is largest near the endpoints [a,b].
-  If f' is largest near the middle of an interval (eg e^{-x^2} when a<-3 and b>3)
-  then that information is largely ignored.
-  
-  Experimental atm.
-  - TODO Make this class accept an arbitrary function which determines g from f
-  - TODO for the functions that use derivative info, we could have them build a
-  temporary slow g^{-1} and use g^{-1}' = (g'(g^{-1}))^{-1}
-  - TODO if we continue to just use g^{-1}'\approx 1/g' then we'll need
-  to check for g' = 0.
-  - TODO quantify the conditioning of any given implementation of g^{-1}
-  - TODO it would be nice if this class didn't neeed Armadillo to operate
-  - TODO read coefs from a file
+  - We seem to get better grids if f' is largest near the endpoints [a,b].
+    If f' is largest near the middle of an interval (eg e^{-x^2} when a<-3 and b>3)
+    then that information is largely ignored.  
+  - Boils down to a really slow identity function if FunC is not compiled with
+    Boost version 1.71.0 is not
  */
 #pragma once
 #include "config.hpp" // FUNC_USE_BOOST_AUTODIFF
@@ -53,8 +53,8 @@ public:
   /* Set m_inv_coefs equal to a vector that (presumably) came from a json file */
   TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize,
       std::array<IN_TYPE,4> inv_coefs = {0,0,1,0}) :
-    TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize),
-    m_inv_coefs(inv_coefs) {}
+    TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize)
+    { m_inv_coefs = inv_coefs; }
 
   /* Build the coefficients in g_inv */
   template<typename OUT_TYPE>
@@ -65,6 +65,7 @@ public:
     using boost::math::quadrature::gauss_kronrod;
     using boost::math::differentiation::make_fvar;
 
+    // TODO check that the first derivative is not null
     // build a function to return the first derivative of f
     std::function<OUT_TYPE(IN_TYPE)> f_prime = [fc](IN_TYPE x) -> OUT_TYPE {
       return (fc->autodiff1_func)(make_fvar<IN_TYPE,1>(x)).derivative(1);
@@ -146,5 +147,9 @@ public:
   void print_details(std::ostream& out) override
   {
     out << "degree 3 monotone Hermite interpolation";
+  }
+
+  std::array<IN_TYPE,4> get_coefs() {
+    return m_inv_coefs;
   }
 };

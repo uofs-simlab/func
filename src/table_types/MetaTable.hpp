@@ -1,11 +1,24 @@
 /*
-   N = number of coefficients used in underlying polynomial
-   Defines several polynomial based arrays which we can use to
-   make actual LUTs succinctly
+   Attempts to factor out common differences between table types
+   (eg hash type, grid type, setup/reading polynomial coefficients)
+   which can be pieced together based on template parameters.
+
+   N = number of coefficients used in underlying piecewise polynomials
+   HORNER: for evaluating piecewise interpolating polynomials
+   TAYLOR: for evaluating Taylor polynomials which are centered at the
+   middle of each subinterval
+
+   UNIFORM: Distance between each subinterval is always the same so we
+   can use a faster hash in exchange for (probably) higher error.
+   NONUNIFORM: Use a transfer function to create a nonuniform grid
+   with a quicker hash.
+   NONUNIFORM_PSEUDO: same as NONUNIFORM but uses a faster, less accurate
+   hash.
+
+   This template style approach greatly reduces code redundancy
 */
 #pragma once
 #include "LookupTable.hpp"
-#include "TransferFunctionSinh.hpp"
 #include <array>
 
 #define INHERIT_META(TIN,TOUT,N,HT,GT) \
@@ -22,7 +35,8 @@
 //#pragma omp parallel for schedule(static)
 
 enum HashTypes {HORNER, TAYLOR};
-enum GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
+// TODO figure out if we actually need to assign numbers to this enum
+enum GridTypes {UNIFORM = 0, NONUNIFORM = 1, NONUNIFORM_PSEUDO = 2};
 
 template <GridTypes GT>
 std::string grid_type_to_string() {
@@ -44,15 +58,17 @@ protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
 
-  TransferFunctionSinh<TIN> m_transferFunction;
+  TransferFunctionSinh<TIN> m_transferFunction; // used to make nonuniform grids
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table;
   TOUT get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return N; }
+  std::array<TIN,4> get_transfer_function_coefs() override { return m_transferFunction.get_coefs(); }
 
 public:
 
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    LookupTable<TIN,TOUT>(func_container, par), m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
+    LookupTable<TIN,TOUT>(func_container, par),
+    m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
   {
     // initialize the transfer function to something useful
     if(GT != UNIFORM)
@@ -61,7 +77,8 @@ public:
 
   /* build this table from a file. Everything other than m_table is built by LookupTable */
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename, std::string tablename) :
-    LookupTable<TIN,TOUT>(func_container, filename), m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
+    LookupTable<TIN,TOUT>(func_container, filename),
+    m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
   {
     std::ifstream file_reader(filename);
     using nlohmann::json;
@@ -79,13 +96,11 @@ public:
       for(unsigned int j=0; j<m_table[i].num_coefs; j++)
         m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<TOUT>();
 
-    // rebuild the transfer function here as well
-    if(GT != UNIFORM){
-      std::array<TIN,4> inv_coefs;
-      for(unsigned int i=0; i<4; i++)
-        inv_coefs[i] = jsonStats["inv_coefs"][std::to_string(i)].get<TOUT>();
-      m_transferFunction = TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize,inv_coefs);
-    }
+    // rebuild the transfer function
+    std::array<TIN,4> inv_coefs = jsonStats["transfer_function_coefs"].get<std::array<TIN,4>>();
+    m_transferFunction = TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize,inv_coefs);
+    //for(unsigned int i=0; i<4; i++)
+    //  inv_coefs[i] = jsonStats["inv_coefs"][std::to_string(i)].get<TOUT>();
   }
 
   /* Provide the most common hash types. The compiler should simplify this when templates are specialized */
@@ -102,6 +117,7 @@ public:
         // index of previous table entry
         x0 = (unsigned) x0r;
         dx -= x0*m_stepSize; 
+        break;
       }
     case HORNER:
       {
@@ -114,6 +130,7 @@ public:
               x0  = (unsigned) dx;
               // value of table entries around x position
               dx -= x0;
+              break;
             }
           case NONUNIFORM:
             {
@@ -122,6 +139,7 @@ public:
               // find where x is within that interval
               TIN h   = m_grid[x0+1] - m_grid[x0];
               dx = (x - m_grid[x0])/h;
+              break;
             }
           case NONUNIFORM_PSEUDO:
             {
@@ -130,6 +148,7 @@ public:
               // just take the fractional part of dx as x's location in this interval
               x0 = (unsigned) dx;
               dx -= x0;
+              break;
             }
         }
       }

@@ -1,8 +1,11 @@
 /*
   TODO explain how this links up with MetaTable & each other implementation
   Intermediate abstract class for LUTs with uniformly spaced grid points.
-  Outfits tables with enough tools to sample from a nonuniform
-  grid efficiently.
+  
+  This class handles everything required to work with a piecewise
+  evaluation implementation. For each such object, we have a
+  registry, plus reading & writing of table data to json
+  with print_details_json.
 
   Notes:
   - In the case where (max-min)/stepsize is not an integer then
@@ -11,6 +14,7 @@
 #pragma once
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
+#include "TransferFunctionSinh.hpp"
 #include "json.hpp"
 #include "config.hpp" // FUNC_USE_SMALL_REGISTRY
 
@@ -28,8 +32,6 @@ struct LookupTableParameters
   TIN stepSize;
 
   // support initializer lists
-  // still some unfortunate redundancy b/c std::string also takes a templated
-  // initializer list...
   LookupTableParameters(TIN min, TIN max, TIN step) :
     minArg(min), maxArg(max), stepSize(step) {}
   LookupTableParameters(){}
@@ -53,13 +55,13 @@ struct alignas(sizeof(TOUT)*alignments[N]) polynomial{
   using LookupTable<TIN,TOUT>::m_stepSize_inv; \
   using LookupTable<TIN,TOUT>::m_tableMaxArg
 
+
 template <typename TIN, typename TOUT = TIN>
 class LookupTable : public EvaluationImplementation<TIN,TOUT>
 {
 protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
 
-  // TODO discuss having m_grid exclusive to NonUniformTables somehow?
   std::unique_ptr<TIN[]> m_grid;  // pointers to grid and evaluation data
   // a polynomial (above) array needs to be provided by each implementation
 
@@ -67,6 +69,7 @@ protected:
   virtual TOUT get_table_entry(unsigned int i, unsigned int j)=0;
   // get the number of coefficients used
   virtual unsigned int get_num_coefs()=0;
+  virtual std::array<TIN,4> get_transfer_function_coefs()=0;
 
   unsigned int m_numIntervals;   // sizes of grid and evaluation data
   unsigned int m_numTableEntries;
@@ -100,7 +103,7 @@ public:
     m_tableMaxArg = m_maxArg;
     if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
-    m_grid.reset(new TIN[m_numIntervals]);
+    m_grid.reset(new TIN[m_numIntervals]); // TODO maybe only initialize if grid is nonuniform?
   }
 
   /* Set every generic member variable from a json file */
@@ -131,8 +134,8 @@ public:
     if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
 
-    // Not recomputing m_grid so the NonuniformLUTs can use this code.
-    // the array of polynomials will now be built by the MetaTable
+    // Recompute m_table, m_grid (the array of polynomials), and the
+    // transfer function in MetaTable
   }
 
   virtual ~LookupTable(){};
@@ -173,6 +176,7 @@ public:
     jsonStats["dataSize"] = m_dataSize;
     jsonStats["numIntervals"] = m_numIntervals;
     jsonStats["numTableEntries"] = m_numTableEntries;
+    jsonStats["transfer_function_coefs"] = get_transfer_function_coefs();
 
     // save the polynomial coefs of each lookup table
     // Note: m_order is used as the number of polynomial coefs
@@ -290,7 +294,7 @@ class LookupTableRegistrar {
 public:
   LookupTableRegistrar(std::string className)
   {
-    LookupTableFactory<TIN,TOUT>::RegisterFactoryFunction(className,
+    LookupTableFactory<TIN,TOUT,OTHER>::RegisterFactoryFunction(className,
       [](FunctionContainer<TIN,TOUT> *fc,
          OTHER args
       ) -> LookupTable<TIN,TOUT>* { return new T(fc, args); }
@@ -314,16 +318,23 @@ private: \
 #define FUNC_STR_EXPAND(x...) #x
 #define FUNC_STR(x...) FUNC_STR_EXPAND(x)
 
-// everything after this point is specialized to uniform LUTs.
 #define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
   template<> const \
   LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT> \
-    classname<TIN,TOUT>::registrar(FUNC_STR(classname))
+    classname<TIN,TOUT>::registrar(FUNC_STR(classname)); \
+  template<> const \
+  LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT,std::string> \
+    classname<TIN,TOUT>::str_registrar(FUNC_STR(classname))
+
 
 #define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
   template<> const \
     LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT> \
-    classname<TIN,TOUT,other>::registrar(FUNC_STR(classname<other>))
+    classname<TIN,TOUT,other>::registrar(FUNC_STR(classname<other>)); \
+  template<> const \
+    LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
+    classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
+
 
 #ifndef FUNC_USE_SMALL_REGISTRY
 // macros used in each class to quickly register 4 different template instantiations
