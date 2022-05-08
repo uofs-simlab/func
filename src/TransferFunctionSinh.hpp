@@ -52,7 +52,7 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
 public:
   /* Set m_inv_coefs equal to a vector that (presumably) came from a json file */
   TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize,
-      std::array<IN_TYPE,4> inv_coefs = {0,0,1,0}) :
+      std::array<IN_TYPE,4> inv_coefs = {0,1,0,0}) :
     TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize)
     { m_inv_coefs = inv_coefs; }
 
@@ -146,7 +146,9 @@ public:
 
   void print_details(std::ostream& out) override
   {
-    out << "degree 3 monotone Hermite interpolation";
+    out << "degree 3 monotone Hermite interpolation with polynomial: \n";
+    out << std::to_string(m_inv_coefs[3]) << "x^3 + " << std::to_string(m_inv_coefs[2]) << "x^2 + " <<
+      std::to_string(m_inv_coefs[1]) << "x + " << std::to_string(m_inv_coefs[0]) << std::endl;
   }
 
   std::array<IN_TYPE,4> get_coefs() {

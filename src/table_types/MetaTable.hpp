@@ -71,8 +71,11 @@ public:
     m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
   {
     // initialize the transfer function to something useful
-    if(GT != UNIFORM)
+    if(GT != UNIFORM){
+      std::cout << "grid type is nonuniform" << std::endl;
       m_transferFunction = TransferFunctionSinh<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
+    }
+    m_transferFunction.print_details(std::cout);
   }
 
   /* build this table from a file. Everything other than m_table is built by LookupTable */
@@ -107,7 +110,7 @@ public:
   TOUT operator()(TIN x) override
   {
     TOUT dx;
-    unsigned x0;
+    unsigned int x0;
     switch(HT){
     case TAYLOR:
       {
@@ -124,31 +127,31 @@ public:
         switch(GT){
           case UNIFORM:
             {
-              // nondimensionalized x position, scaled by step size
-              dx = (TOUT) m_stepSize_inv*(x-m_minArg);
-              // index of previous table entry
-              x0  = (unsigned) dx;
-              // value of table entries around x position
-              dx -= x0;
-              break;
+            // nondimensionalized x position, scaled by step size
+            dx = (TOUT) m_stepSize_inv*(x-m_minArg);
+            // index of previous table entry
+            x0  = (unsigned) dx;
+            // value of table entries around x position
+            dx -= x0;
+            break;
             }
           case NONUNIFORM:
             {
-              // find the subinterval x lives in
-              x0 = m_transferFunction.g_inv(x);
-              // find where x is within that interval
-              TIN h   = m_grid[x0+1] - m_grid[x0];
-              dx = (x - m_grid[x0])/h;
-              break;
+            // find the subinterval x lives in
+            x0 = m_transferFunction.g_inv(x);
+            // find where x is within that interval
+            TIN h = m_grid[x0+1] - m_grid[x0];
+            dx    = (x - m_grid[x0])/h;
+            break;
             }
           case NONUNIFORM_PSEUDO:
             {
-              // find the subinterval x lives in
-              dx = m_transferFunction.g_inv(x);
-              // just take the fractional part of dx as x's location in this interval
-              x0 = (unsigned) dx;
-              dx -= x0;
-              break;
+            // find the subinterval x lives in
+            dx = m_transferFunction.g_inv(x);
+            // just take the fractional part of dx as x's location in this interval
+            x0 = (unsigned) dx;
+            dx -= x0;
+            break;
             }
         }
       }
