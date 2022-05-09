@@ -48,24 +48,27 @@ public:
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
     for (int ii=0; ii<m_numIntervals; ++ii) {
       TIN x;
+      TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == UNIFORM)
         x = m_minArg + ii*m_stepSize;
-      else
+      else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
+      }
       m_grid[ii] = x;
 
       const auto derivs0 = (mp_boost_func)(make_fvar<TIN,1>(x));
       const TOUT y0    = derivs0.derivative(0);
       const TOUT m0    = derivs0.derivative(1);
-      const auto derivs1 = (mp_boost_func)(make_fvar<TIN,1>(x+m_stepSize));
+      const auto derivs1 = (mp_boost_func)(make_fvar<TIN,1>(x+h));
       const TOUT y1    = derivs1.derivative(0);
       const TOUT m1    = derivs1.derivative(1);
 
       m_table[ii].coefs[0] = y0;
-      m_table[ii].coefs[1] = m_stepSize*m0;
-      m_table[ii].coefs[2] = -3*y0+3*y1-(2*m0+m1)*m_stepSize;
-      m_table[ii].coefs[3] = 2*y0-2*y1+(m0+m1)*m_stepSize;
+      m_table[ii].coefs[1] = h*m0;
+      m_table[ii].coefs[2] = -3*y0+3*y1-(2*m0+m1)*h;
+      m_table[ii].coefs[3] = 2*y0-2*y1+(m0+m1)*h;
     }
   }
 

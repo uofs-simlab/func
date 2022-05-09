@@ -25,6 +25,8 @@ FUNC_REGISTER_EACH_ULUT_IMPL(UniformLinearTaylorTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformQuadraticTaylorTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformCubicTaylorTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformCubicHermiteTable);
+FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformCubicHermiteTable);
+FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformPseudoCubicHermiteTable);
 
 FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformLinearInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformPseudoLinearInterpolationTable);

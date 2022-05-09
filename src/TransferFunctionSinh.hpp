@@ -90,21 +90,21 @@ public:
 
     // now g(a)=a and g(b)=b so
     // g_inv_prime(a) = 1/g_prime(a) and g_inv_prime(b) = 1/g_prime(b)
-    IN_TYPE m1 = 1/g_prime(a);
-    IN_TYPE m2 = 1/g_prime(b);
+    IN_TYPE m0 = 1/g_prime(a);
+    IN_TYPE m1 = 1/g_prime(b);
 
     // ensure monotonicity of the Hermite interpolating polynomial.
-    // We already know m1,m2 >= 0
+    // We already know m0,m1 >= 0
+    m0 = (m0 > 3) ? 3 : m0;
     m1 = (m1 > 3) ? 3 : m1;
-    m2 = (m2 > 3) ? 3 : m2;
 
     // Compute the Hermite interpolating polynomial p for g_inv satisfying
-    // p(a)=a, p(b)=b, p'(a)=m1, p'(b)=m2
+    // p(a)=a, p(b)=b, p'(a)=m0, p'(b)=m1
     // (the symbolic expression was computed with Matlab)
-    m_inv_coefs[0] = (a*b*(a + b - a*m2 - b*m1))/(a - b)/(a - b);
-    m_inv_coefs[1] = (a*a*m2 - 6*a*b + b*b*m1 + 2*a*b*m1 + 2*a*b*m2)/(a - b)/(a - b);
-    m_inv_coefs[2] = -(a*m1 - 3*b - 3*a + 2*a*m2 + 2*b*m1 + b*m2)/(a - b)/(a - b);
-    m_inv_coefs[3] = (m1 + m2 - 2)/(a - b)/(a - b);
+    m_inv_coefs[0] = (a*b*(a + b - a*m1 - b*m0))/(a - b)/(a - b);
+    m_inv_coefs[1] = (a*a*m1 - 6*a*b + b*b*m0 + 2*a*b*m0 + 2*a*b*m1)/(a - b)/(a - b);
+    m_inv_coefs[2] = -(a*m0 - 3*b - 3*a + 2*a*m1 + 2*b*m0 + b*m1)/(a - b)/(a - b);
+    m_inv_coefs[3] = (m0 + m1 - 2)/(a - b)/(a - b);
     
     /* build the real version of g_inv by encoding the
        underlying table's hash into the transfer function eval. This

@@ -36,17 +36,21 @@ public:
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
       TIN x;
+      TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == UNIFORM)
         x = m_minArg + ii*m_stepSize;
-      else
+      else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
+      }
+
       // grid points
       m_grid[ii] = x;
       // polynomial coefficients
       const TOUT y0  = m_func(x);
-      const TOUT y1  = m_func(x+m_stepSize/2);
-      const TOUT y2  = m_func(x+m_stepSize);
+      const TOUT y1  = m_func(x+h/2);
+      const TOUT y2  = m_func(x+h);
       m_table[ii].coefs[0] = y0;
       m_table[ii].coefs[1] = -3*y0+4*y1-y2;
       m_table[ii].coefs[2] = 2*y0+-4*y1+2*y2;

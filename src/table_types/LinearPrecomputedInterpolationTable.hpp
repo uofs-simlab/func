@@ -36,16 +36,18 @@ public:
     m_table.reset(new polynomial<TOUT,2>[m_numTableEntries]);
     for (int ii=0; ii < m_numIntervals; ++ii) {
       TIN x;
+      TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == UNIFORM)
         x = m_minArg + ii*m_stepSize;
-      else
+      else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
+      }
 
       m_grid[ii] = x;
       m_table[ii].coefs[0] = m_func(x);
-      x = m_minArg + (ii+1)*(m_stepSize);
-      m_table[ii].coefs[1] = m_func(x) - m_table[ii].coefs[0];
+      m_table[ii].coefs[1] = m_func(x+h) - m_table[ii].coefs[0];
     }
   }
 

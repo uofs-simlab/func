@@ -71,16 +71,18 @@ public:
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
       TIN x;
+      TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == UNIFORM)
         x = m_minArg + ii*m_stepSize;
-      else
+      else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
-
+        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
+      }
       // grid points
       m_grid[ii] = x;      
       // build the vector of coefficients from function values
-      arma::vec y = arma::linspace(x,x+m_stepSize,N+1);
+      arma::vec y = arma::linspace(x,x+h,N+1);
       for (unsigned int k=0; k<N+1; k++)
         y[k] = m_func(y[k]);
       

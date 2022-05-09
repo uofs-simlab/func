@@ -8,6 +8,8 @@
   Notes:
   - table precomputes and stores the linear coefficient so it doesn't have to
     perform that operation every lookup (but does have to look it up)
+  - points sampled in each subintervale will be uniform b/c that can
+    reuse uniform code and seems to be more well behaved in the end.
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
 */
@@ -36,19 +38,22 @@ public:
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
       TIN x;
+      TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == UNIFORM)
         x = m_minArg + ii*m_stepSize;
-      else
+      else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
+      }
 
       // grid points
       m_grid[ii] = x;
-      // polynomial coefficients
+      // polynomial coefficients:
       const TOUT y0 = m_func(x);
-      const TOUT y1 = m_func(x+m_stepSize/3);
-      const TOUT y2 = m_func(x+2*m_stepSize/3);
-      const TOUT y3 = m_func(x+m_stepSize);
+      const TOUT y1 = m_func(x+h/3);
+      const TOUT y2 = m_func(x+2*h/3);
+      const TOUT y3 = m_func(x+h);
       m_table[ii].coefs[0] = y0;
       m_table[ii].coefs[1] = -11*y0/2+9*y1-9*y2/2+y3;
       m_table[ii].coefs[2] = 9*y0-45*y1/2+18*y2-9*y3/2;
