@@ -1,17 +1,17 @@
 # build our config file from the given cmake options
 file(WRITE config.hpp "#pragma once\n")
+if(USE_BOOST AND Boost_FOUND)  
+  file(APPEND config.hpp "#define FUNC_USE_BOOST\n")
+endif()
+
 if(USE_OPENMP)
   # just a nice option to have for profiling
   # when we start building tables in parallel
   list(APPEND func_link_openmp "OpenMP::OpenMP_CXX")
 endif()
 
-if(USE_QUADMATH AND QUADMATH_FOUND)
+if(USE_QUADMATH)
   file(APPEND config.hpp "#define FUNC_USE_QUADMATH\n")
-endif()
-
-if(USE_BOOST)  
-  file(APPEND config.hpp "#define FUNC_USE_BOOST\n")
 endif()
 
 # dev option limits our lookup table factory so each
@@ -36,10 +36,11 @@ if(USE_ARMADILLO AND ARMADILLO_FOUND)
   # set our config file to use armadillo tables and 
   # fill our lookup table factory with armadillo exclusive table constructors
   file(APPEND config.hpp "#define FUNC_USE_ARMADILLO\n")
-  list(APPEND func_src
-    table_types/RegistrarDefinitionsArmadillo.cpp
-  )
 endif()
+# still register the armadillo tables so people can read them from a file
+list(APPEND func_src
+  table_types/RegistrarDefinitionsArmadillo.cpp
+)
 
 # add the func lib with the lists we built above
 add_library(func SHARED ${func_src})

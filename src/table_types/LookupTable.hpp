@@ -208,7 +208,6 @@ using UniformLookupTable = LookupTable<TIN,TOUT>;
   LookupTableFactory<double,float,std::string>::
   LookupTableFactory<float,double,std::string>::
   and NonUniformTables just add to the pile
-  TODO desperately need a dev flag for this
 
   Usage example:
   // given the fc is an initialized function container
@@ -318,6 +317,7 @@ private: \
 #define FUNC_STR_EXPAND(x...) #x
 #define FUNC_STR(x...) FUNC_STR_EXPAND(x)
 
+#ifdef FUNC_USE_BOOST
 #define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
   template<> const \
   LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT> \
@@ -326,7 +326,6 @@ private: \
   LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT,std::string> \
     classname<TIN,TOUT>::str_registrar(FUNC_STR(classname))
 
-
 #define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
   template<> const \
     LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT> \
@@ -334,6 +333,19 @@ private: \
   template<> const \
     LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
     classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
+
+#else // only read table data from a file
+
+#define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
+  template<> const \
+  LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT,std::string> \
+    classname<TIN,TOUT>::str_registrar(FUNC_STR(classname))
+
+#define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
+  template<> const \
+    LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
+    classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
+#endif
 
 
 #ifndef FUNC_USE_SMALL_REGISTRY
