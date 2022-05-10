@@ -13,11 +13,7 @@
 */
 #pragma once
 #include "MetaTable.hpp"
-#include "config.hpp"
-
-#ifndef FUNC_USE_BOOST_AUTODIFF
-#error "CubicHermiteTable needs boost version >= 1.71"
-#endif
+#include "config.hpp" // FUNC_USE_BOOST
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,HORNER,GT>
@@ -34,6 +30,9 @@ public:
   CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
       MetaTable<TIN,TOUT,4,HORNER,GT>(func_container, par)
   {
+#ifndef FUNC_USE_BOOST
+    static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate a CubicHermiteTable without Boost version 1.71.0 or newer");
+#else
     using boost::math::differentiation::make_fvar;
     /* Base class default variables */
     m_name = grid_type_to_string<GT>() + "CubicHermiteTable";
@@ -41,7 +40,8 @@ public:
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
-    __IS_NULL(func_container->autodiff1_func);
+    if(func_container->autodiff1_func == NULL)
+      throw std::invalid_argument("CubicHermiteTable needs the 1st derivative but this is not defined");
     mp_boost_func = func_container->autodiff1_func;
 
     /* Allocate and set table */
@@ -70,6 +70,7 @@ public:
       m_table[ii].coefs[2] = -3*y0+3*y1-(2*m0+m1)*h;
       m_table[ii].coefs[3] = 2*y0-2*y1+(m0+m1)*h;
     }
+#endif
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */

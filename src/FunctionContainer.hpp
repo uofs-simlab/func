@@ -31,15 +31,9 @@
 #include <stdexcept>
 #include <functional>
 #include <boost/math/differentiation/autodiff.hpp>
-#include "config.hpp" // FUNC_USE_BOOST_AUTODIFF
+#include "config.hpp" // FUNC_USE_BOOST
 
-/* Used by each table type to check if the required function
- * type has been provided. */
-#define __IS_NULL(VAR...) \
-  if(VAR == NULL)      \
-    throw std::invalid_argument(#VAR " is NULL")
-
-#ifdef FUNC_USE_BOOST_AUTODIFF
+#ifdef FUNC_USE_BOOST
 /* Let the user quickly define their function container with a macro */
 #define SET_F_ONE_TYPE(F,TYPE)                                \
   F<TYPE>, F<adVar<TYPE,1>>, F<adVar<TYPE,2>>, F<adVar<TYPE,3>>, \
@@ -71,12 +65,12 @@ template<typename IN_TYPE, typename OUT_TYPE>
 struct nth_differentiable<IN_TYPE,OUT_TYPE,0>{
   using type = std::function<OUT_TYPE(IN_TYPE)>;
 };
-#endif // FUNC_USE_BOOST_AUTODIFF
+#endif // FUNC_USE_BOOST
 
 template<typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class FunctionContainer
 {
-#ifdef FUNC_USE_BOOST_AUTODIFF
+#ifdef FUNC_USE_BOOST
   template<unsigned int N>
   using func_type = nth_differentiable<IN_TYPE,OUT_TYPE,N>;
   // 2 parter for providing a way to access each member function with a number.
@@ -100,11 +94,11 @@ public:
   // function that is differentiated N times for each function call.
   template<unsigned int N>
   typename func_type<N>::type get_nth_func(){ return get_nth_func(func_type<N>()); }
-#endif // FUNC_USE_BOOST_AUTODIFF
+#endif // FUNC_USE_BOOST
 public: 
 
   std::function<OUT_TYPE(IN_TYPE)> standard_func;
-#ifdef FUNC_USE_BOOST_AUTODIFF
+#ifdef FUNC_USE_BOOST
   std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> autodiff1_func;
   std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> autodiff2_func;
   std::function<adVar<OUT_TYPE,3>(adVar<IN_TYPE,3>)> autodiff3_func;
@@ -112,7 +106,7 @@ public:
   std::function<adVar<OUT_TYPE,5>(adVar<IN_TYPE,5>)> autodiff5_func;
   std::function<adVar<OUT_TYPE,6>(adVar<IN_TYPE,6>)> autodiff6_func;
   std::function<adVar<OUT_TYPE,7>(adVar<IN_TYPE,7>)> autodiff7_func;
-#endif // FUNC_USE_BOOST_AUTODIFF
+#endif // FUNC_USE_BOOST
       
   // some constructors
   FunctionContainer(){}
@@ -120,7 +114,7 @@ public:
   FunctionContainer(std::function<OUT_TYPE(IN_TYPE)> func) :
     standard_func(func) {};
  
-#ifdef FUNC_USE_BOOST_AUTODIFF
+#ifdef FUNC_USE_BOOST
   FunctionContainer(std::function<OUT_TYPE(IN_TYPE)>   func,
       std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> func1,
       std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> func2,
@@ -133,5 +127,5 @@ public:
     autodiff2_func(func2), autodiff3_func(func3),
     autodiff4_func(func4), autodiff5_func(func5),
     autodiff6_func(func6), autodiff7_func(func7) {}  
-#endif // FUNC_USE_BOOST_AUTODIFF
+#endif // FUNC_USE_BOOST
 };

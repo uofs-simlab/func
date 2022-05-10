@@ -1,16 +1,10 @@
 #include "ArmadilloPrecomputedInterpolationTable.hpp"
-#include "config.hpp" // FUNC_USE_BOOST_AUTODIFF, FUNC_USE_ARMADILLO
-
-#ifndef FUNC_USE_ARMADILLO
-#error "ArmadilloRegistrarDefinitions needs Armadillo"
-#endif
 
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable,4);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable,5);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable,6);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable,7);
 
-#ifdef FUNC_USE_BOOST_AUTODIFF
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformArmadilloPrecomputedInterpolationTable,4);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformArmadilloPrecomputedInterpolationTable,5);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(NonUniformArmadilloPrecomputedInterpolationTable,6);
@@ -37,6 +31,6 @@ FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,5,2);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,3,3);
 FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(UniformPadeTable,4,3);
 
-// TODO Add nonuniform versions of the Pade tables
+// TODO Add nonuniform versions of the Pade tables?
 
-#endif
+

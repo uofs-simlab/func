@@ -10,8 +10,8 @@ if(USE_QUADMATH AND QUADMATH_FOUND)
   file(APPEND config.hpp "#define FUNC_USE_QUADMATH\n")
 endif()
 
-if(USE_BOOST_AUTODIFF)  
-  file(APPEND config.hpp "#define FUNC_USE_BOOST_AUTODIFF\n")
+if(USE_BOOST)  
+  file(APPEND config.hpp "#define FUNC_USE_BOOST\n")
 endif()
 
 # dev option limits our lookup table factory so each

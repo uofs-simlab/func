@@ -11,11 +11,8 @@
 */
 #pragma once
 #include "MetaTable.hpp"
-#include "config.hpp"
+#include "config.hpp" // FUNC_USE_BOOST
 
-#ifndef FUNC_USE_BOOST_AUTODIFF
-#error "LinearTaylorTable needs boost version >= 1.71"
-#endif
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class LinearTaylorTable final : public MetaTable<TIN,TOUT,2,TAYLOR,GT>
@@ -30,6 +27,9 @@ public:
   LinearTaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,2,TAYLOR,GT>(func_container, par)
   {
+#ifndef FUNC_USE_BOOST
+    static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate a LinearTaylorTable without Boost version 1.71.0 or newer");
+#else
     using boost::math::differentiation::make_fvar;
 
     /* Base class variables */
@@ -38,25 +38,24 @@ public:
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
-    __IS_NULL(func_container->autodiff1_func);
+    if(func_container->autodiff1_func == NULL)
+      throw std::invalid_argument("LinearTaylorTable needs the 1st derivative but this is not defined");
+
     mp_boost_func = func_container->autodiff1_func;
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,2>[m_numTableEntries]);
     for (int ii=0; ii<m_numIntervals; ++ii) {
-      TIN x;
-      // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
-        x = m_minArg + ii*m_stepSize;
-      else
-        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+      // nonuniform grids are not supported for Taylor tables
+      TIN x = m_minArg + ii*m_stepSize;
 
-      m_grid[ii]     = x;
+      m_grid[ii] = x;
       // get every derivative up to the first
       auto const derivs = (mp_boost_func)(make_fvar<TIN,1>(x));
       m_table[ii].coefs[0] = derivs.derivative(0);
       m_table[ii].coefs[1] = derivs.derivative(1);
     }
+#endif
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */

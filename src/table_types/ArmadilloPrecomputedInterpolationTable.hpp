@@ -18,10 +18,11 @@
 #include "MetaTable.hpp"
 #include "config.hpp"
 
-#ifndef FUNC_USE_ARMADILLO
-#error "ArmadilloPrecomputedInterpolationTable needs Armadillo"
-#endif
+//#ifndef FUNC_USE_ARMADILLO
+//#error "ArmadilloPrecomputedInterpolationTable needs Armadillo"
+//#endif
 
+//#ifdef FUNC_USE_ARMADILLO
 #define ARMA_USE_CXX11
 #include <armadillo>
 

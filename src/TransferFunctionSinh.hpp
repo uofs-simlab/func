@@ -1,10 +1,12 @@
 /*
   Accepts an array of polynomial coefficients.
   We only mandate that a TransferFunction is a monotonically increasing
-  cubic polynomial, and the table hash much be baked into those coefficients.
+  cubic polynomial, and the table hash must be baked into those coefficients.
+  For example, it initializes itself the identity transfer function which
+  is the linear polynomial with coefs {-m_minArg/m_stepSize,1/m_stepSize,0,0}.
 
   If this class is given a function container then it will use
-  Boost's autodifferentiation to generate a cubic monotone Hermite
+  Boost's automatic differentiation to generate a cubic monotone Hermite
   interpolating polynomial which will be a decent TransferFunction.
 
   Given a function f and its domain [a,b], build a pair of functions
@@ -12,29 +14,24 @@
   g is formally defined as
     g(x) = a + \frac{b-a}{c}\int_a^x\frac{dt}{\sqrt{1+[f'(t)]^2}}.
   where c = \int_a^b\frac{dt}{\sqrt{1+[f'(t)]^2}}.
-  g_inv has to be fast so it is approximated using monotone Hermite
-  cubic interpolation and then g is rebuilt as g_inv^{-1} using
+  g_inv has to be fast so we approximate is as a monotone Hermite
+  cubic polynomial and then rebuilt g as g_inv^{-1} using
   a Newton's method/ bisection mix.
 
 Notes:
   - We seem to get better grids if f' is largest near the endpoints [a,b].
     If f' is largest near the middle of an interval (eg e^{-x^2} when a<-3 and b>3)
     then that information is largely ignored.  
-  - Boils down to a really slow identity function if FunC is not compiled with
-    Boost version 1.71.0 is not
+  - We need Boost version 1.71.0 or newer to generate a candidate transfer function.
+    Boost is not required if TransferFunctionSinh is given pre-generated coefficients.
  */
 #pragma once
-#include "config.hpp" // FUNC_USE_BOOST_AUTODIFF
+#include "config.hpp" // FUNC_USE_BOOST
 #include <cmath> // sqrt
 #include <limits> // std::numeric_limits<T>::digits
-#include <functional> // std::function
 #include <array> // std::array
 
-#ifndef FUNC_USE_BOOST_AUTODIFF
-#error "TransferFunctionSinh needs boost version >= 1.71"
-#endif
-
-#include "TransferFunctionInterface.hpp"
+#include "TransferFunctionInterface.hpp" // TODO remove this interface if possible
 #include "FunctionContainer.hpp"
 
 #define BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND
@@ -50,11 +47,13 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
   __attribute__((aligned)) std::array<IN_TYPE,4> m_inv_coefs;
 
 public:
-  /* Set m_inv_coefs equal to a vector that (presumably) came from a json file */
-  TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize,
-      std::array<IN_TYPE,4> inv_coefs = {0,1,0,0}) :
-    TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize)
-    { m_inv_coefs = inv_coefs; }
+  /* Set m_inv_coefs equal to a vector that is (presumably) either the identity or came from a json file */
+  TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize, std::array<IN_TYPE,4> inv_coefs) :
+    TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize) { m_inv_coefs = inv_coefs; }
+
+  /* initialize the identity transfer function */
+  TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
+    TransferFunctionSinh<IN_TYPE>(minArg, tableMaxArg, stepSize, {-minArg/stepSize,1/stepSize,0,0}) {}
 
   /* Build the coefficients in g_inv */
   template<typename OUT_TYPE>
@@ -62,6 +61,12 @@ public:
       IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
     TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize)
   {
+#ifndef FUNC_USE_BOOST
+    // Template code is only compiled if the template is instantiated
+    // so this will cause a compile time error only when this
+    // constructor is called without Boost available:
+    static_assert(sizeof(TIN) != sizeof(TIN), "Cannot build a nonuniform grid without Boost verion 1.71.0 or higher")
+#else
     using boost::math::quadrature::gauss_kronrod;
     using boost::math::differentiation::make_fvar;
 
@@ -113,6 +118,7 @@ public:
     m_inv_coefs[0] = m_inv_coefs[0] - m_minArg;
     for(unsigned int i=0; i<4; i++)
       m_inv_coefs[i] = m_inv_coefs[i] / stepSize;
+#endif
   }
 
   IN_TYPE g_inv(IN_TYPE x) override

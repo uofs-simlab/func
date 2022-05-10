@@ -1,7 +1,6 @@
 // Sadly, c++17 is the first standard where we can use inline variables.
 // So, the registrar needs all these static const definitions to be out of line.
 #include "TableIncludes.hpp"
-#include "config.hpp" // FUNC_USE_BOOST_AUTODIFF
 
 #include "ConstantTaylorTable.hpp"
 #include "LinearInterpolationTable.hpp"
@@ -15,7 +14,7 @@ FUNC_REGISTER_EACH_ULUT_IMPL(UniformQuadraticPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformCubicPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformConstantTaylorTable);
 
-#ifdef FUNC_USE_BOOST_AUTODIFF
+
 #include "LinearTaylorTable.hpp"
 #include "QuadraticTaylorTable.hpp"
 #include "CubicTaylorTable.hpp"
@@ -36,5 +35,3 @@ FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformQuadraticPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformPseudoQuadraticPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformCubicPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(NonUniformPseudoCubicPrecomputedInterpolationTable);
-
-#endif

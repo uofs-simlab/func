@@ -8,10 +8,7 @@
 #include "ImplementationComparator.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"
-#include "TransferFunctionInterface.hpp"
 
-#ifdef FUNC_USE_ARMADILLO
-#ifdef FUNC_USE_BOOST_AUTODIFF
+#include "TransferFunctionInterface.hpp"
 #include "TransferFunctionSinh.hpp"
-#endif
-#endif
+

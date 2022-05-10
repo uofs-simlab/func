@@ -1,30 +1,23 @@
 /*
   LUT using [M/N] pade approximants with uniform sampling. Polynomial coefficients are calculated using
-  Armadillo. 
+  Armadillo.
 
   Usage example using [4/3] approximants:
     PadeTable<4,3> look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
-  - table precomputes and stores the linear coefficient so it doesn't have to
+  - table precomputes and stores any coefficients so it doesn't have to
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
   - Available template values are all M,N such that 0 < N <= M and M+N<=7
   - Template values where M < N are not supported
+  - Requires both Armadillo and Boost version 1.71.0 or newer to generate
 */
 #pragma once
 #include "MetaTable.hpp"
-#include "config.hpp"
-
-#ifndef FUNC_USE_BOOST_AUTODIFF
-#error "PadeTable needs boost version >= 1.71"
-#endif
-
-#ifndef FUNC_USE_ARMADILLO
-#error "PadeTable needs Armadillo"
-#endif
+#include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO
 
 #include <armadillo>
 #include <iostream>
@@ -47,6 +40,9 @@ public:
   PadeTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>(func_container, par)
   {
+#if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
+    static_assert(sizeof(TIN)!=sizeof(TIN), "Pade tables need both Armadillo and Boost to be generated")
+#else
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
@@ -55,19 +51,16 @@ public:
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
-    __IS_NULL(func_container->template get_nth_func<M+N>()); // the least descriptive exception
+    if(func_container->template get_nth_func<M+N>() == NULL)
+      throw std::invalid_argument("PadeTable<"+std::to_string(M)+","+std::to_string(N)+
+          "> needs the "+std::to_string(N+M)+"th derivative but this is not defined");
     mp_boost_func = func_container->template get_nth_func<M+N>();
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,M+N+1>[m_numTableEntries]);
     for (int ii=0;ii<m_numIntervals;++ii) {
-      TIN x;
-      // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
-        x = m_minArg + ii*m_stepSize;
-      else
-        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
-
+      // nonuniform grids are not supported for PadeTables
+      TIN x = m_minArg + ii*m_stepSize;
       // grid points
       m_grid[ii] = x;
       
@@ -195,7 +188,7 @@ public:
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
 using UniformPadeTable = PadeTable<TIN,TOUT,M,N,UNIFORM>;
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
-using NonUniformPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM>;
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
-using NonUniformPseudoPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM_PSEUDO>;
+//template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
+//using NonUniformPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM>;
+//template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
+//using NonUniformPseudoPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM_PSEUDO>;

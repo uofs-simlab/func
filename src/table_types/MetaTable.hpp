@@ -71,12 +71,9 @@ public:
     m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
   {
     // initialize the transfer function to something useful
-    if(GT != UNIFORM){
-      std::cout << "grid type is nonuniform" << std::endl;
+    if(GT != UNIFORM)
       m_transferFunction = TransferFunctionSinh<TIN>(func_container,m_minArg,m_minArg + m_numIntervals*m_stepSize,m_stepSize);
-      //m_transferFunction = TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize,{-m_minArg/m_stepSize,1/m_stepSize,0,0});
-    }
-    m_transferFunction.print_details(std::cout);
+    //m_transferFunction.print_details(std::cout);
   }
 
   /* build this table from a file. Everything other than m_table is built by LookupTable */
