@@ -18,17 +18,16 @@
 #include "MetaTable.hpp"
 #include "config.hpp"
 
-//#ifndef FUNC_USE_ARMADILLO
-//#error "ArmadilloPrecomputedInterpolationTable needs Armadillo"
-//#endif
-
-//#ifdef FUNC_USE_ARMADILLO
+#ifdef FUNC_USE_ARMADILLO
 #define ARMA_USE_CXX11
 #include <armadillo>
+#endif
 
 // Armadillo supposedly does sketchy LU solves?
-// TODO profile the accuracy vs speed cost of LU factoring
-// vs using iterative refinement on the original matrix
+// TODO there is some error introduced by factoring the
+// vandermonde matrix and doing an LU solve.
+// Is this added error worth the increase in speed?
+// Should we do iterative refinement?
 #define DO_LU_FACTOR
 #ifdef DO_LU_FACTOR
 #define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::none
@@ -36,7 +35,7 @@
 #define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::refine
 #endif
 
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
 class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N+1,HORNER,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -50,6 +49,9 @@ public:
       LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,N+1,HORNER,GT>(func_container, par)
   {
+#ifndef FUNC_USE_ARMADILLO
+    static_assert(sizeof(TIN)!=sizeof(TIN), "Armadillo tables need Armadillo to be generated");
+#else
     /* Base class default variables */
     m_name = grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
     m_numTableEntries = m_numIntervals+1;
@@ -98,6 +100,7 @@ public:
       for (unsigned int k=0; k<N+1; k++)
         m_table[ii].coefs[k] = y[k];
     }
+#endif
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */

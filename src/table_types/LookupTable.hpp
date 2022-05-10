@@ -307,6 +307,8 @@ public:
    - FUNC_REGISTER_EACH_ULUT_IMPL goes underneath the class definition.
    Several different versions of this macro exist for registering templated classes
    - other... is for template parameters unrelated to the tables TIN and TOUT
+   - FUNC_USE_ARMADILLO macro takes advantage of the fact that the tables templated
+   on more than just their types are the only tables that use armadillo
 */
 
 #define FUNC_REGISTER_LUT(classname) \
@@ -318,21 +320,28 @@ private: \
 #define FUNC_STR(x...) FUNC_STR_EXPAND(x)
 
 #ifdef FUNC_USE_BOOST
-#define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
-  template<> const \
-  LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT> \
-    classname<TIN,TOUT>::registrar(FUNC_STR(classname)); \
-  template<> const \
-  LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT,std::string> \
-    classname<TIN,TOUT>::str_registrar(FUNC_STR(classname))
+  #define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
+    template<> const \
+    LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT> \
+      classname<TIN,TOUT>::registrar(FUNC_STR(classname)); \
+    template<> const \
+    LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT,std::string> \
+      classname<TIN,TOUT>::str_registrar(FUNC_STR(classname))
 
-#define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
-  template<> const \
-    LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT> \
-    classname<TIN,TOUT,other>::registrar(FUNC_STR(classname<other>)); \
-  template<> const \
-    LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
-    classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
+  #ifdef FUNC_USE_ARMADILLO
+    #define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
+      template<> const \
+        LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT> \
+        classname<TIN,TOUT,other>::registrar(FUNC_STR(classname<other>)); \
+      template<> const \
+        LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
+        classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
+  #else
+    #define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
+      template<> const \
+        LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
+        classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
+  #endif
 
 #else // only read table data from a file
 

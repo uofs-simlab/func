@@ -19,8 +19,9 @@
 #include "MetaTable.hpp"
 #include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO
 
+#ifdef FUNC_USE_ARMADILLO
 #include <armadillo>
-#include <iostream>
+#endif
 #include <stdexcept>
 #include <cmath> //isinfite
 

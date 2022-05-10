@@ -6,6 +6,8 @@
   - memory size limit
   - filename
 
+  Users may only build tables by a filename if Boost is not available.
+
   Also equipped to
   - compute table error estimates at a given stepsize
   - plot a table implementation against the exact function
@@ -17,9 +19,11 @@
 #include <memory>
 #include <limits>
 
+#ifdef FUNC_USE_BOOST
 #include <boost/math/tools/minima.hpp>
 #include <boost/math/tools/roots.hpp>
 #include <boost/math/special_functions/next.hpp>
+#endif
 
 // If quadmath is used, work in the boost::multiprecision namespace
 #ifdef FUNC_USE_QUADMATH
@@ -56,14 +60,19 @@ public:
   /* A wrapper for the LookupTableFactory */
   std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, IN_TYPE stepSize)
   {
+#ifndef FUNC_USE_BOOST
+    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by step without Boost");
+#else
     LookupTableParameters<IN_TYPE> par;
     par.minArg = m_min; 
     par.maxArg = m_max; 
     par.stepSize = stepSize;
     return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+#endif
   }
 
-  /* Another wrapper for the LookupTableFactory for building tables from a file */
+  /* A wrapper for the LookupTableFactory templated on a string that can build tables from a file */
+  // TODO remove table key argument
   std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string tableKey, std::string filename)
   {
     return LookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
@@ -179,6 +188,9 @@ template <typename IN_TYPE, typename OUT_TYPE>
 inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_impl_size(
     std::string tableKey, unsigned long desiredSize)
 {
+#ifndef FUNC_USE_BOOST
+    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by impl size without Boost");
+#else
   /* Use 2 query points to get relationship */
   const unsigned long N1  = 2;
   const double step1 = (m_max-m_min)/N1;
@@ -212,11 +224,15 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   par1.stepSize = 1.0/((double)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
 
   return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
+#endif
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
 inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_tol(std::string tableKey, double desiredTolerance)
 {
+#ifndef FUNC_USE_BOOST
+    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by tol without Boost");
+#else
   LookupTableParameters<IN_TYPE> par;
   par.minArg = m_min;
   par.maxArg = m_max;
@@ -316,12 +332,16 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   /* Finally, return the implementation with the desired stepSize*/
   par.stepSize = r.first;
   return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
+#endif
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
 inline double LookupTableGenerator<IN_TYPE,OUT_TYPE>::error_at_step_size(
     std::string tableKey, IN_TYPE stepSize)
 {
+#ifndef FUNC_USE_BOOST
+    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot compute error at step without Boost");
+#else
   /*
     Can be implemented in terms of the Functor used in solving for a specific
     tolerance, so that is reused.
@@ -329,12 +349,16 @@ inline double LookupTableGenerator<IN_TYPE,OUT_TYPE>::error_at_step_size(
   OptimalStepSizeFunctor f(*this,tableKey,0);
   double err = f(stepSize);
   return err;
+#endif
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
 inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_size(
     std::string tableKey, IN_TYPE stepSize)
 {
+#ifndef FUNC_USE_BOOST
+    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot compute error at step without Boost");
+#else
   /*
     Can be implemented in terms of the Functor used in solving for a specific
     tolerance, so that is reused.
@@ -353,6 +377,7 @@ inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_
       (impl->function())(x) << " " <<
       (*impl)(x) << std::endl;
   }
+#endif
 }
 
 // Legacy func typedef

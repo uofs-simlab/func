@@ -65,6 +65,9 @@ template<typename IN_TYPE, typename OUT_TYPE>
 struct nth_differentiable<IN_TYPE,OUT_TYPE,0>{
   using type = std::function<OUT_TYPE(IN_TYPE)>;
 };
+
+#else
+#define SET_F(F,TYPE) F<TYPE>
 #endif // FUNC_USE_BOOST
 
 template<typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
