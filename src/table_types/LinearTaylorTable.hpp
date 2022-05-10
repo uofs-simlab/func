@@ -11,6 +11,7 @@
 */
 #pragma once
 #include "MetaTable.hpp"
+#include "FunctionContainer.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
 
 
@@ -22,7 +23,10 @@ class LinearTaylorTable final : public MetaTable<TIN,TOUT,2,TAYLOR,GT>
   INHERIT_META(TIN,TOUT,2,TAYLOR,GT);
   FUNC_REGISTER_LUT(LinearTaylorTable);
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,1>(adVar<TIN,1>)> mp_boost_func;
+#endif
+
 public:
   LinearTaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,2,TAYLOR,GT>(func_container, par)
@@ -64,7 +68,9 @@ public:
         grid_type_to_string<GT>() + "LinearTaylorTable") {}
   // operator() comes from MetaTable
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,1>(adVar<TIN,1>)> boost_function(){ return mp_boost_func; }
+#endif
 };
 
 // define friendlier names

@@ -65,7 +65,7 @@ public:
     // Template code is only compiled if the template is instantiated
     // so this will cause a compile time error only when this
     // constructor is called without Boost available:
-    static_assert(sizeof(TIN) != sizeof(TIN), "Cannot build a nonuniform grid without Boost verion 1.71.0 or higher")
+    static_assert(sizeof(IN_TYPE) != sizeof(IN_TYPE), "Cannot build a nonuniform grid without Boost verion 1.71.0 or higher");
 #else
     using boost::math::quadrature::gauss_kronrod;
     using boost::math::differentiation::make_fvar;

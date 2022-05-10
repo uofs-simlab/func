@@ -24,7 +24,9 @@ class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,HORNER,GT>
 
   FUNC_REGISTER_LUT(CubicHermiteTable);
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,1>(adVar<TIN,1>)> mp_boost_func;
+#endif
 
 public:
   CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
@@ -79,7 +81,9 @@ public:
         grid_type_to_string<GT>() + "CubicHermiteTable") {}
   // operator() comes straight from the MetaTable
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,1>(adVar<TOUT,1>)> boost_function(){ return mp_boost_func; }
+#endif
 };
 
 // define friendlier names

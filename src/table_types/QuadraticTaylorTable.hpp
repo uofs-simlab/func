@@ -11,6 +11,7 @@
 */
 #pragma once
 #include "MetaTable.hpp"
+#include "FunctionContainer.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
 
 
@@ -22,7 +23,10 @@ class QuadraticTaylorTable final : public MetaTable<TIN,TOUT,3,TAYLOR,GT>
   INHERIT_META(TIN,TOUT,3,TAYLOR,GT);
   FUNC_REGISTER_LUT(QuadraticTaylorTable);
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,2>(adVar<TIN,2>)> mp_boost_func;
+#endif
+
 public:
   QuadraticTaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,3,TAYLOR,GT>(func_container, par)
@@ -61,7 +65,9 @@ public:
     MetaTable<TIN,TOUT,3,TAYLOR,GT>(func_container, filename,
         grid_type_to_string<GT>() + "QuadraticTaylorTable") {}
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,2>(adVar<TIN,2>)> boost_function(){ return mp_boost_func; }
+#endif
 };
 
 template <typename TIN, typename TOUT=TIN>

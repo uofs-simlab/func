@@ -34,14 +34,16 @@ class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>
   INHERIT_META(TIN,TOUT,M+N+1,TAYLOR,GT);
   FUNC_REGISTER_LUT(PadeTable);
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> mp_boost_func;
+#endif
 
 public:
   PadeTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>(func_container, par)
   {
 #if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
-    static_assert(sizeof(TIN)!=sizeof(TIN), "Pade tables need both Armadillo and Boost to be generated")
+    static_assert(sizeof(TIN)!=sizeof(TIN), "Pade tables need both Armadillo and Boost to be generated");
 #else
     using boost::math::differentiation::make_fvar;
 
@@ -153,6 +155,7 @@ public:
       for (unsigned int k=0; k<N; k++)
         m_table[ii].coefs[M+1+k] = Q[k+1]; // ignore the first coef of Q b/c it's always 1.
     }
+#endif
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
@@ -183,7 +186,9 @@ public:
     return P/Q;
   }
 
+#ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> boost_function(){ return mp_boost_func; }
+#endif
 };
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
