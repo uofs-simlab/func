@@ -36,9 +36,9 @@ int main(void){
   endif()
 endif()
 
-if (USE_QUADMATH AND NOT QUADMATH_FOUND)
-  message(FATAL_ERROR "Quadruple precision math support was explicitly requested but is unavailable!")
-endif()
+#if (USE_QUADMATH AND NOT QUADMATH_FOUND)
+#  message(FATAL_ERROR "Quadruple precision math support was explicitly requested but is unavailable!")
+#endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Quadmath
