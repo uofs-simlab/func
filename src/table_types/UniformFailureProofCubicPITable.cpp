@@ -31,11 +31,11 @@ UniformFailureProofCubicPITable::UniformFailureProofCubicPITable(EvaluationFunct
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
   m_order = 4;
-  m_numTableEntries = 4*(m_numIntervals+1);
-  m_dataSize = (unsigned) sizeof(double) * m_numTableEntries;
+  m_numTableEntries = m_numIntervals+1;
+  m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   /* Allocate and set table */
-  m_table.reset(new double[m_numTableEntries]);
+  m_table.reset(new polynomial<4,32>[m_numTableEntries]);
   for (int ii=0;ii<m_numIntervals;++ii) {
     const double x = m_minArg + ii*m_stepSize;
     // grid points
@@ -45,10 +45,10 @@ UniformFailureProofCubicPITable::UniformFailureProofCubicPITable(EvaluationFunct
     const double y1 = (*mp_func)(x+m_stepSize/3);
     const double y2 = (*mp_func)(x+2*m_stepSize/3);
     const double y3 = (*mp_func)(x+m_stepSize);
-    m_table[4*ii]   = y0;
-    m_table[4*ii+1] = -11*y0/2+9*y1-9*y2/2+y3;
-    m_table[4*ii+2] = 9*y0-45*y1/2+18*y2-9*y3/2;
-    m_table[4*ii+3] = -9*y0/2+27*y1/2-27*y2/2+9*y3/2;
+    m_table[ii].coefs[0] = y0;
+    m_table[ii].coefs[1] = -11*y0/2+9*y1-9*y2/2+y3;
+    m_table[ii].coefs[2] = 9*y0-45*y1/2+18*y2-9*y3/2;
+    m_table[ii].coefs[3] = -9*y0/2+27*y1/2-27*y2/2+9*y3/2;
   }
 }
 
@@ -67,9 +67,8 @@ double UniformFailureProofCubicPITable::operator()(double x)
   unsigned x0  = (unsigned) dx;
   // value of table entries around x position
   dx -= x0;
-  x0 *= 4;
   // cubic interpolation
-  return m_table[x0]+dx*(m_table[x0+1]+dx*(m_table[x0+2]+dx*m_table[x0+3]));
+  return m_table[x0].coefs[0]+dx*(m_table[x0].coefs[1]+dx*(m_table[x0].coefs[2]+dx*m_table[x0].coefs[3]));
 }
 
 UniformFailureProofCubicPITable::~UniformFailureProofCubicPITable()

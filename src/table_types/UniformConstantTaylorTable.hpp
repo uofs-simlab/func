@@ -16,6 +16,7 @@ class UniformConstantTaylorTable final : public UniformLookupTable
 {
   REGISTER_ULUT(UniformConstantTaylorTable);
 
+  __attribute__((aligned)) std::unique_ptr<double[]> m_table;
 public:
   UniformConstantTaylorTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;

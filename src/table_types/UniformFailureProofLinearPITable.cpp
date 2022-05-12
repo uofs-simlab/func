@@ -31,17 +31,17 @@ UniformFailureProofLinearPITable::UniformFailureProofLinearPITable(EvaluationFun
   /* Base class default variables */
   m_name = STR(IMPL_NAME);
   m_order = 2;
-  m_numTableEntries = 2*m_numIntervals+2;
-  m_dataSize = (unsigned) sizeof(double) * m_numTableEntries;
+  m_numTableEntries = m_numIntervals+1;
+  m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
   /* Allocate and set table */
-  m_table.reset(new double[m_numTableEntries]);
+  m_table.reset(new polynomial<2,16>[m_numTableEntries]);
   for (int ii=0;ii<m_numIntervals;++ii) {
     double x = m_minArg + ii*m_stepSize;
     m_grid[ii] = x;
-    m_table[2*ii]   = (*mp_func)(x);
+    m_table[ii].coefs[0] = (*mp_func)(x);
     x = m_minArg + (ii+1)*m_stepSize;
-    m_table[2*ii+1] = (*mp_func)(x) - m_table[2*ii];
+    m_table[ii].coefs[1] = (*mp_func)(x) - m_table[ii].coefs[0];
   }
 }
 
@@ -58,9 +58,8 @@ double UniformFailureProofLinearPITable::operator()(double x)
   // index of previous table entry
   unsigned x0  = (unsigned) dx;
   dx -= x0;
-  x0 *= 2;
   // linear interpolation
-  return m_table[x0]+dx*m_table[x0+1];
+  return m_table[x0].coefs[0]+dx*m_table[x0].coefs[1];
 }
 
 UniformFailureProofLinearPITable::~UniformFailureProofLinearPITable()

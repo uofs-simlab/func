@@ -21,6 +21,8 @@ class UniformPadeTable final : public UniformLookupTable
 {
   REGISTER_ULUT(UniformPadeTable);
 
+  //this one will need some work
+  __attribute__((aligned)) std::unique_ptr<polynomial<M+N+1,M+N<4? 32:64>[]> m_table;
 public:
   UniformPadeTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
   double operator()(double x) override;

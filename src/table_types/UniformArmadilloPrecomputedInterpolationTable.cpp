@@ -2,6 +2,8 @@
 #include "UniformArmadilloPrecomputedInterpolationTable.hpp"
 #include <armadillo>
 
+#define SOLVE_OPTS arma::solve_opts::refine
+
 // Template substitution happens way after the preprocessor does it's work so
 // we'll register all the available template values this way
 template<>REGISTER_ULUT_IMPL(UniformArmadilloPrecomputedInterpolationTable<4>);
@@ -16,8 +18,8 @@ UniformArmadilloPrecomputedInterpolationTable<N>::UniformArmadilloPrecomputedInt
   /* Base class default variables */
   m_name = "UniformArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
   m_order = N+1;  // take N as the degree of the polynomial interpolant which is of order N+1
-  m_numTableEntries = (N+1)*(m_numIntervals+1);
-  m_dataSize = (unsigned) sizeof(double) * m_numTableEntries;
+  m_numTableEntries = m_numIntervals+1;
+  m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
    
   /* build the vandermonde system for finding the interpolating polynomial's coefficients */
   arma::mat Van = arma::ones(N+1, N+1);
@@ -30,7 +32,7 @@ UniformArmadilloPrecomputedInterpolationTable<N>::UniformArmadilloPrecomputedInt
   arma::lu(L,U,P,Van);
 
   /* Allocate and set table */
-  m_table.reset(new double[m_numTableEntries]);
+  m_table.reset(new polynomial<N+1,64>[m_numTableEntries]);
   for (int ii=0;ii<m_numIntervals;++ii) {
     const double x = m_minArg + ii*m_stepSize;
     // grid points
@@ -43,10 +45,11 @@ UniformArmadilloPrecomputedInterpolationTable<N>::UniformArmadilloPrecomputedInt
     
     // make y the coefficients of the polynomial interpolant
     y = solve(trimatu(U), solve(trimatl(L), P*y));
+    //y = arma::solve(Van, y, SOLVE_OPTS);
     
     // move this back into the m_table array
     for (unsigned int k=0; k<N+1; k++)
-      m_table[(N+1)*ii+k] = y[k];
+      m_table[ii].coefs[k] = y[k];
   }
 }
 
@@ -59,13 +62,12 @@ double UniformArmadilloPrecomputedInterpolationTable<N>::operator()(double x)
   unsigned x0  = (unsigned) dx;
   // value of table entries around x position
   dx -= x0;
-  x0 *= N+1;
   
   // general degree horners method, evaluated from the inside out.
-  double sum = dx*m_table[x0+N];
+  double sum = dx*m_table[x0].coefs[N];
   for (int k=N-1; k>0; k--)
-    sum = dx*(m_table[x0+k] + sum);
-  return m_table[x0]+sum;
+    sum = dx*(m_table[x0].coefs[k] + sum);
+  return m_table[x0].coefs[0]+sum;
 }
 
 // declaration of the available values for the template N
