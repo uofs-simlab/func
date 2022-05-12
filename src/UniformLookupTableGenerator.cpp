@@ -59,7 +59,7 @@ struct UniformLookupTableGenerator::OptimalStepSizeFunctor
     par.minArg = m_parent.m_min;
 		par.maxArg = m_parent.m_max;
 		par.stepSize = stepSize;
-    auto impl = UniformLookupTableFactory::Create(m_tableKey, m_parent.mp_func, par);
+    auto impl = UniformLookupTableFactory::Create(m_tableKey, m_parent.mp_func_container, par);
 
     boost::uintmax_t max_it = 20;
 
@@ -112,7 +112,8 @@ private:
 /*
   UniformLookupTableGenerator functions
 */
-UniformLookupTableGenerator::UniformLookupTableGenerator(EvaluationFunctor<double,double> *func, double minArg, double maxArg) : mp_func(func), m_min(minArg), m_max(maxArg) {}
+UniformLookupTableGenerator::UniformLookupTableGenerator(FunctionContainer *func_container, double minArg, double maxArg) : 
+  mp_func_container(func_container), m_min(minArg), m_max(maxArg) {}
 
 
 UniformLookupTableGenerator::~UniformLookupTableGenerator()
@@ -125,7 +126,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_ste
   par.minArg = m_min; 
   par.maxArg = m_max; 
   par.stepSize = stepSize;
-  return UniformLookupTableFactory::Create(tableKey, mp_func, par);
+  return UniformLookupTableFactory::Create(tableKey, mp_func_container, par);
 }
 
 std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_impl_size(std::string tableKey, unsigned long desiredSize)
@@ -145,9 +146,9 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_imp
   par2.stepSize = step2;
 
   std::unique_ptr<EvaluationImplementation> impl1 =
-   UniformLookupTableFactory::Create(tableKey, mp_func, par1);
+   UniformLookupTableFactory::Create(tableKey, mp_func_container, par1);
   std::unique_ptr<EvaluationImplementation> impl2 =
-    UniformLookupTableFactory::Create(tableKey, mp_func, par2);
+    UniformLookupTableFactory::Create(tableKey, mp_func_container, par2);
 
   unsigned long size1 = impl1->size();
   unsigned long size2 = impl2->size();
@@ -160,7 +161,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_imp
      (assuming linear relationship of num_intervals to size */
   par1.stepSize = 1.0/((double)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
 
-  return UniformLookupTableFactory::Create(tableKey, mp_func, par1);
+  return UniformLookupTableFactory::Create(tableKey, mp_func_container, par1);
 }
 
 std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_tol(std::string tableKey, double desiredTolerance)
@@ -171,7 +172,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_tol
   par.stepSize =  (m_max-m_min)/1000.0;
   /* generate a first approximation for the implementation */
   auto impl =
-    UniformLookupTableFactory::Create(tableKey, mp_func, par);
+    UniformLookupTableFactory::Create(tableKey, mp_func_container, par);
   /* And initialize the functor used for refinement */
   OptimalStepSizeFunctor f(*this,tableKey,0);
   double stepSize  = impl->step_size();
@@ -264,7 +265,7 @@ std::unique_ptr<UniformLookupTable> UniformLookupTableGenerator::generate_by_tol
 
   /* Finally, return the implementation with the desired stepSize*/
   par.stepSize = r.first;
-  return UniformLookupTableFactory::Create(tableKey,mp_func,par);
+  return UniformLookupTableFactory::Create(tableKey,mp_func_container,par);
 }
 
 
@@ -292,7 +293,7 @@ void UniformLookupTableGenerator::plot_implementation_at_step_size(std::string t
   par.maxArg = m_max; 
   par.stepSize = stepSize;
   auto impl =
-    UniformLookupTableFactory::Create(tableKey, mp_func, par);
+    UniformLookupTableFactory::Create(tableKey, mp_func_container, par);
 
   std::cout << "# x func impl" << std::endl;
   for (double x=impl->min_arg();

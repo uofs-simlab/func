@@ -11,8 +11,7 @@
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
-  - Available template values are M such that 0 < N <= M and M+N<=7 and the EvaluationFunctor's M+Nth
-  derivative must be defined.
+  - Available template values are all M,N such that 0 < N <= M and M+N<=7
 */
 #include "UniformLookupTable.hpp"
 
@@ -21,9 +20,11 @@ class UniformPadeTable final : public UniformLookupTable
 {
   REGISTER_ULUT(UniformPadeTable);
 
-  //this one will need some work
+  // mind the lesser than sign                              -> |
   __attribute__((aligned)) std::unique_ptr<polynomial<M+N+1,M+N<4? 32:64>[]> m_table;
+  EvaluationFunctor<autodiff_fvar<double,M+N>,autodiff_fvar<double,M+N>> *mp_boost_func;
 public:
-  UniformPadeTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformPadeTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
+  EvaluationFunctor<autodiff_fvar<double,M+N>,autodiff_fvar<double,M+N>> *boost_function(){ return mp_boost_func; }
 };

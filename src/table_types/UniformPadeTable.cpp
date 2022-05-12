@@ -2,15 +2,16 @@
 #include "UniformPadeTable.hpp"
 #include <armadillo>
 #include <iostream>
+#include <stdexcept>
 
 // The registration looks terrible so it's at the bottom of the class
+using boost::math::differentiation::make_fvar;
 
 static double const fact[] = {1,1,2,6,24,120,720,5040};
-double (EvaluationFunctor<double,double>::*derivs[7])(double);
 
 template <unsigned int M, unsigned int N>
-UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : 
-  UniformLookupTable(func, par)
+UniformPadeTable<M,N>::UniformPadeTable(FunctionContainer *func_container, UniformLookupTableParameters par) : 
+  UniformLookupTable(func_container, par)
 {
   /* Base class default variables */
   m_name = "UniformPadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
@@ -18,14 +19,8 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
   m_numTableEntries = m_numIntervals+1;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  // assign the first 7 derivatives to the derivs array for easy enumeration
-  derivs[0]=&EvaluationFunctor<double,double>::deriv;
-  derivs[1]=&EvaluationFunctor<double,double>::deriv2;
-  derivs[2]=&EvaluationFunctor<double,double>::deriv3;
-  derivs[3]=&EvaluationFunctor<double,double>::deriv4;
-  derivs[4]=&EvaluationFunctor<double,double>::deriv5;
-  derivs[5]=&EvaluationFunctor<double,double>::deriv6;
-  derivs[6]=&EvaluationFunctor<double,double>::deriv7;
+  __IS_NULLPTR(func_container->get_nth_func<M+N>()); // the least descriptive exception
+  mp_boost_func = func_container->get_nth_func<M+N>();
 
   /* Allocate and set table */
   m_table.reset(new polynomial<M+N+1, M+N<4? 32:64>[m_numTableEntries]);
@@ -36,24 +31,24 @@ UniformPadeTable<M,N>::UniformPadeTable(EvaluationFunctor<double,double> *func, 
     
     // build the matrix of taylor coefficients
     arma::mat T = arma::zeros(M+N+1, N+1);
-    T(0,0) = (*func)(x);
-    for(unsigned int i=1; i<M+N+1; i++)
-      T(i,0) = (func->*(derivs[i-1]))(x)/(fact[i]);
-    
+    const auto derivs = (*mp_boost_func)(make_fvar<double,M+N>(x));
+    for(unsigned int i=0; i<M+N+1; i++)
+      T(i,0) = derivs.derivative(i)/(fact[i]);
+
     // copy a shifted column 1 of T into the rest of the matrix
     for(unsigned int i=0; i<N+1; i++)
       T(arma::span(i,N+M), i) = T(arma::span(0,N+M-i), 0);
 
     // find the coefficients of Q.
-    arma::mat Q = arma::null(T.rows(M+1, M+N)); 
-    // Need to learn more about Pade approx. to see if this if statement is useful
-    if(Q.n_cols > 1){ // Arma could throw an exception if Q isn't a vector but this is more descriptive
-      throw "Pade table of order [" + std::to_string(M) + "/" + std::to_string(N) + "] does not exist.";
+    arma::mat Q = arma::null(T.rows(M+1, M+N));
+    // TODO check if this is useful
+    if(Q.n_cols > 1){ // Arma could throw an exception if Q isn't a vector but this is more descriptive TODO better exception
+      throw std::domain_error("Pade table of order [" + std::to_string(M) + "/" + std::to_string(N) + "] does not exist.");
       return;
     }
 
     // scale Q such that its first entry equals 1.
-    Q=Q/Q[0]; 
+    Q=Q/Q[0];
 
     // find the coefficients of P
     arma::vec P = T.rows(0,M)*Q;

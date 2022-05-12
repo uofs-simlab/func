@@ -14,7 +14,11 @@ int main()
 {
   using namespace std;
 
-  MyFunction func;
+  FunctionContainer func_container;
+  func_container.double_func = new MyFunction<double>;
+  func_container.fvar1_func  = new MyFunction<fvar1>;
+  func_container.fvar2_func  = new MyFunction<fvar2>;
+  func_container.fvar3_func  = new MyFunction<fvar3>;
 
   /* Which implementations to use */
   std::vector<std::string> implNames {"UniformLinearInterpolationTable",
@@ -24,7 +28,7 @@ int main()
       "UniformQuadraticTaylorTable",
       "UniformCubicTaylorTable"};
 
-  UniformLookupTableGenerator gen(&func, MIN_ARG, MAX_ARG);
+  UniformLookupTableGenerator gen(&func_container, MIN_ARG, MAX_ARG);
 
   cout << "# Function: " << FUNCNAME << endl;
   cout << "# h ";

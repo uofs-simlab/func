@@ -14,14 +14,12 @@
 #pragma once
 #include "UniformLookupTable.hpp"
 
-#include <cmath>
-
 class UniformQuadraticPrecomputedInterpolationTable final : public UniformLookupTable
 {
   REGISTER_ULUT(UniformQuadraticPrecomputedInterpolationTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<3,32>[]> m_table;
 public:
-  UniformQuadraticPrecomputedInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformQuadraticPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
 };

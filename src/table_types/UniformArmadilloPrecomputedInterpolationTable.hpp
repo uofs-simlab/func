@@ -23,6 +23,6 @@ class UniformArmadilloPrecomputedInterpolationTable final : public UniformLookup
 
   __attribute__((aligned)) std::unique_ptr<polynomial<N+1,64>[]> m_table;
 public:
-  UniformArmadilloPrecomputedInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par);
+  UniformArmadilloPrecomputedInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
 };

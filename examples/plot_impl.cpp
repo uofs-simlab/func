@@ -16,7 +16,8 @@ int main()
 {
   using namespace std;
 
-  MyFunction func;
+  FunctionContainer func_container;
+  func_container.double_func = new MyFunction<double>;
 
   cout << "# Function: " << FUNCNAME << endl;
   cout << "# h";
@@ -25,7 +26,7 @@ int main()
   // UniformLookupTableGenerator<UniformLinearInterpolationTable>
   //   gen(&func,MIN_ARG,MAX_ARG,0.0);
 
-  UniformLookupTableGenerator gen(&func,MIN_ARG,MAX_ARG);
+  UniformLookupTableGenerator gen(&func_container,MIN_ARG,MAX_ARG);
 
   gen.plot_implementation_at_step_size("UniformLinearInterpolationTable",STEP);
 

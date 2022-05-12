@@ -26,8 +26,8 @@ if(USE_ARMADILLO AND ARMADILLO_FOUND)
   list(APPEND func_impls_link_libs ${ARMADILLO_LIBRARIES})
 
   list(APPEND func_impls_src
-      table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
-      table_types/UniformPadeTable.cpp
+    table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
+    table_types/UniformPadeTable.cpp
   )
 endif()
 

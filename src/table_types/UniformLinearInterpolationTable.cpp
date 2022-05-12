@@ -4,7 +4,8 @@
 #define IMPL_NAME UniformLinearInterpolationTable
 REGISTER_ULUT_IMPL(IMPL_NAME);
 
-UniformLinearInterpolationTable::UniformLinearInterpolationTable(EvaluationFunctor<double,double> *func, UniformLookupTableParameters par) : UniformLookupTable(func, par)
+UniformLinearInterpolationTable::UniformLinearInterpolationTable(FunctionContainer *func_container, UniformLookupTableParameters par) :
+  UniformLookupTable(func_container, par)
 {
   /* Base class variables */
   m_name = STR(IMPL_NAME);

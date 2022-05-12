@@ -18,7 +18,11 @@ int main()
 {
   using namespace std;
 
-  MyFunction func;
+  FunctionContainer func_container;
+  func_container.double_func = new MyFunction<double>;
+  func_container.fvar1_func  = new MyFunction<fvar1>;
+  func_container.fvar2_func  = new MyFunction<fvar2>;
+  func_container.fvar3_func  = new MyFunction<fvar3>;
 
   cout << "# Function: " << FUNCNAME << "\n";
   cout << "# Tol:      " << TOL << "\n";
@@ -34,7 +38,7 @@ int main()
       "UniformCubicTaylorTable"};
 
 
-  UniformLookupTableGenerator gen(&func, MIN_ARG, MAX_ARG);
+  UniformLookupTableGenerator gen(&func_container, MIN_ARG, MAX_ARG);
 
   for (auto itName : implNames) {
     std::cout << "\nGenerating " << itName << ":" << std::endl;
