@@ -15,7 +15,7 @@ UniformCubicHermiteTable::UniformCubicHermiteTable(FunctionContainer *func_conta
   m_numTableEntries = m_numIntervals+1;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  __IS_NULLPTR(func_container->fvar1_func);
+  __IS_NULL(func_container->fvar1_func);
   mp_boost_func = func_container->fvar1_func;
 
   /* Allocate and set table */
@@ -24,10 +24,10 @@ UniformCubicHermiteTable::UniformCubicHermiteTable(FunctionContainer *func_conta
     const double x = m_minArg + ii*m_stepSize;
     m_grid[ii] = x;
 
-    const auto derivs0 = (*mp_boost_func)(make_fvar<double,1>(x));
+    const auto derivs0 = (mp_boost_func)(make_fvar<double,1>(x));
     const double y0    = derivs0.derivative(0);
     const double m0    = derivs0.derivative(1);
-    const auto derivs1 = (*mp_boost_func)(make_fvar<double,1>(x+m_stepSize));
+    const auto derivs1 = (mp_boost_func)(make_fvar<double,1>(x+m_stepSize));
     const double y1    = derivs1.derivative(0);
     const double m1    = derivs1.derivative(1);
 

@@ -21,9 +21,9 @@ UniformQuadraticPrecomputedInterpolationTable::UniformQuadraticPrecomputedInterp
     // grid points
     m_grid[ii] = x;
     // polynomial coefficients
-    const double y0  = (*mp_func)(x);
-    const double y1  = (*mp_func)(x+m_stepSize/2);
-    const double y2  = (*mp_func)(x+m_stepSize);
+    const double y0  = (mp_func)(x);
+    const double y1  = (mp_func)(x+m_stepSize/2);
+    const double y2  = (mp_func)(x+m_stepSize);
     m_table[ii].coefs[0] = y0;
     m_table[ii].coefs[1] = -3*y0+4*y1-y2;
     m_table[ii].coefs[2] = 2*y0+-4*y1+2*y2;

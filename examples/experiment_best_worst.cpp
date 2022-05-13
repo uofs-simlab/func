@@ -44,10 +44,10 @@ int main(int argc, char* argv[])
   int    seed         = std::stoi(argv[4]);
 
   FunctionContainer func_container;
-  func_container.double_func = new ZeroFunction<double>;
-  func_container.fvar1_func  = new ZeroFunction<fvar1>;
-  func_container.fvar2_func  = new ZeroFunction<fvar2>;
-  func_container.fvar3_func  = new ZeroFunction<fvar3>;
+  func_container.double_func = ZeroFunction<double>;
+  func_container.fvar1_func  = ZeroFunction<fvar1>;
+  func_container.fvar2_func  = ZeroFunction<fvar2>;
+  func_container.fvar3_func  = ZeroFunction<fvar3>;
 
   double stepSize;
 

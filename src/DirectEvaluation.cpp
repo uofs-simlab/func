@@ -38,7 +38,7 @@ double DirectEvaluation::operator()(double x)
   #ifdef FUNC_RECORD
     mp_recorder->record_arg(x);
   #endif
-  return (*mp_func)(x);
+  return mp_func(x);
 }
 
 void DirectEvaluation::print_details(std::ostream& out)

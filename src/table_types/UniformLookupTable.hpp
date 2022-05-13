@@ -2,6 +2,7 @@
   Intermediate abstract class for LUTs with uniformly spaced grid points
 */
 #pragma once
+#include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
 
 #include <memory>

@@ -19,7 +19,7 @@ UniformConstantTaylorTable::UniformConstantTaylorTable(FunctionContainer *func_c
   for (int ii=0; ii<m_numTableEntries; ++ii) {
     double x = m_minArg + ii*m_stepSize;
     m_grid[ii] = x;
-    m_table[ii] = (*mp_func)(x);
+    m_table[ii] = mp_func(x);
   }
 }
 

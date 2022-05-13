@@ -17,9 +17,9 @@ class UniformQuadraticTaylorTable final : public UniformLookupTable
   REGISTER_ULUT(UniformQuadraticTaylorTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<3,32>[]> m_table;
-  EvaluationFunctor<fvar2,fvar2> *mp_boost_func;
+  std::function<fvar2(fvar2)> mp_boost_func;
 public:
   UniformQuadraticTaylorTable(FunctionContainer *func_container, UniformLookupTableParameters par);
   double operator()(double x) override;
-  EvaluationFunctor<fvar2,fvar2> *boost_function(){ return mp_boost_func; }
+  std::function<fvar2(fvar2)> boost_function(){ return mp_boost_func; }
 };

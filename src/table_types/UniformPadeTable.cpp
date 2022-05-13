@@ -19,7 +19,7 @@ UniformPadeTable<M,N>::UniformPadeTable(FunctionContainer *func_container, Unifo
   m_numTableEntries = m_numIntervals+1;
   m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
-  __IS_NULLPTR(func_container->get_nth_func<M+N>()); // the least descriptive exception
+  __IS_NULL(func_container->get_nth_func<M+N>()); // the least descriptive exception
   mp_boost_func = func_container->get_nth_func<M+N>();
 
   /* Allocate and set table */
@@ -31,7 +31,7 @@ UniformPadeTable<M,N>::UniformPadeTable(FunctionContainer *func_container, Unifo
     
     // build the matrix of taylor coefficients
     arma::mat T = arma::zeros(M+N+1, N+1);
-    const auto derivs = (*mp_boost_func)(make_fvar<double,M+N>(x));
+    const auto derivs = (mp_boost_func)(make_fvar<double,M+N>(x));
     for(unsigned int i=0; i<M+N+1; i++)
       T(i,0) = derivs.derivative(i)/(fact[i]);
 

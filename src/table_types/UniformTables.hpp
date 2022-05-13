@@ -8,8 +8,6 @@
 #include "UniformQuadraticPrecomputedInterpolationTable.hpp"
 #include "UniformCubicPrecomputedInterpolationTable.hpp"
 
-#include "UniformFailureProofTable.hpp"
-
 #include "UniformConstantTaylorTable.hpp"
 #include "UniformLinearTaylorTable.hpp"
 #include "UniformQuadraticTaylorTable.hpp"
