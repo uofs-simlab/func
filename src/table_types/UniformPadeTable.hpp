@@ -12,12 +12,24 @@
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
   - Available template values are all M,N such that 0 < N <= M and M+N<=7
+  - Template values where M < N are not supported
 */
+#pragma once
 #include "UniformLookupTable.hpp"
+#include "config.hpp"
+
+#ifndef FUNC_USE_BOOST_AUTODIFF
+#error "UniformPadeTable needs boost version >= 1.71"
+#endif
+
+#ifndef FUNC_USE_ARMADILLO
+#error "UniformPadeTable needs Armadillo"
+#endif
+
 #include <armadillo>
 #include <iostream>
 #include <stdexcept>
-#include <cmath>
+#include <cmath> //isinfite
 
 static double const fact[] = {1,1,2,6,24,120,720,5040};
 
@@ -26,10 +38,13 @@ class UniformPadeTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformPadeTable);
+  FUNC_REGISTER_LUT(UniformPadeTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE, M+N+1>[]> m_table;
-  std::function<fvar<OUT_TYPE,M+N>(fvar<OUT_TYPE,M+N>)> mp_boost_func;
+  std::function<adVar<OUT_TYPE,M+N>(adVar<OUT_TYPE,M+N>)> mp_boost_func;
+  OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
+  unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
+
 public:
   UniformPadeTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
@@ -64,30 +79,31 @@ public:
 
       // find the coefficients of Q.
       arma::mat Q = arma::null(T.rows(M+1, M+N));
+      if(Q.n_rows > 1)
+        throw std::range_error(m_name + " is too poorly conditioned");
 
       // scale Q such that its first entry equals 1.
       Q=Q/Q[0];
-      if(!std::isfinite(Q[1]))
-        std::cerr << "Q = " << Q << std::endl << std::endl;
+      for(unsigned int i=1; i<M+N+1; i++)
+        if(!std::isfinite(Q[i]))
+          throw std::range_error(m_name + " is too poorly conditioned");
 
       // find the coefficients of P
       arma::vec P = T.rows(0,M)*Q;
 
-      // Check if the denominator Q has any roots
-      // within the subinterval [-m_stepSize/2,m_stepSize/2).
-      // If any roots exist, then lower the degree of the denominator.
-      //
-      // We'll check for the existence of a root by building a bracket,
-      // using Q(0)=1 as our 
-      // positive endpoint. Thus, we just need to find a point where
-      // Q is negative.
-      // Helper function:
+      /* Check if the denominator Q has any roots
+         within the subinterval [-m_stepSize/2,m_stepSize/2).
+         If any roots exist, then lower the degree of the denominator.
+        
+         We'll check for the existence of a root by building a bracket,
+         using Q(0)=1 as our positive endpoint. Thus, we just need
+         to find a point where Q is negative. Hence this helper function: */
       auto Q_is_negative = [this, &Q, &ii](IN_TYPE x) -> bool {
         // Tell us if this point is within this subinterval's range
         if(((ii == 0 && x < 0.0) || (ii == m_numIntervals - 1 && x > 0.0)))
           return false;
 
-        // compute Q(x)
+        // compute Q(x) using horners, evaluating from the inside out
         OUT_TYPE sum = x*Q[N];
         for (int k=N-1; k>0; k--)
           sum = x*(Q[k] + sum);
@@ -100,7 +116,7 @@ public:
         // check Q at the subinterval endpoints
         bool Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
 
-        // Check Q at any of its vertexes if they exist
+        // Check Q for negativity at any of its vertexes
         double desc = 0.0;
         if(!Q_has_root)
           switch(k){
@@ -142,6 +158,28 @@ public:
     }
   }
 
+  /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
+  UniformPadeTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::string filename) :
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, filename)
+  {
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+
+    // double check the names match
+    std::string temp_name = jsonStats["name"].get<std::string>();
+    if(temp_name != "UniformPadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">")
+      throw std::invalid_argument("Error while reading " + filename + ": "
+          "Cannot build a " + temp_name + " from a UniformPadeTable<" +
+          std::to_string(M) + "," + std::to_string(N) + ">");
+
+    m_table.reset(new polynomial<OUT_TYPE,M+N+1>[m_numTableEntries]);
+    for(unsigned int i=0; i<m_numTableEntries; i++)
+      for(unsigned int j=0; j<m_table[i].num_coefs; j++)
+        m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<OUT_TYPE>();
+  }
+
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // nondimensionalized x position
@@ -164,20 +202,5 @@ public:
     return P/Q;
   }
 
-  std::function<fvar<OUT_TYPE,M+N>(fvar<OUT_TYPE,M+N>)> boost_function(){ return mp_boost_func; }
+  std::function<adVar<OUT_TYPE,M+N>(adVar<OUT_TYPE,M+N>)> boost_function(){ return mp_boost_func; }
 };
-
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,1,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,2,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,3,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,4,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,5,1);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,6,1);
-
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,2,2);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,3,2);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,4,2);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,5,2);
-
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,3,3);
-REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformPadeTable,4,3);

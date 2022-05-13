@@ -12,31 +12,62 @@
 #pragma once
 #include "UniformLookupTable.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformLinearInterpolationTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformLinearInterpolationTable);
+  FUNC_REGISTER_LUT(UniformLinearInterpolationTable);
 
-  __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
+  __attribute__((aligned(sizeof(OUT_TYPE)))) std::unique_ptr<polynomial<OUT_TYPE,1>[]> m_table;
+  OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
+  unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
+  
 public:
+  //#pragma omp declare simd
   UniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
   {
     /* Base class variables */
-    m_name = STR(UniformLinearInterpolationTable);
+    m_name = FUNC_STR(UniformLinearInterpolationTable);
     m_order = 2;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
 
     /* Allocate and set table */
     m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
+    
+    /* I think it would be nice to have simd table generation so something like the LUT generator can use actual
+     * parallelism. The alignment of m_table might also give us a big speedup from simd */
+    //#pragma omp simd aligned(m_table:sizeof(OUT_TYPE)) // needs the constructor to be declared simd
+    // assuming each iteration will take about the same amount of time
+    //#pragma omp parallel for schedule(static)
     for (int ii=0; ii<m_numIntervals; ++ii) {
       const IN_TYPE x = m_minArg + ii*m_stepSize;
       m_grid[ii]  = x;
-      m_table[ii].coefs[0] = (mp_func)(x);
+      m_table[ii].coefs[0] = m_func(x);
     }
+  }
+
+  /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
+  UniformLinearInterpolationTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::string filename) :
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, filename)
+  {
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+
+    // double check the names match
+    std::string temp_name = jsonStats["name"].get<std::string>();
+    if(temp_name != "UniformLinearInterpolationTable")
+      throw std::invalid_argument("Error while reading " + filename + ": "
+          "Cannot build a " + temp_name + " from a UniformLinearInterpolationTable");
+
+    m_table.reset(new polynomial<OUT_TYPE,1>[m_numTableEntries]);
+    for(unsigned int i=0; i<m_numTableEntries; i++)
+      for(unsigned int j=0; j<m_table[i].num_coefs; j++)
+        m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<OUT_TYPE>();
   }
 
   OUT_TYPE operator()(IN_TYPE x) override
@@ -53,5 +84,3 @@ public:
     return y1+dx*(y2-y1);
   }
 };
-
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformLinearInterpolationTable);

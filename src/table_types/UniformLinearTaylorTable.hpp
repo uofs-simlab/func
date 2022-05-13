@@ -11,16 +11,24 @@
 */
 #pragma once
 #include "UniformLookupTable.hpp"
+#include "config.hpp"
 
-template <typename IN_TYPE, typename OUT_TYPE>
+#ifndef FUNC_USE_BOOST_AUTODIFF
+#error "UniformLinearTaylorTable needs boost version >= 1.71"
+#endif
+
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class UniformLinearTaylorTable final : public UniformLookupTable<IN_TYPE,OUT_TYPE>
 {
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
   INHERIT_UNIFORM_LUT(IN_TYPE,OUT_TYPE);
-  REGISTER_LUT(UniformLinearTaylorTable);
+  FUNC_REGISTER_LUT(UniformLinearTaylorTable);
 
   __attribute__((aligned)) std::unique_ptr<polynomial<OUT_TYPE,2>[]> m_table;
-  std::function<fvar<OUT_TYPE,1>(fvar<IN_TYPE,1>)> mp_boost_func;
+  std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> mp_boost_func;
+  OUT_TYPE get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
+  unsigned int get_num_coefs() override { return m_table[0].num_coefs; }
+
 public:
   UniformLinearTaylorTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, UniformLookupTableParameters<IN_TYPE> par) :
     UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, par)
@@ -28,7 +36,7 @@ public:
     using boost::math::differentiation::make_fvar;
 
     /* Base class variables */
-    m_name = STR(UniformLinearTaylorTable);
+    m_name = FUNC_STR(UniformLinearTaylorTable);
     m_order = 2;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * m_numTableEntries;
@@ -48,6 +56,27 @@ public:
     }
   }
 
+  /* build this table from a file. Everything other than m_table is built by UniformLookupTable */
+  UniformLinearTaylorTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::string filename) :
+    UniformLookupTable<IN_TYPE,OUT_TYPE>(func_container, filename)
+  {
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+
+    // double check the names match
+    std::string temp_name = jsonStats["name"].get<std::string>();
+    if(temp_name != "UniformLinearTaylorTable")
+      throw std::invalid_argument("Error while reading " + filename + ": "
+          "Cannot build a " + temp_name + " from a UniformLinearTaylorTable");
+
+    m_table.reset(new polynomial<OUT_TYPE,2>[m_numTableEntries]);
+    for(unsigned int i=0; i<m_numTableEntries; i++)
+      for(unsigned int j=0; j<m_table[i].num_coefs; j++)
+        m_table[i].coefs[j] = jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)].get<OUT_TYPE>();
+  }
+
   OUT_TYPE operator()(IN_TYPE x) override
   {
     // nondimensionalized x position
@@ -60,7 +89,5 @@ public:
     return m_table[x1].coefs[0]+m_table[x1].coefs[1]*dx;
   }
 
-  std::function<fvar<OUT_TYPE,1>(fvar<IN_TYPE,1>)> boost_function(){ return mp_boost_func; }
+  std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> boost_function(){ return mp_boost_func; }
 };
-
-REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(UniformLinearTaylorTable);

@@ -45,7 +45,6 @@ int main(int argc, char* argv[])
   unsigned int seed   = std::stoi(argv[6]);
 
   FunctionContainer<double> func_container{SET_F(MyFunction,double)};
-
   double stepSize;
 
   /* Check which implementations are available */
@@ -70,48 +69,19 @@ int main(int argc, char* argv[])
     "UniformLinearInterpolationTable",
     "UniformLinearPrecomputedInterpolationTable",
     "UniformLinearTaylorTable",
-    "NonUniformLinearInterpolationTable",
     "UniformQuadraticPrecomputedInterpolationTable",
     "UniformQuadraticTaylorTable"
   };
 
-  std::vector<std::string> padeNames {
-    "UniformPadeTable<1,1>",
-    "UniformPadeTable<2,1>",
-    "UniformPadeTable<3,1>",
-    "UniformPadeTable<4,1>",
-    "UniformPadeTable<5,1>",
-    "UniformPadeTable<6,1>",
-    "UniformPadeTable<2,2>",
-    "UniformPadeTable<3,2>",
-    "UniformPadeTable<4,2>",
-    "UniformPadeTable<5,2>",
-    "UniformPadeTable<3,3>",
-    "UniformPadeTable<4,3>",
-  };
-
   UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
-
-  /* add implementations to vector */
-  // unique_ptr<EvaluationImplementation> test = make_unique<DirectEvaluation>(&func,tableMin,tableMax);
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
+    cerr << "Building " << itName << " ..." << endl; 
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
-  //for (auto itName : padeNames) {
-  //  impls.emplace_back(gen.generate_by_tol(itName,tableTol));
-  //}
-  
-  //add a composite table. The generator doesn't converge with mid = the root 
-  //and also this is far too specific for this experiment.
-  //double mid = exp(7.7/13.0287)+1;
-  //UniformLookupTableGenerator gen1(&func_container, tableMin, mid);
-  //UniformLookupTableGenerator gen2(&func_container, mid, tableMax);
 
-  //impls.emplace_back(unique_ptr<EvaluationImplementation>(
-  //      new CompositeLookupTable({gen1.generate_by_tol(implNames[3],tableTol*(mid-tableMin)/(tableMax-tableMin)),
-  //        gen2.generate_by_tol(implNames[7],tableTol*(tableMax-mid)/(tableMax-tableMin))})));
+  cout << "Running timings ..." << endl;
  
   ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);

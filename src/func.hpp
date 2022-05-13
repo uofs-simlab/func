@@ -1,8 +1,17 @@
 // Global include for FunC
-#include "func_impls.hpp"
+#pragma once
+#include "config.hpp"
+#include "DirectEvaluation.hpp"
+#include "TableIncludes.hpp"
+
 #include "UniformLookupTableGenerator.hpp"
 #include "ImplementationComparator.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"
-#include "TransferFunction.hpp"
-#include "TransferFunctionSinh.hpp"
+#include "TransferFunctionInterface.hpp"
+
+#ifdef FUNC_USE_ARMADILLO
+#ifdef FUNC_USE_BOOST_AUTODIFF
+//#include "TransferFunctionSinh.hpp"
+#endif
+#endif

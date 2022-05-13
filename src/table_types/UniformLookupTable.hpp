@@ -1,30 +1,45 @@
 /*
-  Intermediate abstract class for LUTs with uniformly spaced grid points
+  Intermediate abstract class for LUTs with uniformly spaced grid points.
+  Outfits tables with enough tools to sample from a nonuniform
+  grid efficiently.
+
+  Notes:
+  - In the case where (max-min)/stepsize is not an integer then
+  the real table max is greater than the user supplied max
 */
 #pragma once
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
-#include "TransferFunction.hpp"
+#include "json.hpp"
+#include "config.hpp" // FUNC_USE_SMALL_REGISTRY
 
 #include <map>
 #include <memory>
 #include <vector>
 #include <functional>
+#include <fstream>
 
 template <typename IN_TYPE>
 struct UniformLookupTableParameters
 {
-  IN_TYPE minArg = 0;
-  IN_TYPE maxArg = 1;
-  IN_TYPE stepSize = 1;
-  std::shared_ptr<TransferFunction<IN_TYPE>> transferFunction;
+  IN_TYPE minArg;
+  IN_TYPE maxArg;
+  IN_TYPE stepSize;
+
+  // support initializer lists
+  // still some unfortunate redundancy b/c std::string also takes a templated
+  // initializer list...
+  UniformLookupTableParameters(IN_TYPE min, IN_TYPE max, IN_TYPE step) :
+    minArg(min), maxArg(max), stepSize(step) {}
+  UniformLookupTableParameters(){}
 };
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
 
-template <typename OUT_TYPE, unsigned int NUM_COEFS>
-struct alignas(sizeof(OUT_TYPE)*alignments[NUM_COEFS]) polynomial{
-  OUT_TYPE coefs[NUM_COEFS];
+template <typename OUT_TYPE, unsigned int N>
+struct alignas(sizeof(OUT_TYPE)*alignments[N]) polynomial{
+  static const unsigned int num_coefs = N;
+  OUT_TYPE coefs[N];
 };
 
 /* Use to inherit UniformLookupTable's member variables 
@@ -42,8 +57,15 @@ class UniformLookupTable : public EvaluationImplementation<IN_TYPE,OUT_TYPE>
 {
 protected:
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+
+  // TODO discuss having m_grid exclusive to NonUniformTables
   std::unique_ptr<IN_TYPE[]> m_grid;  // pointers to grid and evaluation data
-  // a LUT array needs to be provided by each implementation
+  // a polynomial (above) array needs to be provided by each implementation
+
+  // get the ith polynomial's jth coefficient
+  virtual OUT_TYPE get_table_entry(unsigned int i, unsigned int j)=0;
+  // get the number of coefficients used
+  virtual unsigned int get_num_coefs()=0;
 
   unsigned int m_numIntervals;   // sizes of grid and evaluation data
   unsigned int m_numTableEntries;
@@ -80,6 +102,37 @@ public:
     m_grid.reset(new IN_TYPE[m_numIntervals]);
   }
 
+  /* Set every generic member variable from a json file */
+  UniformLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+      std::string filename) :
+    EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "uniform_lookup_table")
+  {
+    // Assuming we're still using the same function container as before
+    // Also kinda inefficient since the derived class will also make its own
+    // jsonStats but oh well
+    std::ifstream file_reader(filename);
+    using nlohmann::json;
+    json jsonStats;
+    file_reader >> jsonStats;
+    m_name = jsonStats["name"].get<std::string>();
+    m_minArg = jsonStats["minArg"].get<IN_TYPE>();
+    m_maxArg = jsonStats["maxArg"].get<IN_TYPE>();
+    m_stepSize = jsonStats["stepSize"].get<IN_TYPE>();
+    m_stepSize_inv = 1.0/m_stepSize;
+    m_order = jsonStats["order"].get<unsigned int>();
+    m_dataSize = jsonStats["dataSize"].get<unsigned int>();
+    m_numIntervals = jsonStats["numIntervals"].get<unsigned int>();
+    m_numTableEntries = jsonStats["numTableEntries"].get<unsigned int>();
+
+    // recompute m_tableMaxArg
+    m_tableMaxArg = m_maxArg;
+    if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
+      m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
+
+    // Not recomputing m_grid so the NonuniformLUTs can use this code.
+    // the array of polynomials must now be built by each table implementation
+  }
+
   virtual ~UniformLookupTable(){};
 
   /* public access of protected data */
@@ -93,9 +146,39 @@ public:
         << m_stepSize << " " << m_numIntervals << " ";
   }
 
-  std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(unsigned intervalNumber)
+  virtual std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(unsigned intervalNumber)
   {
-    return std::make_pair(m_grid[intervalNumber],m_grid[intervalNumber+1]);
+    return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
+  }
+
+  /* Write table data to the provided ostream in the form of json. Virtual in case derived
+     classes need to save their own member vars. eg. NonuniformLUTs will store their
+     grid and rebuild their transfer function */
+  virtual void print_details_json(std::ostream& out)
+  {
+    // TODO if FunC gets a namespace we should consider renaming our json
+    // functions to to_json() and from_json() functions as seen here
+    // https://github.com/nlohmann/json
+    using nlohmann::json;
+    json jsonStats;
+
+    jsonStats["_comment"] = "FunC lookup table data";
+    jsonStats["name"] = m_name;
+    jsonStats["minArg"] = m_minArg;
+    jsonStats["maxArg"] = m_maxArg;
+    jsonStats["stepSize"] = m_stepSize;
+    jsonStats["order"] = m_order;
+    jsonStats["dataSize"] = m_dataSize;
+    jsonStats["numIntervals"] = m_numIntervals;
+    jsonStats["numTableEntries"] = m_numTableEntries;
+
+    // save the polynomial coefs of each lookup table
+    // Note: m_order is used as the number of polynomial coefs
+    for(unsigned int i=0; i<m_numTableEntries; i++)
+      for(unsigned int j=0; j<get_num_coefs(); j++)
+        jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)] = get_table_entry(i,j);
+
+    out << jsonStats.dump(2) << std::endl;
   }
 };
 
@@ -105,11 +188,17 @@ public:
   UniformLookupTableFactory: singleton class responsible for
   - creating Derived classes of UniformLookupTable
   - keeping a registry of derived classes
-  - It's usage throughout FunC implies 4 namespaces are made.
+  - It's usage throughout FunC implies 8 namespaces are made.
   UniformLookupTableFactory<double>::
   UniformLookupTableFactory<float>::
   UniformLookupTableFactory<double,float>::
   UniformLookupTableFactory<float,double>::
+  UniformLookupTableFactory<double,double,std::string>::
+  UniformLookupTableFactory<float,float,std::string>::
+  UniformLookupTableFactory<double,float,std::string>::
+  UniformLookupTableFactory<float,double,std::string>::
+  and NonUniformTables just add to the pile
+  TODO desperately need a dev flag for this
 
   Usage example:
   // given the fc is an initialized function container
@@ -118,14 +207,14 @@ public:
     UniformLookupTableFactory<double>::Create("UniformCubicPrecomputedInterpolationTable",fc, par);
 
 //////////////////////////////////////////////////////////////////////////// */
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class OTHER = UniformLookupTableParameters<IN_TYPE>>
 class UniformLookupTableFactory
 {
 public:
   // Only ever hand out unique pointers
   static std::unique_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> Create(
       std::string name, FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-      UniformLookupTableParameters<IN_TYPE> par)
+      OTHER args)
   {
     // Create a UniformLookupTable
     UniformLookupTable<IN_TYPE,OUT_TYPE> *instance = nullptr;
@@ -133,7 +222,7 @@ public:
     // find the name in the registry and call factory method.
     auto it = get_registry().find(name);
     if(it != get_registry().end())
-      instance = it->second(fc,par);
+      instance = it->second(fc, args);
 
     // wrap instance in a unique ptr and return (if created)
     if(instance == nullptr)
@@ -145,7 +234,7 @@ public:
   static void RegisterFactoryFunction(std::string name,
       std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
         FunctionContainer<IN_TYPE,OUT_TYPE>*, 
-        UniformLookupTableParameters<IN_TYPE>
+        OTHER
       )> classFactoryFunction)
   {
     // register a derived class factory function
@@ -165,11 +254,11 @@ public:
 private:
   // the actual registry is private to this class
   static std::map<std::string, std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
-			FunctionContainer<IN_TYPE,OUT_TYPE>*, UniformLookupTableParameters<IN_TYPE>)>>& get_registry()
+			FunctionContainer<IN_TYPE,OUT_TYPE>*, OTHER)>>& get_registry()
   {
     // Get the singleton instance of the registry map
     static std::map<std::string, std::function<UniformLookupTable<IN_TYPE,OUT_TYPE>*(
-               FunctionContainer<IN_TYPE,OUT_TYPE>*,UniformLookupTableParameters<IN_TYPE>)>> registry;
+               FunctionContainer<IN_TYPE,OUT_TYPE>*,OTHER)>> registry;
     return registry;
   }
 
@@ -185,51 +274,66 @@ private:
   NOTE: implementation defined in this header so that templates get
   instantiated in derived LUT class files
 */
-template <class T, typename IN_TYPE, typename OUT_TYPE>
+template <class T, typename IN_TYPE, typename OUT_TYPE, class OTHER = UniformLookupTableParameters<IN_TYPE>>
 class UniformLookupTableRegistrar {
 public:
   UniformLookupTableRegistrar(std::string className)
   {
     UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::RegisterFactoryFunction(className,
       [](FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-         UniformLookupTableParameters<IN_TYPE> par
-      ) -> UniformLookupTable<IN_TYPE,OUT_TYPE>* { return new T(fc, par); }
+         OTHER args
+      ) -> UniformLookupTable<IN_TYPE,OUT_TYPE>* { return new T(fc, args); }
     );
   }
 };
 
 /*
    Macros for class registration:
-   - REGISTER_LUT goes inside class definition
-   - REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS goes underneath the class definition.
+   - FUNC_REGISTER_LUT goes inside class definition
+   - FUNC_REGISTER_EACH_ULUT_IMPL goes underneath the class definition.
    Several different versions of this macro exist for registering templated classes
    - other... is for template parameters unrelated to the tables IN_TYPE and OUT_TYPE
 */
-#define REGISTER_LUT(classname) \
+// this macro is used for nonuniform tables
+#define FUNC_REGISTER_LUT(classname) \
 private: \
-  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar
-#define STR_EXPAND(x...) #x
-#define STR(x...) STR_EXPAND(x)
+  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE> registrar; \
+  static const UniformLookupTableRegistrar<classname,IN_TYPE,OUT_TYPE,std::string> str_registrar
 
-#define REGISTER_LUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
+#define FUNC_STR_EXPAND(x...) #x
+#define FUNC_STR(x...) FUNC_STR_EXPAND(x)
+
+// everything after this point is specialized to uniform LUTs.
+#define FUNC_REGISTER_ULUT_IMPL(classname,IN_TYPE,OUT_TYPE) \
   template<> const \
   UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE>::registrar(STR(classname))
+    classname<IN_TYPE,OUT_TYPE>::registrar(FUNC_STR(classname))
 
-#define REGISTER_TEMPLATED_LUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
+#define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,IN_TYPE,OUT_TYPE,other...) \
   template<> const \
     UniformLookupTableRegistrar<classname<IN_TYPE,OUT_TYPE,other>,IN_TYPE,OUT_TYPE> \
-    classname<IN_TYPE,OUT_TYPE,other>::registrar(STR(classname<other>))
+    classname<IN_TYPE,OUT_TYPE,other>::registrar(FUNC_STR(classname<other>))
 
+#ifndef FUNC_USE_SMALL_REGISTRY
 // macros used in each class to quickly register 4 different template instantiations
-#define REGISTER_DOUBLE_AND_FLOAT_LUT_IMPLS(classname)\
-  REGISTER_LUT_IMPL(classname,double,double); \
-  REGISTER_LUT_IMPL(classname,float,double); \
-  REGISTER_LUT_IMPL(classname,double,float); \
-  REGISTER_LUT_IMPL(classname,float,float);
+#define FUNC_REGISTER_EACH_ULUT_IMPL(classname)\
+  FUNC_REGISTER_ULUT_IMPL(classname,double,double); \
+  FUNC_REGISTER_ULUT_IMPL(classname,float,double);  \
+  FUNC_REGISTER_ULUT_IMPL(classname,double,float);  \
+  FUNC_REGISTER_ULUT_IMPL(classname,float,float);
 
-#define REGISTER_TEMPLATED_DOUBLE_AND_FLOAT_LUT_IMPLS(classname,other...) \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,double,double,other); \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,float,double,other);  \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,double,float,other);  \
-  REGISTER_TEMPLATED_LUT_IMPL(classname,float,float,other)
+#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...) \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,double,other); \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,double,other);  \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,float,other);  \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,float,other)
+
+#else // just build double -> double tables
+
+#define FUNC_REGISTER_EACH_ULUT_IMPL(classname)\
+  FUNC_REGISTER_ULUT_IMPL(classname,double,double); \
+
+#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...) \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,double,other); \
+
+#endif // FUNC_USE_SMALL_REGISTRY

@@ -7,29 +7,39 @@
 #include "UniformLookupTable.hpp"
 
 // differentiation tables
-#include "UniformConstantTaylorTable.hpp"
-#include "UniformLinearTaylorTable.hpp"
-#include "UniformQuadraticTaylorTable.hpp"
-#include "UniformCubicTaylorTable.hpp"
-#include "UniformCubicHermiteTable.hpp"
-#ifdef USE_ARMADILLO
-  #include "UniformPadeTable.hpp"
+#ifdef FUNC_USE_BOOST_AUTODIFF
+  #include "UniformLinearTaylorTable.hpp"
+  #include "UniformQuadraticTaylorTable.hpp"
+  #include "UniformCubicTaylorTable.hpp"
+  #include "UniformCubicHermiteTable.hpp"
+
+  #ifdef FUNC_USE_ARMADILLO
+    #include "UniformPadeTable.hpp"
+  #endif
 #endif
 
 // standard interpolation tables
+#include "UniformConstantTaylorTable.hpp"
 #include "UniformLinearInterpolationTable.hpp"
 #include "UniformLinearPrecomputedInterpolationTable.hpp"
-#include "UniformCubicPrecomputedInterpolationTable.hpp"
 #include "UniformQuadraticPrecomputedInterpolationTable.hpp"
-#ifdef USE_ARMADILLO
+#include "UniformCubicPrecomputedInterpolationTable.hpp"
+#ifdef FUNC_USE_ARMADILLO
   #include "UniformArmadilloPrecomputedInterpolationTable.hpp"
 #endif
 
 
 /* ---- NonUniform Tables ---- */
-#include "NonUniformLookupTable.hpp"
-#include "NonUniformLinearInterpolationTable.hpp"
-#include "NonUniformCubicPrecomputedInterpolationTable.hpp"
+// Currently an armadillo and boost extension
+//#ifdef FUNC_USE_ARMADILLO
+//#ifdef FUNC_USE_BOOST_AUTODIFF
+//  #include "NonUniformLookupTable.hpp"
+//  #include "NonUniformLinearInterpolationTable.hpp"
+//  #include "NonUniformPseudoLinearInterpolationTable.hpp"
+//  #include "NonUniformCubicPrecomputedInterpolationTable.hpp"
+//  #include "NonUniformPseudoCubicPrecomputedInterpolationTable.hpp"
+//#endif
+//#endif
 
 
 /* ---- Meta Tables ---- */

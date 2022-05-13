@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.1)
 # Default to "Release" build
 SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
 # options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) DEBUG RELEASE
-# RELWITHDEBINFO MINSIZEREL.")
+# RELWITHDEBINFO MINSIZEREL DEV.")
 
 project(FunC)
 
@@ -18,9 +18,19 @@ find_package(Boost COMPONENTS
         # system
         REQUIRED)
 
+message(STATUS "Version of Boost found: ${Boost_VERSION}")
 message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
 message(STATUS "Boost libs to link: ${Boost_LIBRARIES}")
 message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
+
+if(Boost_VERSION VERSION_LESS 1.71.0)
+  set(USE_BOOST_AUTODIFF OFF)
+  message(WARNING "The version of Boost found is less than 1.71.0
+If you wish to use Taylor, Pade, and Hermite tables then you will need
+a newer version of Boost.")
+else()
+  set(USE_BOOST_AUTODIFF ON)
+endif()
 
 # Find Armadillo for the degree 4-7 polynomial interpolation and Pade tables
 option(USE_ARMADILLO "Use Armadillo library" OFF)
@@ -28,19 +38,41 @@ option(USE_ARMADILLO "Use Armadillo library" OFF)
 find_package(Armadillo COMPONENTS)
 
 if(ARMADILLO_FOUND)
+  message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
+  message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
+  message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
   if(NOT USE_ARMADILLO)
     message(WARNING "Armadillo found but not requested.
 If you wish to use Armadillo (NEEDED FOR HIGHER ORDER AND PADE TABLES),
  reconfigure with -DUSE_ARMADILLO=ON")
   endif()
-  message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
-  message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
-  message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
 endif()
 
-# Search for quadmath (fatal error if requested but not found)
-option(USE_QUADMATH "Use quadmath library" ON)
+# Use quadmath if possible. Don't make a fuss if it's not there
+# Could be reconfigured if the user really doesn't want quadmath
+# even if they have it
 find_package(Quadmath)
+if(QUADMATH_FOUND)
+  option(USE_QUADMATH "Use quadmath library" ON)
+else()
+  # we'll just use long double instead
+  option(USE_QUADMATH "Use quadmath library" OFF)
+endif()
+
+find_package(OpenMP)
+if(OpenMP_FOUND)
+  if(APPLE AND ${CMAKE_VERSION} VERSION_LESS 3.12.0)
+    message(WARNING "Must have at least CMake version 3.12 to add openmp to FunC on MacOS")
+    option(USE_OPENMP "Use OpenMP" OFF)
+  else()
+    message(STATUS "Using OpenMP for threadsafety")
+    option(USE_OPENMP "Use OpenMP" ON)
+  endif()
+else()
+  # use std::lib instead
+  option(USE_OPENMP "Use OpenMP" OFF)
+endif()
+
 
 # Add an option for turning on argument recording
 option(FUNC_RECORD "Enable recording of arguments for DirectEvaluation" OFF)

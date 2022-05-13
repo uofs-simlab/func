@@ -5,6 +5,7 @@
 
   - takes ownership of the vector of implementations passed to it
 */
+#pragma once
 #include "Timer.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"
@@ -57,9 +58,9 @@ struct ImplTimer
   };
   void print_timing_stats(std::ostream& out)
   {
-    out << "Min " << minTime
-      << " Max " << maxTime
-      << " Mean " << meanTime
+    out << "Min " << minTime << "s"
+      << " Max " << maxTime << "s"
+      << " Mean " << meanTime << "s"
       << "\n";
   }
 };
@@ -74,9 +75,9 @@ private:
   ImplContainer<IN_TYPE,OUT_TYPE>          m_implementations;
   unsigned                                 m_numberOfImplementations;
 
-  std::vector<TimeContainer>      m_evaluationTimers;
+  std::vector<TimeContainer>  m_evaluationTimers;
 
-  IN_TYPE                 m_minArg,m_maxArg;
+  IN_TYPE                     m_minArg,m_maxArg;
 
   std::unique_ptr<OUT_TYPE[]> m_evalHolder;
 
