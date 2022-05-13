@@ -4,3 +4,5 @@
 #include "ImplementationComparator.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"
+#include "TransferFunction.hpp"
+#include "TransferFunctionSinh.hpp"

@@ -6,49 +6,57 @@
   - determine size of data needed for 'evaluation'
   - override the brackets operator to perform 'evaluation'
   - cleanup in destructor
-  - Can be constructed with an optional vector of special points 
-  to specify discontinuities
 */
 #pragma once
-#include "SpecialPoint.hpp"
 #include <string>
 #include <vector>
 #include <iostream>
 #include <functional>
 
+/* macro to get the EvaluationImplementation's member variables
+   without having to sprinkle "this->" throughout our code.
+   Remember to at least make these "using" statments protected */
+#define INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE) \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::mp_func; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_order; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_name; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_dataSize; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_minArg; \
+  using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_maxArg
+
+
+template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class EvaluationImplementation
 {
 protected:
 
-  std::function<double(double)>   mp_func; // mathematical function to evaluate
-  std::vector<SpecialPoint>       m_special_points; // specify any discontinuities
+  std::function<OUT_TYPE(IN_TYPE)>   mp_func; // mathematical function to evaluate
 
-  double             m_minArg, m_maxArg; // bounds of evaluation
-  unsigned           m_order;    // order of accuracy of implementation
-  std::string        m_name;     // name of implementation type
-  unsigned           m_dataSize; // size of relevant data for impl evaluation
+  IN_TYPE      m_minArg, m_maxArg; // bounds of evaluation
+  unsigned     m_order;    // order of accuracy of implementation
+  std::string  m_name;     // name of implementation type
+  unsigned     m_dataSize; // size of relevant data for impl evaluation
 
 public:
 
   // Every class inheriting from this one use a FunctionContainer as 
-  // their first arg (aside from UniformFailureProofTable and CompoundLookupTable).
-  EvaluationImplementation(std::function<double(double)> func = NULL, std::string name = "", 
-      std::vector<SpecialPoint> points = std::vector<SpecialPoint>());
+  // their first arg (aside from UniformFailureProofTable).
+  EvaluationImplementation(std::function<OUT_TYPE(IN_TYPE)> func = NULL, std::string name = "") :
+    m_name(name), mp_func(func), m_minArg(0), m_maxArg(0) {}
 
   virtual ~EvaluationImplementation(){};
 
-  virtual double operator()(double x) = 0;
+  virtual OUT_TYPE operator()(IN_TYPE x) = 0;
   virtual void print_details(std::ostream& out)
   {
     out << m_minArg << " " << m_maxArg << " ";
   };
 
   /* public access of protected data */
-  double min_arg();
-  double max_arg();
-  unsigned order();
-  unsigned size();
-  std::string name();
-  std::function<double(double)> function();
-  std::vector<SpecialPoint> special_points();
+  IN_TYPE min_arg(){ return m_minArg; };
+  IN_TYPE max_arg(){ return m_maxArg; };
+  unsigned order(){ return m_order; };
+  unsigned size(){ return m_dataSize; };
+  std::string name(){ return m_name; };
+  std::function<OUT_TYPE(IN_TYPE)> function(){ return mp_func; };
 };

@@ -18,16 +18,12 @@ int main()
 {
   using namespace std;
 
-  FunctionContainer func_container;
-  func_container.double_func = MyFunction<double>;
-  func_container.fvar1_func  = MyFunction<fvar1>;
-  func_container.fvar2_func  = MyFunction<fvar2>;
-  func_container.fvar3_func  = MyFunction<fvar3>;
+  FunctionContainer<double> func_container{SET_F(MyFunction,double)};
 
   cout << "# Function: " << FUNCNAME << "\n";
   cout << "# Tol:      " << TOL << "\n";
 
-  vector<unique_ptr<EvaluationImplementation>> impls;
+  vector<unique_ptr<EvaluationImplementation<double>>> impls;
 
   /* Which LUT implementations to use */
   vector<string> implNames {"UniformLinearInterpolationTable",
@@ -38,7 +34,7 @@ int main()
       "UniformCubicTaylorTable"};
 
 
-  UniformLookupTableGenerator gen(&func_container, MIN_ARG, MAX_ARG);
+  UniformLookupTableGenerator<double> gen(&func_container, MIN_ARG, MAX_ARG);
 
   for (auto itName : implNames) {
     std::cout << "\nGenerating " << itName << ":" << std::endl;

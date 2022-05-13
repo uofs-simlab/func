@@ -1,7 +1,9 @@
+/*
+  Abstract interface for interfacing with classes
+  that can generate random numbers
+*/
 #pragma once
-
-/* Abstract interface for interfacing with random distributions */
-template <typename OutType=double>
+template <typename POINT_TYPE>
 class RngInterface{
   public:
     // build a random generator for sampling from a distribution
@@ -11,8 +13,7 @@ class RngInterface{
     virtual unsigned int seed()=0;
 
     // get a random point from the random distribution
-    virtual OutType getPt()=0;
+    virtual POINT_TYPE get_point()=0;
 
     virtual ~RngInterface(){}
 };
-
