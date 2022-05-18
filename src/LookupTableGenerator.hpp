@@ -14,7 +14,7 @@
 */
 #pragma once
 #include "LookupTable.hpp"
-#include "config.hpp" // FUNC_USE_QUADMATH
+#include "config.hpp" // FUNC_USE_QUADMATH, FUNC_USE_BOOST
 #include <iostream>
 #include <memory>
 #include <limits>
@@ -236,12 +236,20 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   LookupTableParameters<IN_TYPE> par;
   par.minArg = m_min;
   par.maxArg = m_max;
-  par.stepSize =  (m_max-m_min)/1000.0;
+  par.stepSize = m_max-m_min; // max reasonable stepsize
+
   /* generate a first approximation for the implementation */
   auto impl = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
   /* And initialize the functor used for refinement */
   OptimalStepSizeFunctor f(*this,tableKey,0);
-  IN_TYPE stepSize  = impl->step_size();
+
+  /* quit now if this table is amazing already. Useful for high order tables on small intervals
+   * where toms748 tries to use a stepsize larger than the table range */
+  auto gmax_step = f(m_max-m_min) - desiredTolerance;
+  if(gmax_step <= 0.0)
+    return impl;
+
+  IN_TYPE stepSize = (m_max-m_min)/1000.0; // a passable initial guess
   const int order  = impl->order();
 
   const double logTol = log(desiredTolerance);
@@ -310,8 +318,8 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   */
   using namespace boost::math::tools;
 
-  IN_TYPE factor = 2;   // Mult/divide factor for bracket expansion when searching.
-  bool is_rising = 1;  // The error curve should always be rising
+  IN_TYPE factor = 2; // Mult/divide factor for bracket expansion when searching.
+  bool is_rising = 1; // The error curve should always be rising
   int digits = std::numeric_limits<double>::digits;  // Maximum possible binary digits accuracy for type T.
   // Some fraction of digits is used to control how accurate to try to make the result.
   int get_digits = digits-30;  // We have to have a non-zero interval at each step, so
@@ -320,17 +328,24 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
                                // allow for inaccuracy in f(x), otherwise the last few iterations
                                // just thrash around.
   eps_tolerance<double> tol(get_digits); // Set the tolerance.
-  OptimalStepSizeFunctor g(*this,tableKey,desiredTolerance); // functor for solving log(E(h)/TOL)-1 = 0
+  OptimalStepSizeFunctor g(*this,tableKey,desiredTolerance); // functor for solving log(E(h)/TOL) = 0
 
   /*
     Run the bracket and solve algorithm
     - answer is taken to be the lower point of the bracketing interval
     - this guarantees a tolerance lower than desired
+    - Unfortunately, still have to watch out for stepsizes larger than the table range
+    so we can't just use bracket_and_solve_root
   */
-  std::pair<IN_TYPE, IN_TYPE> r = bracket_and_solve_root(g, stepSize, factor, is_rising, tol, it);
+  //std::pair<IN_TYPE, IN_TYPE> r = bracket_and_solve_root(g, stepSize, factor, is_rising, tol, it);
+  //g(m_max-m_min) - desiredTolerance > 0 otherwise we would've quit at the start of this function
+  
+  std::pair<IN_TYPE, IN_TYPE> r = toms748_solve(g, 0.0, m_max-m_min, -desiredTolerance, gmax_step, tol, it);
 
-  /* Finally, return the implementation with the desired stepSize*/
-  par.stepSize = r.first;
+  /* Finally, return the implementation with the desired stepSize */
+  // TODO do we want to ensure that (max-min)/stepSize is an integer?
+  if(r.first < m_max-m_min)
+    par.stepSize = r.first;
   return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
 #endif
 }
@@ -341,6 +356,7 @@ inline double LookupTableGenerator<IN_TYPE,OUT_TYPE>::error_at_step_size(
 {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot compute error at step without Boost");
+    return 0; // just so the compiler doesn't complain
 #else
   /*
     Can be implemented in terms of the Functor used in solving for a specific
