@@ -23,15 +23,15 @@
 #include <armadillo>
 #endif
 
-// Armadillo supposedly does sketchy LU solves?
 // TODO there is some error introduced by factoring the
-// vandermonde matrix and doing an LU solve.
+// vandermonde matrix before doing an LU solve.
 // Is this added error worth the increase in speed?
 // Should we do iterative refinement?
 #define DO_LU_FACTOR
 #ifdef DO_LU_FACTOR
 #define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::none
 #else
+//#define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::none
 #define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::refine
 #endif
 
