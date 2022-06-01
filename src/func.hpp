@@ -9,6 +9,5 @@
 #include "RngInterface.hpp"
 #include "StdRng.hpp"
 
-#include "TransferFunctionInterface.hpp"
 #include "TransferFunctionSinh.hpp"
 

@@ -54,7 +54,7 @@ DirectEvaluation.hpp;ArgumentRecord.hpp;\
 ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
 json.hpp;\
 FailureProofTable.hpp;CompositeLookupTable.hpp;\
-TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\
+TransferFunctionSinh.hpp;\
 LookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/LookupTable.hpp;\

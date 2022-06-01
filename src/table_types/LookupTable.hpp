@@ -361,15 +361,17 @@ private: \
 // macros used in each class to quickly register 4 different template instantiations
 #define FUNC_REGISTER_EACH_ULUT_IMPL(classname)\
   FUNC_REGISTER_ULUT_IMPL(classname,double,double); \
-  FUNC_REGISTER_ULUT_IMPL(classname,float,double);  \
-  FUNC_REGISTER_ULUT_IMPL(classname,double,float);  \
-  FUNC_REGISTER_ULUT_IMPL(classname,float,float);
+  FUNC_REGISTER_ULUT_IMPL(classname,float,float);   \
+  FUNC_REGISTER_ULUT_IMPL(classname,long double,long double)
+//  FUNC_REGISTER_ULUT_IMPL(classname,float,double);  \
+//  FUNC_REGISTER_ULUT_IMPL(classname,double,float);  \
 
-#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...) \
+#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...)\
   FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,double,other); \
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,double,other);  \
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,float,other);  \
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,float,other)
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,float,other);    \
+  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,long double,long double,other)
+// FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,double,other);  \
+// FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,float,other);  \
 
 #else // just build double -> double tables
 

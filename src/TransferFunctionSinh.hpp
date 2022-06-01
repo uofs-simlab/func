@@ -30,18 +30,26 @@ Notes:
 #include <cmath> // sqrt
 #include <limits> // std::numeric_limits<T>::digits
 #include <array> // std::array
+#include <utility> // std::pair
 
-#include "TransferFunctionInterface.hpp" // TODO remove this interface if possible
+//#include "TransferFunctionInterface.hpp" // TODO remove this interface if possible
 #include "FunctionContainer.hpp"
 
+#ifdef FUNC_USE_BOOST
 #define BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND
 #include <boost/math/quadrature/gauss_kronrod.hpp> // gauss_kronrod::integrate
 #include <boost/math/tools/roots.hpp> // newton_raphson_iterate
+#endif
+
 
 template <typename IN_TYPE>
-class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
+class TransferFunctionSinh
 {
-  IMPLEMENT_TRANSFER_FUNCTION_INTERFACE(IN_TYPE);
+  /* This min, max must be the same as the corresponding table's min and
+  max resp. (though note that the table max is not necessarily equal to
+  the function's max arg) */
+  IN_TYPE m_minArg, m_tableMaxArg;
+  IN_TYPE m_stepSize;
 
   // aligned array of polynomial coefs approximating g_inv
   __attribute__((aligned)) std::array<IN_TYPE,4> m_inv_coefs;
@@ -49,7 +57,7 @@ class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
 public:
   /* Set m_inv_coefs equal to a vector that is (presumably) either the identity or came from a json file */
   TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize, std::array<IN_TYPE,4> inv_coefs) :
-    TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize) { m_inv_coefs = inv_coefs; }
+    m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) { m_inv_coefs = inv_coefs; }
 
   /* initialize the identity transfer function */
   TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
@@ -59,7 +67,7 @@ public:
   template<typename OUT_TYPE>
   TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
       IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
-    TransferFunctionInterface<IN_TYPE>(minArg, tableMaxArg, stepSize)
+    m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize)
   {
 #ifndef FUNC_USE_BOOST
     // Template code is only compiled if the template is instantiated
@@ -121,7 +129,7 @@ public:
 #endif
   }
 
-  IN_TYPE g_inv(IN_TYPE x) override
+  IN_TYPE g_inv(IN_TYPE x)
   {
     // Horner's method
     IN_TYPE sum = 0;
@@ -141,16 +149,18 @@ public:
 
   /* Use newton-raphson_iteration on g_inv. Recall that each coef in g was divided by h
    * and we subtracted by m_minArg */
-  IN_TYPE g(IN_TYPE x) override
+  IN_TYPE g(IN_TYPE x)
   {
     // This will have at least 0.6*std::numeric_limits<IN_TYPE>::digits digits of accuracy
     boost::uintmax_t maxit = 55;
+    std::cout << m_minArg << " is less than " << m_tableMaxArg << std::endl;
     return boost::math::tools::newton_raphson_iterate(
         [this,x](const IN_TYPE z){ return std::make_tuple(g_inv(z) - (x-m_minArg)/m_stepSize, g_inv_prime(z));},
         x,m_minArg, m_tableMaxArg, 0.6*std::numeric_limits<IN_TYPE>::digits, maxit);
   }
 
-  void print_details(std::ostream& out) override
+  // public access to private vars
+  void print_details(std::ostream& out)
   {
     out << "degree 3 monotone Hermite interpolation with polynomial: \n";
     out << std::to_string(m_inv_coefs[3]) << "x^3 + " << std::to_string(m_inv_coefs[2]) << "x^2 + " <<
@@ -160,4 +170,6 @@ public:
   std::array<IN_TYPE,4> get_coefs() {
     return m_inv_coefs;
   }
+
+  std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_tableMaxArg); }
 };
