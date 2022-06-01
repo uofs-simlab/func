@@ -1,16 +1,16 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required(VERSION 3.1)
 
 # Default to "Release" build
 SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
 # options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) DEBUG RELEASE
 # RELWITHDEBINFO MINSIZEREL DEV.")
 
-project(FunC)
+project(
+  FunC
+  VERSION 2.0
+  LANGUAGES CXX)
 
-set(FunC_VERSION_MAJOR 0)
-set(FunC_START_VERSION_MINOR 1)
-
-set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
