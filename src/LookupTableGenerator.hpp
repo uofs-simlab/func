@@ -25,6 +25,8 @@
 #include <boost/math/special_functions/next.hpp>
 #endif
 
+// TODO we need this errprecision to change based on IN_TYPE and OUT_TYPE somehow
+// ideally epsilon_errprecision = sqrt(epsilon_OUTTYPE)
 // If quadmath is used, work in the boost::multiprecision namespace
 #ifdef FUNC_USE_QUADMATH
 #include <boost/multiprecision/float128.hpp>
@@ -104,8 +106,8 @@ struct LookupTableGenerator<IN_TYPE,OUT_TYPE>::LookupTableErrorFunctor
   /* operator() always returns a negative value */
   errprecision operator()(errprecision const& x)
   {
-    errprecision f_value = static_cast<errprecision>((m_impl->function())(double(x)));
-    errprecision lut_value = static_cast<errprecision>((*m_impl)(double(x)));
+    errprecision f_value = static_cast<errprecision>((m_impl->function())(IN_TYPE(x)));
+    errprecision lut_value = static_cast<errprecision>((*m_impl)(IN_TYPE(x)));
     return -static_cast<errprecision>(2.0) * fabs( (f_value - lut_value) ) /
       (fabs(f_value)+fabs(lut_value));
   }
