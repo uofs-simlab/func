@@ -21,7 +21,7 @@
   any other FunC lookup table
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
-  - specify the FUNC_RECORD flag to turn on argument recording for args outside
+  - specify the FUNC_DEBUG flag to turn on argument recording for args outside
   the table's range.
   - optional ArgumentRecord args available if you want nicer looking output
 */
@@ -30,10 +30,11 @@
 #include "FunctionContainer.hpp"
 #include "LookupTable.hpp"
 #include "json.hpp"
+#include <memory> // unique_ptr
 #include <fstream> //ifstream
 #include <limits> // std::numeric_limits<IN_TYPE>::max() / lowest()
 
-#ifdef FUNC_RECORD
+#ifdef FUNC_DEBUG
   #include "ArgumentRecord.hpp"
 #endif
 
@@ -41,7 +42,7 @@ template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class LUT_TYPE = Lookup
 class FailureProofTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
   std::unique_ptr<LUT_TYPE> mp_LUT;
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
-  #ifdef FUNC_RECORD
+  #ifdef FUNC_DEBUG
     std::unique_ptr<ArgumentRecord<IN_TYPE>> mp_recorder;
   #endif
 public:
@@ -61,7 +62,7 @@ public:
     m_maxArg = mp_LUT->max_arg();
     m_order  = mp_LUT->order();
     m_dataSize = mp_LUT->size();
-    #ifdef FUNC_RECORD
+    #ifdef FUNC_DEBUG
       // check if we're using default/bad histogram arguments
       if(histMin >= histMax){
         histMin = m_minArg;
@@ -93,7 +94,7 @@ public:
     using nlohmann::json;
     json jsonStats;
     file_reader >> jsonStats;
-    #ifdef FUNC_RECORD
+    #ifdef FUNC_DEBUG
       // reconstruct our arg record if it was ever saved to jsonStats
       try{
         mp_recorder =
@@ -108,7 +109,7 @@ public:
   {
     // check if x is in the range of the table
     if(x < m_minArg || m_maxArg < x){
-      #ifdef FUNC_RECORD
+      #ifdef FUNC_DEBUG
         mp_recorder->record_arg(x);
       #endif
       return m_func(x);
@@ -120,7 +121,7 @@ public:
   {
     out << "FailureProof" << m_name << " " << m_minArg << " " << m_maxArg << " "
         << mp_LUT->step_size() << " " << mp_LUT->num_intervals() << " ";
-  #ifdef FUNC_RECORD
+  #ifdef FUNC_DEBUG
     out << std::endl;
     mp_recorder->print_details(out);
   #endif
@@ -136,7 +137,7 @@ public:
     jsonStats["name"] = m_name;
     jsonStats["minArg"] = m_minArg;
     jsonStats["maxArg"] = m_maxArg;
-    #ifdef FUNC_RECORD
+    #ifdef FUNC_DEBUG
       // have our ArgumentRecord add it's own data
       mp_recorder->print_details_json(jsonStats);
     #endif

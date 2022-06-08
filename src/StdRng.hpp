@@ -21,8 +21,8 @@
  */
 #pragma once
 #include "RngInterface.hpp"
-#include <iostream>
 #include <random>
+#include <memory>
 
 template <typename POINT_TYPE,
          class DIST_TYPE = std::uniform_real_distribution<POINT_TYPE>,
@@ -31,16 +31,19 @@ class StdRng : public RngInterface<POINT_TYPE>
 {
   std::unique_ptr<DIST_TYPE> mp_distribution;
   std::unique_ptr<RNG_TYPE>  mp_generator;
-  unsigned int m_seed;
+  unsigned int m_seed = 1;
 
   public:
-    // create a new StdRng based on the pointer to probability distribution passed in
-    StdRng(DIST_TYPE *dist) : mp_distribution(std::move(dist)){}
+    // Take ownership of the pointer to probability distribution passed in
+    StdRng(std::unique_ptr<DIST_TYPE> dist) : mp_distribution(std::move(dist))
+  {
+    init(m_seed); // initialize the seed & generator to 1
+  }
 
-    // create a new StdRng based on the pointer to probability distribution passed in
+    // create a new StdRng based on the template type and its parameters
     template <typename ... DIST_TYPE_ARGS>
     StdRng(DIST_TYPE_ARGS ... args) :
-      mp_distribution(std::unique_ptr<DIST_TYPE>(new DIST_TYPE(args ...))){}
+      StdRng(std::unique_ptr<DIST_TYPE>(new DIST_TYPE(args ...))){}
 
     // set the seed and generator of the distribution
     void init(unsigned int seed)

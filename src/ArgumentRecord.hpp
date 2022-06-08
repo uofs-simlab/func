@@ -5,13 +5,11 @@
   usage of a function's domain.
 
   Notes:
-  - Currently, this class doesn't end up in the current version 
-  of FunC unless the -DFUNC_RECORD flag is specified at compile time.
-  See DirectEvaluation for example usage.
-  - Designed assuming it will be a private member var so some functions
-  won't do everything on their own
-  *specifically print_details_json assumes the encapsulating 
-  class will do most of the work for it*
+  - Currently, this class is only used in the current version 
+  of FunC if the -DFUNC_DEBUG flag is specified at compile time.
+  - Argument recording is threadsafe
+  - See DirectEvaluation.hpp and FailureProofTable.hpp for example usage.
+  - This is designed to be a private member variable of some class
 */
 #pragma once
 #include <string> // to_string()
@@ -118,7 +116,11 @@ class ArgumentRecord
       m_min_recorded = std::numeric_limits<IN_TYPE>::max();
     }
 
+#ifdef FUNC_DEBUG
+    ~ArgumentRecord(){print_details(std::cerr);}
+#else
     ~ArgumentRecord(){}
+#endif
 
     /* Rebuild our argument record
        Note: Assuming the encapsulating
@@ -180,67 +182,60 @@ class ArgumentRecord
     }
 
     // make a string representation of the histogram
-    std::string to_string();
+    std::string to_string()
+    {
+      // avoid division by zero by printing nothing if the histogram is empty
+      if(mv_histogram[m_peak_index]==0)
+        return "";
+      
+      // print out the histogram horizontally such that
+      // 1. the longest row is 15 stars wide
+      // 2. If a bucket recorded _any_ args then it gets at least 1 star
+      std::string hist_str;
+      hist_str=std::to_string(m_minArg)+'\n';
+      for(unsigned int i=0; i<m_histSize; i++){
+        for(unsigned int j=0; j<(unsigned int)ceil(15*mv_histogram[i]/mv_histogram[m_peak_index]); j++)
+          hist_str=hist_str+'*';
+        hist_str=hist_str+'\n';
+      }
+      hist_str=hist_str+std::to_string(m_maxArg);
+      return hist_str;
+    }
 
-    // print out the various fields in this class
-    void print_details(std::ostream& out);
+    // human readable output of the histogram and other statistics
+    void print_details(std::ostream& out)
+    {
+      unsigned int total_recorded = 0;
+      for(unsigned int i=0; i<m_histSize; i++)
+        total_recorded += mv_histogram[i];
 
-    // add to the provided json object
+      out << "histogram: \n";
+      out << this->to_string() << "\n";
+      out << m_num_out_of_bounds + total_recorded << " total args were sampled. Of those, "
+          << total_recorded << " were recorded by the histogram.\n";
+      out << "Recorded args were sampled the most often from the subinterval "
+          << "["
+          << m_minArg + (m_maxArg - m_minArg)*m_peak_index/(IN_TYPE)m_histSize << ", "
+          << m_minArg + (m_maxArg - m_minArg)*(m_peak_index+1)/(IN_TYPE)m_histSize << ") "
+          << "with " << mv_histogram[m_peak_index] << " evaluations.\n";
+      out << "The largest argument seen was x=" << m_max_recorded << "\n";
+      out << "The lowest argument seen was x=" << m_min_recorded << std::endl;
+    }
+
+    // print each field in this class to the given ostream
     void print_details_json(nlohmann::json& jsonStats);
+    {
+      jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
+      jsonStats["ArgumentRecord"]["minArg"] = m_minArg;
+      jsonStats["ArgumentRecord"]["maxArg"] = m_maxArg;
+      jsonStats["ArgumentRecord"]["histogramSize"] = m_histSize;
+      for(unsigned int i=0; i<m_histSize; i++)
+        jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)]=mv_histogram[i];
+      jsonStats["ArgumentRecord"]["peak_index"] = m_peak_index;
+      jsonStats["ArgumentRecord"]["m_min_recorded"] = m_min_recorded;
+      jsonStats["ArgumentRecord"]["m_max_recorded"] = m_max_recorded;
+      
+      // insert more statistics here
+    }
 };
 
-/* Implementations of functions that print to the console */
-template <typename IN_TYPE>
-inline std::string ArgumentRecord<IN_TYPE>::to_string()
-{
-  // avoid division by zero by printing nothing if the histogram is empty
-  if(mv_histogram[m_peak_index]==0)
-    return "";
-  
-  // print out the histogram horizontally such that the longest row is 15 stars wide
-  std::string hist_str;
-  hist_str=std::to_string(m_minArg)+'\n';
-  for(unsigned int i=0; i<m_histSize; i++){
-    for(unsigned int j=0; j<(unsigned int)(15*mv_histogram[i]/mv_histogram[m_peak_index]); j++)
-      hist_str=hist_str+'*';
-    hist_str=hist_str+'\n';
-  }
-  hist_str=hist_str+std::to_string(m_maxArg);
-  return hist_str;
-}
-
-template <typename IN_TYPE>
-inline void ArgumentRecord<IN_TYPE>::print_details_json(nlohmann::json& jsonStats)
-{
-  jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
-  jsonStats["ArgumentRecord"]["minArg"] = m_minArg;
-  jsonStats["ArgumentRecord"]["maxArg"] = m_maxArg;
-  jsonStats["ArgumentRecord"]["histogramSize"] = m_histSize;
-  for(unsigned int i=0; i<m_histSize; i++)
-    jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)]=mv_histogram[i];
-  jsonStats["ArgumentRecord"]["peak_index"] = m_peak_index;
-  jsonStats["ArgumentRecord"]["m_min_recorded"] = m_min_recorded;
-  jsonStats["ArgumentRecord"]["m_max_recorded"] = m_max_recorded;
-  
-  // insert more statistics here
-}
-
-template <typename IN_TYPE>
-inline void ArgumentRecord<IN_TYPE>::print_details(std::ostream& out)
-{
-  unsigned int total_recorded = 0;
-  for(unsigned int i=0; i<m_histSize; i++)
-    total_recorded += mv_histogram[i];
-
-  out << "histogram: \n";
-  out << this->to_string() << "\n";
-  out << m_num_out_of_bounds + total_recorded << " total args were sampled. Of those, "
-      << total_recorded << " were recorded by the histogram.\n";
-  out << "Recorded args were sampled the most often from the subinterval"
-      << "["
-      << m_minArg + (m_maxArg - m_minArg)*m_peak_index/(IN_TYPE)m_histSize << ", "
-      << m_minArg + (m_maxArg - m_minArg)*(m_peak_index+1)/(IN_TYPE)m_histSize << ") "
-      << "with " << mv_histogram[m_peak_index] << " evaluations.\n";
-  out << "The largest argument recorded was x=" << m_max_recorded << "\n";
-  out << "The lowest argument recorded was x=" << m_min_recorded << std::endl;
-}
