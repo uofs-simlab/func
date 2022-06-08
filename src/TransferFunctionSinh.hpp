@@ -32,7 +32,6 @@ Notes:
 #include <array> // std::array
 #include <utility> // std::pair
 
-//#include "TransferFunctionInterface.hpp" // TODO remove this interface if possible
 #include "FunctionContainer.hpp"
 
 #ifdef FUNC_USE_BOOST
@@ -153,7 +152,6 @@ public:
   {
     // This will have at least 0.6*std::numeric_limits<IN_TYPE>::digits digits of accuracy
     boost::uintmax_t maxit = 55;
-    std::cout << m_minArg << " is less than " << m_tableMaxArg << std::endl;
     return boost::math::tools::newton_raphson_iterate(
         [this,x](const IN_TYPE z){ return std::make_tuple(g_inv(z) - (x-m_minArg)/m_stepSize, g_inv_prime(z));},
         x,m_minArg, m_tableMaxArg, 0.6*std::numeric_limits<IN_TYPE>::digits, maxit);
