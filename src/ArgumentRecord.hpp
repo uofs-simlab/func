@@ -209,6 +209,12 @@ class ArgumentRecord
       for(unsigned int i=0; i<m_histSize; i++)
         total_recorded += mv_histogram[i];
 
+      if(m_num_out_of_bounds + total_recorded == 0){
+        out << "No arguments were recorded by arg record" << "\n";
+        return;
+      }
+
+
       out << "histogram: \n";
       out << this->to_string() << "\n";
       out << m_num_out_of_bounds + total_recorded << " total args were sampled. Of those, "
@@ -223,7 +229,7 @@ class ArgumentRecord
     }
 
     // print each field in this class to the given ostream
-    void print_details_json(nlohmann::json& jsonStats);
+    void print_details_json(nlohmann::json& jsonStats)
     {
       jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
       jsonStats["ArgumentRecord"]["minArg"] = m_minArg;

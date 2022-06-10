@@ -87,8 +87,8 @@ public:
     // check that the names match
     m_name = jsonStats["name"].get<std::string>();
     if(m_name != tablename)
-      throw std::invalid_argument("Error while reading " + filename +
-          ": Cannot build a " + m_name + " from a " + tablename);
+      throw std::invalid_argument("Error while building " + tablename + " : " + filename +
+          " contains data for building a " + m_name + " which is not compatible");
 
     m_table.reset(new polynomial<TOUT,N>[m_numTableEntries]);
     for(unsigned int i=0; i<m_numTableEntries; i++)

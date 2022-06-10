@@ -394,6 +394,7 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   std::pair<IN_TYPE, IN_TYPE> r = toms748_solve(g, 0.0, m_max-m_min, -desiredTolerance, fmax_step-desiredTolerance, tol, it);
 
   /* Save and return the implementation with the desired stepSize */
+  par.stepSize = r.first;
   auto lut = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
   if(filename != ""){
     std::ofstream out_file(filename);

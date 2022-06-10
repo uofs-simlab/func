@@ -80,7 +80,7 @@ public:
   {
     #ifdef FUNC_DEBUG
       mp_recorder->record_arg(x);
-      return m_func(x)*(((TOUT) 1) + m_tol*mp_sampler->get_point());
+      return m_func(x)*(((TOUT) 1) + m_tol*mp_sampler.get_point());
     #endif
     return m_func(x);
   }

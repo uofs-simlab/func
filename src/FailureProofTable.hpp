@@ -79,7 +79,7 @@ public:
     (void) histSize;
   }
 
-  /* Build our own LUT_TYPE */
+  /* Build our own LUT_TYPE. Only works if the template is specific enough */
   FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
       LookupTableParameters<IN_TYPE> par,
       IN_TYPE histMin = 1, IN_TYPE histMax = 0, unsigned int histSize = 10) :
