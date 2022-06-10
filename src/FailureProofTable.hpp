@@ -29,6 +29,7 @@
 #include "EvaluationImplementation.hpp"
 #include "FunctionContainer.hpp"
 #include "LookupTable.hpp"
+#include "LookupTableGenerator.hpp" // generate_by_filename
 #include "json.hpp"
 #include <memory> // unique_ptr
 #include <fstream> //ifstream
@@ -85,15 +86,12 @@ public:
     FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,par)), histMin, histMax, histSize) {}
 
   /* Build our own LUT_TYPE from a file */
-  FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, std::string filename,
-      IN_TYPE histMin = 1, IN_TYPE histMax = 0, unsigned int histSize = 10
-      ) :
-    FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,filename)), histMin, histMax, histSize)
+  FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, std::string filename) :
+    FailureProofTable(LookupTableGenerator<IN_TYPE,OUT_TYPE>(fc,1,0).generate_by_file(filename))
   {
-    std::ifstream file_reader(filename);
-    using nlohmann::json;
-    json jsonStats;
-    file_reader >> jsonStats;
+    nlohmann::json jsonStats;
+    std::ifstream(filename) >> jsonStats;
+
     #ifdef FUNC_DEBUG
       // reconstruct our arg record if it was ever saved to jsonStats
       try{
@@ -130,8 +128,7 @@ public:
   // TODO test
   void print_details_json(std::ostream &out) override
   {
-    using nlohmann::json;
-    json jsonStats;
+    nlohmann::json jsonStats;
 
     jsonStats["_comment"] = "FunC FailureProofTable data";
     jsonStats["name"] = m_name;

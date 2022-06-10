@@ -5,8 +5,12 @@
   - tolerance
   - memory size limit
   - filename
+  If gen_by_XXX is given a filename then on the first run, a table will be
+  generated from scratch and saved to filename. Subsequent runs will use the table
+  in filename instead of generating a table again.
+  TODO where does that file appear and do we like that?
 
-  Users may only build tables by a filename if Boost is not available.
+  If Boost is not available then users can only build tables by file.
 
   Also equipped to
   - compute table error estimates at a given stepsize
@@ -51,6 +55,11 @@ private:
   /* Nested functor for optimal grid spacing determination */
   struct OptimalStepSizeFunctor;
 
+  /* check if filename exists or if the user can access it */
+  bool file_exists(std::string filename){
+    return static_cast<bool>(std::ifstream(filename));
+  }
+
 public:
   /* set member variables */
   LookupTableGenerator(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
@@ -59,32 +68,52 @@ public:
 
   ~LookupTableGenerator(){}
 
+  /* A wrapper for the LookupTableFactory<std::string> which builds tables from a file
+   * tableKey arg only exists as a sanity check (it's pointless otherwise) */
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string filename, std::string tableKey = "")
+  {
+    // get the tableKey from filename
+    if(tableKey == ""){
+      nlohmann::json jsonStats;
+      std::ifstream(filename) >> jsonStats;
+
+      tableKey = jsonStats["name"].get<std::string>();
+    }
+    // MetaTable will check that tableKey actually matches the name in filename!
+    return LookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
+  }
+
   /* A wrapper for the LookupTableFactory */
-  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, IN_TYPE stepSize)
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, IN_TYPE stepSize, std::string filename = "")
   {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by step without Boost");
 #else
+    if(filename != "" && file_exists(filename))
+      return generate_by_file(filename, tableKey);
+
+    if(stepSize <= 0)
+      throw std::invalid_argument("LUT stepSize must be positive!");
+
     LookupTableParameters<IN_TYPE> par;
     par.minArg = m_min; 
     par.maxArg = m_max; 
     par.stepSize = stepSize;
-    return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+
+    auto lut = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+    if(filename != ""){
+      std::ofstream out_file(filename);
+      lut->print_details_json(out_file);
+    }
+    return lut;
 #endif
   }
 
-  /* A wrapper for the LookupTableFactory templated on a string that can build tables from a file */
-  // TODO remove table key argument
-  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string tableKey, std::string filename)
-  {
-    return LookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
-  }
-
   /* Generate a table that is accurate to desiredTolerance */
-  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_tol(std::string tableKey, double desiredTolerance);
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_tol(std::string tableKey, double desiredTolerance, std::string filename = "");
 
   /* Generate a table takes up desiredSize bytes */
-  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize);
+  std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize, std::string filename = "");
 
   /* Return the approx error in tableKey at stepSize */
   double error_at_step_size(std::string tableKey, IN_TYPE stepSize);
@@ -188,11 +217,14 @@ private:
 
 template <typename IN_TYPE, typename OUT_TYPE>
 inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_impl_size(
-    std::string tableKey, unsigned long desiredSize)
+    std::string tableKey, unsigned long desiredSize, std::string filename)
 {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by impl size without Boost");
 #else
+  if(filename != "" && file_exists(filename))
+    return generate_by_file(filename, tableKey);
+
   /* Use 2 query points to get relationship */
   const unsigned long N1  = 2;
   const double step1 = (m_max-m_min)/N1;
@@ -225,16 +257,24 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
      (assuming linear relationship of num_intervals to size */
   par1.stepSize = 1.0/((double)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
 
-  return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
+  auto lut = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
+  if(filename != ""){
+    std::ofstream out_file(filename);
+    lut->print_details_json(out_file);
+  }
+  return lut;
 #endif
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>
-inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_tol(std::string tableKey, double desiredTolerance)
+inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_tol(std::string tableKey, double desiredTolerance, std::string filename)
 {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by tol without Boost");
 #else
+  if(filename != "" && file_exists(filename))
+    return generate_by_file(filename, tableKey);
+
   LookupTableParameters<IN_TYPE> par;
   par.minArg = m_min;
   par.maxArg = m_max;
@@ -247,11 +287,19 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
 
   /* quit now if this table is amazing already. Useful for high order tables on small intervals
    * where toms748 tries to use a stepsize larger than the table range */
-  auto gmax_step = f(m_max-m_min) - desiredTolerance;
-  if(gmax_step <= 0.0)
+  auto fmax_step = f(m_max-m_min);
+  if(fmax_step <= desiredTolerance){
+#ifdef FUNC_DEBUG
+    std::cerr << "generate_by_tol built " << tableKey << " with a max error of " << fmax_step << " which satisfies tol=" << desiredTolerance << "\n";
+#endif
+    if(filename != ""){
+      std::ofstream out_file(filename);
+      impl->print_details_json(out_file);
+    }
     return impl;
+  }
 
-  IN_TYPE stepSize = (m_max-m_min)/1000.0; // a passable initial guess
+  IN_TYPE stepSize = (m_max-m_min)/1000.0; // initial guess stepsize. Probably too small for most high order tables
   const int order  = impl->order();
 
   const double logTol = log(desiredTolerance);
@@ -330,7 +378,7 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
                                // allow for inaccuracy in f(x), otherwise the last few iterations
                                // just thrash around.
   eps_tolerance<double> tol(get_digits); // Set the tolerance.
-  OptimalStepSizeFunctor g(*this,tableKey,desiredTolerance); // functor for solving log(E(h)/TOL) = 0
+  OptimalStepSizeFunctor g(*this,tableKey,desiredTolerance); // functor for solving log(E(h)/TOL) = 0. g = f-desiredTolerance
 
   /*
     Run the bracket and solve algorithm
@@ -340,15 +388,18 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
     so we can't just use bracket_and_solve_root
   */
   //std::pair<IN_TYPE, IN_TYPE> r = bracket_and_solve_root(g, stepSize, factor, is_rising, tol, it);
-  //g(m_max-m_min) - desiredTolerance > 0 otherwise we would've quit at the start of this function
-  
-  std::pair<IN_TYPE, IN_TYPE> r = toms748_solve(g, 0.0, m_max-m_min, -desiredTolerance, gmax_step, tol, it);
 
-  /* Finally, return the implementation with the desired stepSize */
-  // TODO do we want to ensure that (max-min)/stepSize is an integer?
-  if(r.first < m_max-m_min)
-    par.stepSize = r.first;
-  return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
+  /* f(m_max-m_min) - desiredTolerance > 0 otherwise we would've quit at the start of this function 
+   * TODO do we want to ensure that (max-min)/stepSize is an integer? */
+  std::pair<IN_TYPE, IN_TYPE> r = toms748_solve(g, 0.0, m_max-m_min, -desiredTolerance, fmax_step-desiredTolerance, tol, it);
+
+  /* Save and return the implementation with the desired stepSize */
+  auto lut = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
+  if(filename != ""){
+    std::ofstream out_file(filename);
+    lut->print_details_json(out_file);
+  }
+  return lut;
 #endif
 }
 
