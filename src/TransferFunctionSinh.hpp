@@ -150,11 +150,11 @@ public:
    * and we subtracted by m_minArg */
   IN_TYPE g(IN_TYPE x)
   {
-    // This will have at least 0.6*std::numeric_limits<IN_TYPE>::digits digits of accuracy
+    // This will have at least 0.9*std::numeric_limits<IN_TYPE>::digits digits of accuracy
     boost::uintmax_t maxit = 55;
     return boost::math::tools::newton_raphson_iterate(
         [this,x](const IN_TYPE z){ return std::make_tuple(g_inv(z) - (x-m_minArg)/m_stepSize, g_inv_prime(z));},
-        x,m_minArg, m_tableMaxArg, 0.6*std::numeric_limits<IN_TYPE>::digits, maxit);
+        x,m_minArg, m_tableMaxArg, 0.9*std::numeric_limits<IN_TYPE>::digits, maxit);
   }
 
   // public access to private vars

@@ -81,10 +81,8 @@ public:
     LookupTable<TIN,TOUT>(func_container, filename),
     m_transferFunction(TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize))
   {
-    std::ifstream file_reader(filename);
-    using nlohmann::json;
-    json jsonStats;
-    file_reader >> jsonStats;
+    nlohmann::json jsonStats;
+    std::ifstream(filename) >> jsonStats;
 
     // check that the names match
     m_name = jsonStats["name"].get<std::string>();
@@ -100,8 +98,6 @@ public:
     // rebuild the transfer function
     std::array<TIN,4> inv_coefs = jsonStats["transfer_function_coefs"].get<std::array<TIN,4>>();
     m_transferFunction = TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize,inv_coefs);
-    //for(unsigned int i=0; i<4; i++)
-    //  inv_coefs[i] = jsonStats["inv_coefs"][std::to_string(i)].get<TOUT>();
   }
 
   /* Provide the most common hash types. The compiler should simplify this when templates are specialized */

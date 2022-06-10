@@ -81,6 +81,8 @@ protected:
 
 public:
 
+  /* Generate a LUT from func_container.
+   * TODO How helpful is the error message if func_container == nullptr? */
   LookupTable(FunctionContainer<TIN,TOUT> *func_container,
       LookupTableParameters<TIN> par) :
     EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "lookup_table")
@@ -103,21 +105,19 @@ public:
     m_tableMaxArg = m_maxArg;
     if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
-    m_grid.reset(new TIN[m_numIntervals]); // TODO maybe only initialize if grid is nonuniform?
+    m_grid.reset(new TIN[m_numIntervals]); // TODO maybe only initialize if grid is nonuniform? This is probably optimized out anyways...
+
+    if(func_container->standard_func == nullptr)
+      throw std::invalid_argument("function not defined in given FunctionContainer");
   }
 
   /* Set every generic member variable from a json file */
-  LookupTable(FunctionContainer<TIN,TOUT> *func_container,
-      std::string filename) :
-    EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "lookup_table")
+  LookupTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
+    EvaluationImplementation<TIN,TOUT>(func_container == nullptr ? nullptr : func_container->standard_func, "lookup_table")
   {
-    // Assuming we're still using the same function container as before
-    // We'll end up making 2 jsonStats objects because the MetaTable needs
-    // to check the table name and construct m_table. Not a big deal
-    std::ifstream file_reader(filename);
-    using nlohmann::json;
-    json jsonStats;
-    file_reader >> jsonStats;
+    // func_container is unused here and could just be nullptr...
+    nlohmann::json jsonStats;
+    std::ifstream(filename) >> jsonStats;
 
     // name checking happens in MetaTable
     m_minArg = jsonStats["minArg"].get<TIN>();
@@ -164,8 +164,7 @@ public:
     // TODO if FunC gets a namespace we should consider renaming our json
     // functions to to_json() and from_json() functions as seen here
     // https://github.com/nlohmann/json
-    using nlohmann::json;
-    json jsonStats;
+    nlohmann::json jsonStats;
 
     jsonStats["_comment"] = "FunC lookup table data";
     jsonStats["name"] = m_name;
@@ -233,9 +232,20 @@ public:
     if(it != get_registry().end())
       instance = it->second(fc, args);
 
+    // try to help the user out if this lookup went poorly!
+    if(instance == nullptr){
+      std::string error_string = name + " not found in registry. ";
+      // TODO check for any trivial typos and say what the typo is!!!
+      // check if there were any linking problems
+      if(get_registry().empty()){
+        error_string += "FunC can't access a lookup table registry with the requested type combination. Either libfunc.so was not properly linked or FunC must be recompiled with knowledge of "
+          + std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " (where these typenames are likely mangled).";
+      }
+      
+      throw std::invalid_argument(error_string);
+    }
+
     // wrap instance in a unique ptr and return (if created)
-    if(instance == nullptr)
-      throw std::invalid_argument(name + " not found in registry.");
     return std::unique_ptr<LookupTable<TIN,TOUT>>(instance);
   }
 

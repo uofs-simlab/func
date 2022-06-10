@@ -42,7 +42,7 @@ public:
 
   // Every class inheriting from this one use a FunctionContainer as 
   // their first arg (aside from UniformFailureProofTable).
-  EvaluationImplementation(std::function<OUT_TYPE(IN_TYPE)> func = NULL, std::string name = "") :
+  EvaluationImplementation(std::function<OUT_TYPE(IN_TYPE)> func = nullptr, std::string name = "") :
     m_name(name), m_func(func), m_minArg(0), m_maxArg(0) {}
 
   virtual ~EvaluationImplementation(){};

@@ -63,10 +63,8 @@ public:
   DirectEvaluation(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
     EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "DirectEvaluation")
   {
-    std::ifstream file_reader(filename);
-    using nlohmann::json;
-    json jsonStats;
-    file_reader >> jsonStats;
+    nlohmann::json jsonStats;
+    std::ifstream(filename) >> jsonStats;
     m_name = jsonStats["name"].get<std::string>();
     m_minArg = jsonStats["minArg"].get<TIN>();
     m_maxArg = jsonStats["maxArg"].get<TIN>();
@@ -106,8 +104,7 @@ inline void DirectEvaluation<TIN,TOUT>::print_details(std::ostream& out)
 template <typename TIN, typename TOUT>
 inline void DirectEvaluation<TIN,TOUT>::print_details_json(std::ostream& out)
 {
-  using nlohmann::json;
-  json jsonStats;
+  nlohmann::json jsonStats;
 
   jsonStats["_comment"] = "FunC DirectEvaluation data";
   jsonStats["name"] = m_name;

@@ -86,7 +86,7 @@ private:
     - By default uses a std::uniform_real_distribution<IN_TYPE>
       with the std::mt19937 variant of the std::mersenne_twister_engine
   */
-  std::shared_ptr<RngInterface<IN_TYPE>> mp_sampler;
+  std::unique_ptr<RngInterface<IN_TYPE>> mp_sampler;
   std::unique_ptr<IN_TYPE[]>             mp_randomEvaluations;
   int                                    m_nEvals;
 
@@ -118,7 +118,7 @@ private:
 public:
 
   ImplementationComparator(ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals = 100000,
-      unsigned int seed = 2017, RngInterface<IN_TYPE> *inRng = NULL);
+      unsigned int seed = 2017, std::unique_ptr<RngInterface<IN_TYPE>> inRng = nullptr);
   ~ImplementationComparator(){}
 
   /* Run timings with different set of random arguments */
@@ -169,8 +169,8 @@ public:
 /* Constructor's implementation */
 template <typename IN_TYPE, typename OUT_TYPE>
 inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
-    ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals, unsigned int seed, RngInterface<IN_TYPE> *inRng) :
-  m_implementations(std::move(inImpl)), m_nEvals(nEvals), mp_sampler(inRng)
+    ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals, unsigned int seed, std::unique_ptr<RngInterface<IN_TYPE>> inRng) :
+  m_implementations(std::move(inImpl)), m_nEvals(nEvals), mp_sampler(std::move(inRng))
 {
   /*
      Allocate enough timer containers
@@ -206,8 +206,8 @@ inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
     If an RngInterface was not provided, set mp_sampler to a uniform real
     distribution on the table's endpoints 
   */
-  if(mp_sampler == NULL)
-    mp_sampler = std::shared_ptr<StdRng<IN_TYPE>>(new StdRng<IN_TYPE>(m_minArg, m_maxArg));
+  if(mp_sampler == nullptr)
+    mp_sampler = std::unique_ptr<StdRng<IN_TYPE>>(new StdRng<IN_TYPE>(m_minArg, m_maxArg));
   mp_sampler->init(seed);
   mp_randomEvaluations = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[m_nEvals]);
 }
@@ -237,8 +237,7 @@ template <typename IN_TYPE, typename OUT_TYPE>
 inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_statistics_json(std::ostream &out)
 {
   /* add implementations to vector */
-  using nlohmann::json;
-  json jsonStats;
+  nlohmann::json jsonStats;
 
   jsonStats["_comment"] = "Timing data for implementations.";
   jsonStats["nEvals"] = m_nEvals;

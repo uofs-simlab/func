@@ -42,7 +42,7 @@ public:
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
-    if(func_container->autodiff3_func == NULL)
+    if(func_container->autodiff3_func == nullptr)
       throw std::invalid_argument("CubicTaylorTable needs the 3rd derivative but this is not defined");
 
     mp_boost_func = func_container->autodiff3_func;

@@ -54,7 +54,7 @@ public:
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
-    if(func_container->template get_nth_func<M+N>() == NULL)
+    if(func_container->template get_nth_func<M+N>() == nullptr)
       throw std::invalid_argument("PadeTable<"+std::to_string(M)+","+std::to_string(N)+
           "> needs the "+std::to_string(N+M)+"th derivative but this is not defined");
     mp_boost_func = func_container->template get_nth_func<M+N>();
@@ -79,7 +79,7 @@ public:
 
       // find the coefficients of Q.
       arma::mat Q = arma::null(T.rows(M+1, M+N));
-      if(Q.n_rows > 1)
+      if(Q.n_elem != N+1)
         throw std::range_error(m_name + " is too poorly conditioned");
 
       // scale Q such that its first entry equals 1.
