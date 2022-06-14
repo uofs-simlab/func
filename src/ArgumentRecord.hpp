@@ -5,7 +5,7 @@
   usage of a function's domain.
 
   Notes:
-  - Currently, this class is only used in the current version 
+  - This class is only used in the current version 
   of FunC if the -DFUNC_DEBUG flag is specified at compile time.
   - Argument recording is threadsafe
   - See DirectEvaluation.hpp and FailureProofTable.hpp for example usage.
@@ -19,8 +19,8 @@
 #include "json.hpp"
 
 /* TODO 
-   Since the histogram will never have that many buckets,
-   I think we could get away with just making every one of
+   The histogram will never have that many buckets so 
+   we could likely get away with just making every one of
    this class's member variables threadprivate. */
 
 // can change FuncMutex if we decide to use std::mutex in
@@ -181,6 +181,11 @@ class ArgumentRecord
       // record more statistics here
     }
 
+    std::string ith_interval(unsigned int i){
+      return "[" + std::to_string(m_minArg + (m_maxArg - m_minArg)*i/(IN_TYPE)m_histSize) + ", "
+          + std::to_string(m_minArg + (m_maxArg - m_minArg)*(i+1)/(IN_TYPE)m_histSize) + ")";
+    }
+
     // make a string representation of the histogram
     std::string to_string()
     {
@@ -196,7 +201,7 @@ class ArgumentRecord
       for(unsigned int i=0; i<m_histSize; i++){
         for(unsigned int j=0; j<(unsigned int)ceil(15*mv_histogram[i]/mv_histogram[m_peak_index]); j++)
           hist_str=hist_str+'*';
-        hist_str=hist_str+'\n';
+        hist_str=hist_str + ith_interval(i) + " with " + mv_histogram[i] + " evaluations.\n";
       }
       hist_str=hist_str+std::to_string(m_maxArg);
       return hist_str;
@@ -214,16 +219,15 @@ class ArgumentRecord
         return;
       }
 
+      unsigned int complete_total = m_num_out_of_bounds + total_recorded;
 
       out << "histogram: \n";
       out << this->to_string() << "\n";
-      out << m_num_out_of_bounds + total_recorded << " total args were sampled. Of those, "
+      out << complete_total << " total args were sampled. Of those, "
           << total_recorded << " were recorded by the histogram.\n";
       out << "Recorded args were sampled the most often from the subinterval "
-          << "["
-          << m_minArg + (m_maxArg - m_minArg)*m_peak_index/(IN_TYPE)m_histSize << ", "
-          << m_minArg + (m_maxArg - m_minArg)*(m_peak_index+1)/(IN_TYPE)m_histSize << ") "
-          << "with " << mv_histogram[m_peak_index] << " evaluations.\n";
+          << ith_interval(m_peak_index) << " with " << mv_histogram[m_peak_index] << " evaluations ("
+          << mv_histogram[m_peak_index]/((double) complete_total) << "\% of the total evaluations).\n";
       out << "The largest argument seen was x=" << m_max_recorded << "\n";
       out << "The lowest argument seen was x=" << m_min_recorded << std::endl;
     }
