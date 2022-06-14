@@ -63,13 +63,11 @@ table_types/ArmadilloPrecomputedInterpolationTable.hpp;\
 table_types/ConstantTaylorTable.hpp;\
 table_types/CubicHermiteTable.hpp;\
 table_types/CubicPrecomputedInterpolationTable.hpp;\
-table_types/CubicTaylorTable.hpp;\
+table_types/TaylorTable.hpp;\
 table_types/LinearInterpolationTable.hpp;\
 table_types/LinearPrecomputedInterpolationTable.hpp;\
-table_types/LinearTaylorTable.hpp;\
 table_types/PadeTable.hpp;\
 table_types/QuadraticPrecomputedInterpolationTable.hpp;\
-table_types/QuadraticTaylorTable.hpp;\
 ")
 
 install(TARGETS func

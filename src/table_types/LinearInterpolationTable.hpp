@@ -15,18 +15,18 @@
 #include "MetaTable.hpp"
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
-class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,HORNER,GT>
+class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,1,HORNER,GT);
+  INHERIT_META(TIN,TOUT,1,GT);
 
   FUNC_REGISTER_LUT(LinearInterpolationTable);
  
 public:
   //#pragma omp declare simd
   LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,1,HORNER,GT>(func_container, par)
+    MetaTable<TIN,TOUT,1,GT>(func_container, par)
   {
     /* Base class variables */
     m_name  = grid_type_to_string<GT>() + "LinearInterpolationTable";
@@ -51,10 +51,10 @@ public:
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
   LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,1,HORNER,GT>(func_container, filename,
+    MetaTable<TIN,TOUT,1,GT>(func_container, filename,
         grid_type_to_string<GT>() + "LinearInterpolationTable") {}
 
-  // operator() is slightly different from MetaTable's HORNER method
+  // operator() is slightly different from MetaTable's provided Horner's method
   TOUT operator()(TIN x) override
   {
     //enum GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};

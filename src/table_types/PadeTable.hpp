@@ -25,15 +25,15 @@
 #include <stdexcept>
 #include <cmath> //isinfite
 
-static double const fact[] = {1,1,2,6,24,120,720,5040};
-
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
-class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>
+class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,M+N+1,TAYLOR,GT);
+  INHERIT_META(TIN,TOUT,M+N+1,GT);
   FUNC_REGISTER_LUT(PadeTable);
+
+  static TOUT constexpr fact[] = {1,1,2,6,24,120,720,5040};
 
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> mp_boost_func;
@@ -41,7 +41,7 @@ class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>
 
 public:
   PadeTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>(func_container, par)
+    MetaTable<TIN,TOUT,M+N+1,GT>(func_container, par)
   {
 #if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
     static_assert(sizeof(TIN)!=sizeof(TIN), "Pade tables need both Armadillo and Boost to be generated");
@@ -55,8 +55,7 @@ public:
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
     if(func_container->template get_nth_func<M+N>() == nullptr)
-      throw std::invalid_argument("PadeTable<"+std::to_string(M)+","+std::to_string(N)+
-          "> needs the "+std::to_string(N+M)+"th derivative but this is not defined");
+      throw std::invalid_argument(m_name + " needs the "+std::to_string(N+M)+"th derivative but this is not defined");
     mp_boost_func = func_container->template get_nth_func<M+N>();
 
     /* Allocate and set table */
@@ -161,7 +160,7 @@ public:
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
   PadeTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>(func_container, filename,
+    MetaTable<TIN,TOUT,M+N+1,GT>(func_container, filename,
         grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">") {}
 
   // override operator() from MetaTable so we work with rational functions instead

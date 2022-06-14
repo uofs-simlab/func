@@ -17,16 +17,16 @@
 #include "MetaTable.hpp"
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
-class CubicPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,4,HORNER,GT>
+class CubicPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,4,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,4,HORNER,GT);
+  INHERIT_META(TIN,TOUT,4,GT);
   FUNC_REGISTER_LUT(CubicPrecomputedInterpolationTable);
 
 public:
   CubicPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,4,HORNER,GT>(func_container, par)
+    MetaTable<TIN,TOUT,4,GT>(func_container, par)
   {
     /* Base class default variables */
     m_name = grid_type_to_string<GT>() + "CubicPrecomputedInterpolationTable";
@@ -63,7 +63,7 @@ public:
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
   CubicPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,4,HORNER,GT>(func_container, filename,
+    MetaTable<TIN,TOUT,4,GT>(func_container, filename,
         grid_type_to_string<GT>() + "CubicPrecomputedInterpolationTable") {}
   // operator() comes straight from the MetaTable
 };

@@ -4,9 +4,7 @@
    which can be pieced together based on template parameters.
 
    N = number of coefficients used in underlying piecewise polynomials
-   HORNER: for evaluating piecewise interpolating polynomials
-   TAYLOR: for evaluating Taylor polynomials which are centered at the
-   middle of each subinterval
+   Provided Horner's method which is the most common table evaluation method in FunC
 
    UNIFORM: Distance between each subinterval is always the same so we
    can use a faster hash in exchange for (probably) higher error.
@@ -21,9 +19,9 @@
 #include "LookupTable.hpp"
 #include <array>
 
-#define INHERIT_META(TIN,TOUT,N,HT,GT) \
-  using MetaTable<TIN,TOUT,N,HT,GT>::m_table; \
-  using MetaTable<TIN,TOUT,N,HT,GT>::m_transferFunction
+#define INHERIT_META(TIN,TOUT,N,GT) \
+  using MetaTable<TIN,TOUT,N,GT>::m_table; \
+  using MetaTable<TIN,TOUT,N,GT>::m_transferFunction
 
 /* Parallelization macro.
  * Play around with this to see which OpenMP option for parallelizing a for loop is best
@@ -34,8 +32,7 @@
 // assuming each iteration will take about the same amount of time
 //#pragma omp parallel for schedule(static)
 
-enum HashTypes {HORNER, TAYLOR};
-// TODO figure out if we actually need to assign numbers to this enum
+// TODO do we actually need/want to assign numbers to this enum? Use an enum class instead?
 enum GridTypes {UNIFORM = 0, NONUNIFORM = 1, NONUNIFORM_PSEUDO = 2};
 
 template <GridTypes GT>
@@ -51,7 +48,7 @@ std::string grid_type_to_string() {
   } 
 }
 
-template <typename TIN, typename TOUT, unsigned int N, HashTypes HT, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
 class MetaTable : public LookupTable<TIN,TOUT>
 {
 protected:
@@ -100,59 +97,45 @@ public:
     m_transferFunction = TransferFunctionSinh<TIN>(m_minArg,m_tableMaxArg,m_stepSize,inv_coefs);
   }
 
-  /* Provide the most common hash types. The compiler should simplify this when templates are specialized */
+  /* Provide the most common hash. The compiler should simplify this method when templates are instantiated */
   TOUT operator()(TIN x) override
   {
     TOUT dx;
     unsigned int x0;
-    switch(HT){
-    case TAYLOR:
-      {
-      // nondimensionalized x position
-      dx = (x-m_minArg);
-      TOUT x0r = dx/m_stepSize+0.5;
-      // index of previous table entry
-      x0 = (unsigned) x0r;
-      dx -= x0*m_stepSize; 
-      break;
-      }
-    case HORNER:
-      {
-      switch(GT){
-        case UNIFORM:
-          {
-          // nondimensionalized x position, scaled by step size
-          dx = (TOUT) m_stepSize_inv*(x-m_minArg);
-          // index of previous table entry
-          x0  = (unsigned) dx;
-          // value of table entries around x position
-          dx -= x0;
-          break;
-          }
-        case NONUNIFORM:
-          {
-          // find the subinterval x lives in
-          x0 = m_transferFunction.g_inv(x);
-          // find where x is within that interval
-          TIN h = m_grid[x0+1] - m_grid[x0];
-          dx    = (x - m_grid[x0])/h;
-          break;
-          }
-        case NONUNIFORM_PSEUDO:
-          {
-          // find the subinterval x lives in
-          dx = m_transferFunction.g_inv(x);
-          // just take the fractional part of dx as x's location in this interval
-          x0 = (unsigned) dx;
-          dx -= x0;
-          break;
-          }
+    switch(GT){
+      case UNIFORM:
+        {
+        // nondimensionalized x position, scaled by step size
+        dx  = (TOUT) m_stepSize_inv*(x-m_minArg);
+        // index of previous table entry
+        x0  = (unsigned) dx;
+        // value of table entries around x position
+        dx -= x0;
+        break;
         }
-      }
+      case NONUNIFORM:
+        {
+        // find the subinterval x lives in
+        x0 = m_transferFunction.g_inv(x);
+        // find where x is within that interval
+        TIN h = m_grid[x0+1] - m_grid[x0];
+        dx    = (x - m_grid[x0])/h;
+        break;
+        }
+      case NONUNIFORM_PSEUDO:
+        {
+        // find the subinterval x lives in
+        dx  = m_transferFunction.g_inv(x);
+        // just take the fractional part of dx as x's location in this interval
+        x0  = (unsigned) dx;
+        dx -= x0;
+        break;
+        }
     }
+    
     // general degree horners method, evaluated from the inside out.
     TOUT sum = 0;
-    for (int k=N-1; k>0; k--)
+    for(int k=N-1; k>0; k--)
       sum = dx*(m_table[x0].coefs[k] + sum);
     return m_table[x0].coefs[0]+sum;
   }

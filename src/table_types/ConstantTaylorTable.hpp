@@ -13,19 +13,17 @@
 #include "MetaTable.hpp"
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
-class ConstantTaylorTable final : public MetaTable<TIN,TOUT,1,TAYLOR,GT>
+class ConstantTaylorTable final : public MetaTable<TIN,TOUT,1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,1,TAYLOR,GT);
+  INHERIT_META(TIN,TOUT,1,GT);
 
   FUNC_REGISTER_LUT(ConstantTaylorTable);
 
-  //TOUT get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[0]; (void) j; }
-
 public:
   ConstantTaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,1,TAYLOR,GT>(func_container, par)
+    MetaTable<TIN,TOUT,1,GT>(func_container, par)
   {
     /* Base class default variables */
     m_name = grid_type_to_string<GT>() + "ConstantTaylorTable";
@@ -50,7 +48,7 @@ public:
 
   /* build this table from a file */
   ConstantTaylorTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,1,TAYLOR,GT>(func_container, filename,
+    MetaTable<TIN,TOUT,1,GT>(func_container, filename,
         grid_type_to_string<GT>() + "ConstantTaylorTable") {}
 
   /* Constant interpolation from table point immediately below x */

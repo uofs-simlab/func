@@ -36,18 +36,18 @@
 #endif
 
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
-class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N+1,HORNER,GT>
+class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N+1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,N+1,HORNER,GT);
+  INHERIT_META(TIN,TOUT,N+1,GT);
 
   FUNC_REGISTER_LUT(ArmadilloPrecomputedInterpolationTable);
 
 public:
   ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container,
       LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,N+1,HORNER,GT>(func_container, par)
+    MetaTable<TIN,TOUT,N+1,GT>(func_container, par)
   {
 #ifndef FUNC_USE_ARMADILLO
     static_assert(sizeof(TIN)!=sizeof(TIN), "Armadillo tables need Armadillo to be generated");
@@ -105,7 +105,7 @@ public:
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
   ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,N+1,HORNER,GT>(func_container, filename,
+    MetaTable<TIN,TOUT,N+1,GT>(func_container, filename,
         grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">") {}
   // operator() comes straight from the MetaTable
 };

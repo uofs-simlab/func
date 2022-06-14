@@ -16,11 +16,11 @@
 #include "config.hpp" // FUNC_USE_BOOST
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
-class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,HORNER,GT>
+class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,4,HORNER,GT);
+  INHERIT_META(TIN,TOUT,4,GT);
 
   FUNC_REGISTER_LUT(CubicHermiteTable);
 
@@ -30,7 +30,7 @@ class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,HORNER,GT>
 
 public:
   CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-      MetaTable<TIN,TOUT,4,HORNER,GT>(func_container, par)
+      MetaTable<TIN,TOUT,4,GT>(func_container, par)
   {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate a CubicHermiteTable without Boost version 1.71.0 or newer");
@@ -77,7 +77,7 @@ public:
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
   CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,4,HORNER,GT>(func_container, filename,
+    MetaTable<TIN,TOUT,4,GT>(func_container, filename,
         grid_type_to_string<GT>() + "CubicHermiteTable") {}
   // operator() comes straight from the MetaTable
 

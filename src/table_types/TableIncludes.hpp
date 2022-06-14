@@ -16,9 +16,7 @@
 #include "ArmadilloPrecomputedInterpolationTable.hpp"
 
 // tables using derivatives
-#include "LinearTaylorTable.hpp"
-#include "QuadraticTaylorTable.hpp"
-#include "CubicTaylorTable.hpp"
+#include "TaylorTable.hpp"
 #include "CubicHermiteTable.hpp"
 #include "PadeTable.hpp"
 

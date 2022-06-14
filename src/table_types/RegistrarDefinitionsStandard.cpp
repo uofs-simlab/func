@@ -15,9 +15,7 @@ FUNC_REGISTER_EACH_ULUT_IMPL(UniformCubicPrecomputedInterpolationTable);
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformConstantTaylorTable);
 
 
-#include "LinearTaylorTable.hpp"
-#include "QuadraticTaylorTable.hpp"
-#include "CubicTaylorTable.hpp"
+#include "TaylorTable.hpp"
 #include "CubicHermiteTable.hpp"
 
 FUNC_REGISTER_EACH_ULUT_IMPL(UniformLinearTaylorTable);

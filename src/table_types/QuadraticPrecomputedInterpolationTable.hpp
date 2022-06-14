@@ -15,16 +15,16 @@
 #include "MetaTable.hpp"
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
-class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3,HORNER,GT>
+class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,3,HORNER,GT);
+  INHERIT_META(TIN,TOUT,3,GT);
   FUNC_REGISTER_LUT(QuadraticPrecomputedInterpolationTable);
 
 public:
   QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,3,HORNER,GT>(func_container, par)
+    MetaTable<TIN,TOUT,3,GT>(func_container, par)
   {
     /* Base class default variables */
     m_name = grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable";
@@ -58,7 +58,7 @@ public:
   }
 
   QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,3,HORNER,GT>(func_container, filename,
+    MetaTable<TIN,TOUT,3,GT>(func_container, filename,
         grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable") {}
 };
 
