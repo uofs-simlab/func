@@ -15,7 +15,8 @@
 #include <string> // to_string()
 #include <memory>
 #include <fstream>
-#include <limits> // numeric_limits<IN_TYPE>::max() / min()
+#include <limits> // numeric_limits<IN_TYPE>::max() / lowest()
+#include <cmath> // pow, floor, ceil
 #include "json.hpp"
 
 /* TODO 
@@ -199,13 +200,23 @@ class ArgumentRecord
       std::string hist_str;
       hist_str=std::to_string(m_minArg)+'\n';
       for(unsigned int i=0; i<m_histSize; i++){
-        for(unsigned int j=0; j<(unsigned int)ceil(15*mv_histogram[i]/mv_histogram[m_peak_index]); j++)
+        unsigned int row_length = ceil(15*mv_histogram[i]/mv_histogram[m_peak_index]);
+        for(unsigned int j=0; j<row_length; j++)
           hist_str=hist_str+'*';
-        hist_str=hist_str + ith_interval(i) + " with " + mv_histogram[i] + " evaluations.\n";
+        for(unsigned int j=row_length; j<15; j++)
+          hist_str=hist_str+' ';
+        hist_str=hist_str + " " + ith_interval(i) + " with " + std::to_string(mv_histogram[i]) + " evaluations\n";
       }
       hist_str=hist_str+std::to_string(m_maxArg);
       return hist_str;
     }
+
+    // TODO check if this works well for negative doubles too!!!!
+    double round_n(double x, unsigned int n_digits, bool is_up){
+      double pow10n = pow(10,n_digits);
+      return is_up ? ceil(x * pow10n)/pow10n : floor(x * pow10n)/pow10n;
+    }
+
 
     // human readable output of the histogram and other statistics
     void print_details(std::ostream& out)
@@ -214,12 +225,13 @@ class ArgumentRecord
       for(unsigned int i=0; i<m_histSize; i++)
         total_recorded += mv_histogram[i];
 
-      if(m_num_out_of_bounds + total_recorded == 0){
+      unsigned int complete_total = m_num_out_of_bounds + total_recorded;
+
+      if(complete_total == 0){
         out << "No arguments were recorded by arg record" << "\n";
         return;
       }
-
-      unsigned int complete_total = m_num_out_of_bounds + total_recorded;
+      unsigned int prec = out.precision();
 
       out << "histogram: \n";
       out << this->to_string() << "\n";
@@ -228,8 +240,9 @@ class ArgumentRecord
       out << "Recorded args were sampled the most often from the subinterval "
           << ith_interval(m_peak_index) << " with " << mv_histogram[m_peak_index] << " evaluations ("
           << mv_histogram[m_peak_index]/((double) complete_total) << "\% of the total evaluations).\n";
-      out << "The largest argument seen was x=" << m_max_recorded << "\n";
-      out << "The lowest argument seen was x=" << m_min_recorded << std::endl;
+      // iostream will automatically "round to prec digits" but the rounding can make the min/max args too large/small respectively by default
+      out << "The largest argument seen was x=" << round_n(m_max_recorded,prec,true) << "\n";
+      out << "The lowest argument seen was x=" << round_n(m_min_recorded,prec,false) << std::endl;
     }
 
     // print each field in this class to the given ostream
