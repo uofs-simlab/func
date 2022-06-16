@@ -182,10 +182,21 @@ class ArgumentRecord
       // record more statistics here
     }
 
-    std::string ith_interval(unsigned int i){
-      return "[" + std::to_string(m_minArg + (m_maxArg - m_minArg)*i/(IN_TYPE)m_histSize) + ", "
-          + std::to_string(m_minArg + (m_maxArg - m_minArg)*(i+1)/(IN_TYPE)m_histSize) + ")";
+    // std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from stack overflow
+    template <typename T>
+    std::string to_string_with_precision(const T val, const int n = std::numeric_limits<T>::max_digits10)
+    {
+        std::ostringstream out;
+        out.precision(n);
+        out << std::scientific << val;
+        return out.str();
     }
+
+    std::string ith_interval(unsigned int i, const int n = 3){
+      return "[" + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*i/(IN_TYPE)m_histSize, n) + ", "
+          + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*(i+1)/(IN_TYPE)m_histSize, n) + ")";
+    }
+
 
     // make a string representation of the histogram
     std::string to_string()
@@ -198,7 +209,7 @@ class ArgumentRecord
       // 1. the longest row is 15 stars wide
       // 2. If a bucket recorded _any_ args then it gets at least 1 star
       std::string hist_str;
-      hist_str=std::to_string(m_minArg)+'\n';
+      hist_str=to_string_with_precision(m_minArg,3)+'\n';
       for(unsigned int i=0; i<m_histSize; i++){
         unsigned int row_length = ceil(15*mv_histogram[i]/mv_histogram[m_peak_index]);
         for(unsigned int j=0; j<row_length; j++)
@@ -207,16 +218,9 @@ class ArgumentRecord
           hist_str=hist_str+' ';
         hist_str=hist_str + " " + ith_interval(i) + " with " + std::to_string(mv_histogram[i]) + " evaluations\n";
       }
-      hist_str=hist_str+std::to_string(m_maxArg);
+      hist_str=hist_str+to_string_with_precision(m_maxArg,3);
       return hist_str;
     }
-
-    // TODO check if this works well for negative doubles too!!!!
-    double round_n(double x, unsigned int n_digits, bool is_up){
-      double pow10n = pow(10,n_digits);
-      return is_up ? ceil(x * pow10n)/pow10n : floor(x * pow10n)/pow10n;
-    }
-
 
     // human readable output of the histogram and other statistics
     void print_details(std::ostream& out)
@@ -231,7 +235,6 @@ class ArgumentRecord
         out << "No arguments were recorded by arg record" << "\n";
         return;
       }
-      unsigned int prec = out.precision();
 
       out << "histogram: \n";
       out << this->to_string() << "\n";
@@ -241,8 +244,8 @@ class ArgumentRecord
           << ith_interval(m_peak_index) << " with " << mv_histogram[m_peak_index] << " evaluations ("
           << mv_histogram[m_peak_index]/((double) complete_total) << "\% of the total evaluations).\n";
       // iostream will automatically "round to prec digits" but the rounding can make the min/max args too large/small respectively by default
-      out << "The largest argument seen was x=" << round_n(m_max_recorded,prec,true) << "\n";
-      out << "The lowest argument seen was x=" << round_n(m_min_recorded,prec,false) << std::endl;
+      out << "The largest argument seen was x=" << to_string_with_precision(m_max_recorded) << "\n";
+      out << "The lowest argument seen was x=" << to_string_with_precision(m_min_recorded) << std::endl;
     }
 
     // print each field in this class to the given ostream
