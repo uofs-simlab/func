@@ -8,11 +8,14 @@
 #include "config.hpp" // FUNC_USE_QUADMATH
 #include <memory>     // unique_ptr
 
+/*
+ * Two-stage string expansion macros
+ */
 #define FUNC_STR_EXPAND(x...) #x
 #define FUNC_STR(x...) FUNC_STR_EXPAND(x)
 
 /*
- * Macro to easily add table types into the registry
+ * Macros to easily add table types into the registry
  * - Call this inside ::initialize_registry() for all desired table types
  */
 #define FUNC_ADD_TABLE_TO_REGISTRY(classname)                                                                          \
@@ -69,7 +72,7 @@ private:
 
 /* --------------------------------------------------------------------------
  * --------------------------------------------------------------------------
- *      Implementations
+ *      Implementation
  * --------------------------------------------------------------------------
  * -------------------------------------------------------------------------- */
 
