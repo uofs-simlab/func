@@ -22,7 +22,6 @@ class CubicPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,4,HOR
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,4,HORNER,GT);
-  FUNC_REGISTER_LUT(CubicPrecomputedInterpolationTable);
 
 public:
   CubicPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :

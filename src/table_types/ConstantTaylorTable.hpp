@@ -19,8 +19,6 @@ class ConstantTaylorTable final : public MetaTable<TIN,TOUT,1,TAYLOR,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,1,TAYLOR,GT);
 
-  FUNC_REGISTER_LUT(ConstantTaylorTable);
-
   //TOUT get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[0]; (void) j; }
 
 public:

@@ -1,6 +1,6 @@
 # build our config file from the given cmake options
 file(WRITE config.hpp "#pragma once\n")
-if(USE_BOOST AND Boost_FOUND)  
+if(USE_BOOST AND Boost_FOUND)
   file(APPEND config.hpp "#define FUNC_USE_BOOST\n")
 endif()
 
@@ -33,7 +33,7 @@ if(USE_ARMADILLO AND ARMADILLO_FOUND)
   list(APPEND func_include_dirs ${ARMADILLO_INCLUDE_DIR})
   list(APPEND func_link_arma ${ARMADILLO_LIBRARIES})
 
-  # set our config file to use armadillo tables and 
+  # set our config file to use armadillo tables and
   # fill our lookup table factory with armadillo exclusive table constructors
   file(APPEND config.hpp "#define FUNC_USE_ARMADILLO\n")
 endif()
@@ -55,6 +55,7 @@ ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
 json.hpp;\
 FailureProofTable.hpp;CompositeLookupTable.hpp;\
 TransferFunctionInterface.hpp;TransferFunctionSinh.hpp;\
+LookupTableFactory.hpp;\
 LookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/LookupTable.hpp;\

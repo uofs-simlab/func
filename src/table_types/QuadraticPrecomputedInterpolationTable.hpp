@@ -20,7 +20,6 @@ class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,3,HORNER,GT);
-  FUNC_REGISTER_LUT(QuadraticPrecomputedInterpolationTable);
 
 public:
   QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :

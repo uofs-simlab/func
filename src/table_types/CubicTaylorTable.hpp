@@ -21,7 +21,6 @@ class CubicTaylorTable final : public MetaTable<TIN,TOUT,4,TAYLOR,GT>
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,4,TAYLOR,GT);
-  FUNC_REGISTER_LUT(CubicTaylorTable);
 
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,3>(adVar<TOUT,3>)> mp_boost_func;

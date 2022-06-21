@@ -21,7 +21,6 @@ class LinearTaylorTable final : public MetaTable<TIN,TOUT,2,TAYLOR,GT>
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,2,TAYLOR,GT);
-  FUNC_REGISTER_LUT(LinearTaylorTable);
 
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,1>(adVar<TIN,1>)> mp_boost_func;

@@ -21,8 +21,6 @@ class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,HORNER,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,1,HORNER,GT);
 
-  FUNC_REGISTER_LUT(LinearInterpolationTable);
- 
 public:
   //#pragma omp declare simd
   LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :

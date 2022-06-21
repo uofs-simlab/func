@@ -21,7 +21,6 @@ class QuadraticTaylorTable final : public MetaTable<TIN,TOUT,3,TAYLOR,GT>
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,3,TAYLOR,GT);
-  FUNC_REGISTER_LUT(QuadraticTaylorTable);
 
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,2>(adVar<TIN,2>)> mp_boost_func;

@@ -33,7 +33,6 @@ class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,TAYLOR,GT>
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,M+N+1,TAYLOR,GT);
-  FUNC_REGISTER_LUT(PadeTable);
 
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> mp_boost_func;

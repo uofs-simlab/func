@@ -14,6 +14,7 @@
 */
 #pragma once
 #include "LookupTable.hpp"
+#include "LookupTableFactory.hpp"
 #include "config.hpp" // FUNC_USE_QUADMATH
 #include <iostream>
 #include <memory>
@@ -40,6 +41,8 @@ class LookupTableGenerator
 private:
   FunctionContainer<IN_TYPE,OUT_TYPE> *mp_func_container;
 
+  LookupTableFactory<IN_TYPE,OUT_TYPE> factory;
+
   IN_TYPE m_min;
   IN_TYPE m_max;
 
@@ -64,10 +67,10 @@ public:
     static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by step without Boost");
 #else
     LookupTableParameters<IN_TYPE> par;
-    par.minArg = m_min; 
-    par.maxArg = m_max; 
+    par.minArg = m_min;
+    par.maxArg = m_max;
     par.stepSize = stepSize;
-    return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+    return factory.create(tableKey, mp_func_container, par);
 #endif
   }
 
@@ -130,7 +133,7 @@ struct LookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
     par.minArg = m_parent.m_min;
 		par.maxArg = m_parent.m_max;
 		par.stepSize = stepSize;
-    auto impl = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(m_tableKey, m_parent.mp_func_container, par);
+    auto impl = m_parent.factory.create(m_tableKey, m_parent.mp_func_container, par);
 
     boost::uintmax_t max_it = 20;
 
@@ -208,9 +211,9 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   par2.stepSize = step2;
 
   std::unique_ptr<EvaluationImplementation<IN_TYPE,OUT_TYPE>> impl1 =
-    LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
+    factory.create(tableKey, mp_func_container, par1);
   std::unique_ptr<EvaluationImplementation<IN_TYPE,OUT_TYPE>> impl2 =
-    LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par2);
+    factory.create(tableKey, mp_func_container, par2);
 
   unsigned long size1 = impl1->size();
   unsigned long size2 = impl2->size();
@@ -223,7 +226,7 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
      (assuming linear relationship of num_intervals to size */
   par1.stepSize = 1.0/((double)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
 
-  return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par1);
+  return factory.create(tableKey, mp_func_container, par1);
 #endif
 }
 
@@ -238,7 +241,7 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   par.maxArg = m_max;
   par.stepSize =  (m_max-m_min)/1000.0;
   /* generate a first approximation for the implementation */
-  auto impl = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+  auto impl = factory.create(tableKey, mp_func_container, par);
   /* And initialize the functor used for refinement */
   OptimalStepSizeFunctor f(*this,tableKey,0);
   IN_TYPE stepSize  = impl->step_size();
@@ -331,7 +334,7 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
 
   /* Finally, return the implementation with the desired stepSize*/
   par.stepSize = r.first;
-  return LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey,mp_func_container,par);
+  return factory.create(tableKey,mp_func_container,par);
 #endif
 }
 
@@ -365,9 +368,9 @@ inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_
   */
   LookupTableParameters<IN_TYPE> par;
   par.minArg = m_min;
-  par.maxArg = m_max; 
+  par.maxArg = m_max;
   par.stepSize = stepSize;
-  auto impl = LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(tableKey, mp_func_container, par);
+  auto impl = factory.create(tableKey, mp_func_container, par);
 
   std::cout << "# x func impl" << std::endl;
   for (double x=impl->min_arg();

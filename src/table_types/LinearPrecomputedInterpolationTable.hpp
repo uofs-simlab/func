@@ -20,7 +20,6 @@ class LinearPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,2,HO
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,2,HORNER,GT);
-  FUNC_REGISTER_LUT(LinearPrecomputedInterpolationTable);
 
 public:
   LinearPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :

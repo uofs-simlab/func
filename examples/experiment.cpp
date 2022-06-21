@@ -46,9 +46,11 @@ int main(int argc, char* argv[])
 
   FunctionContainer<double> func_container{SET_F(MyFunction,double)};
 
+  LookupTableFactory<double> factory;
+
   /* Check which implementations are available */
   std::cout << "# Registered uniform tables: \n#  ";
-  for (auto it : UniformLookupTableFactory<double>::get_registry_keys() ) {
+  for (auto it : factory.get_registered_keys() ) {
     std::cout << it << "\n#  ";
   }
   std::cout << "\n";
@@ -58,10 +60,10 @@ int main(int argc, char* argv[])
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-    "UniformArmadilloPrecomputedInterpolationTable<4>",
-    "UniformArmadilloPrecomputedInterpolationTable<5>",
-    "UniformArmadilloPrecomputedInterpolationTable<6>",
-    "UniformArmadilloPrecomputedInterpolationTable<7>",
+    // "UniformArmadilloPrecomputedInterpolationTable<4>",
+    // "UniformArmadilloPrecomputedInterpolationTable<5>",
+    // "UniformArmadilloPrecomputedInterpolationTable<6>",
+    // "UniformArmadilloPrecomputedInterpolationTable<7>",
     //"UniformConstantTaylorTable",
     "UniformCubicHermiteTable",
     "UniformCubicPrecomputedInterpolationTable",
@@ -95,8 +97,8 @@ int main(int argc, char* argv[])
     cout << "Building " << itName << " ..." << endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
- 
-  //add a composite table. The generator doesn't converge with mid = the root 
+
+  //add a composite table. The generator doesn't converge with mid = the root
   //and also this is far too specific for this experiment.
   //double mid = exp(7.7/13.0287)+1;
 
@@ -113,7 +115,7 @@ int main(int argc, char* argv[])
   //      )));
 
   cout << "Running timings ..." << endl;
- 
+
   ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 

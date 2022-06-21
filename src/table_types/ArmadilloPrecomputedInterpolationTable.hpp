@@ -42,7 +42,6 @@ class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,N+1,HORNER,GT);
 
-  FUNC_REGISTER_LUT(ArmadilloPrecomputedInterpolationTable);
 
 public:
   ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container,

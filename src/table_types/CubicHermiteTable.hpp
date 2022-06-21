@@ -22,7 +22,6 @@ class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,HORNER,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,4,HORNER,GT);
 
-  FUNC_REGISTER_LUT(CubicHermiteTable);
 
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,1>(adVar<TIN,1>)> mp_boost_func;
