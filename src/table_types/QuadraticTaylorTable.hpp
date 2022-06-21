@@ -48,7 +48,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
-    for (int ii=0;ii<m_numIntervals;++ii) {
+    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN x = m_minArg + ii*m_stepSize;
       m_grid[ii] = x;

@@ -1,4 +1,4 @@
-/* 
+/*
    TODO We don't really need a transfer function interface for
    our use case
 
@@ -51,7 +51,7 @@ public:
 
   virtual ~TransferFunctionInterface(){}
 
-  virtual void print_details(std::ostream& out){};
+  virtual void print_details(std::ostream& /* out */){};
 
   // public access to private vars
   std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_tableMaxArg); }

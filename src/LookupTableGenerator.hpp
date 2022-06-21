@@ -138,19 +138,15 @@ struct LookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
     boost::uintmax_t max_it = 20;
 
     errprecision max_err = 0;
-    errprecision xstar, err;
+    errprecision err;
 
     /* get number of binary bits in mantissa */
     int bits = std::numeric_limits<errprecision>::digits;
-
-    double eps = std::numeric_limits<double>::epsilon();
-
     /*
       for each interval in the table, compute the maximum error
       - be careful about the top most interval, it may reach beyond the
       table range due to rounding errors
     */
-    unsigned index = 0;
     for(unsigned ii=0; ii<impl->num_intervals()-1; ii++){
 
       std::pair<IN_TYPE,IN_TYPE> intEndPoints = impl->arg_bounds_of_interval(ii);
@@ -160,16 +156,14 @@ struct LookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
         break;
       std::pair<errprecision, errprecision> r =
         brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
-      xstar = r.first; err = r.second;
+      err = r.second;
       if( err < max_err ) {
-        index = ii+1;
         max_err = err;
       }
     }
 
     /* want return to be 0 if the same, +/- on either side */
     max_err = -max_err;
-    // std::cout << "stepSize: " << stepSize << " max_err: " << max_err << std::endl;
     return double(max_err-m_tol);
   }
 

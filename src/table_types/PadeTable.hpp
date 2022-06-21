@@ -49,7 +49,7 @@ public:
 
     /* Base class default variables */
     m_name = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
-    m_order = M+N+1;  
+    m_order = M+N+1;
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
@@ -60,12 +60,12 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,M+N+1>[m_numTableEntries]);
-    for (int ii=0;ii<m_numIntervals;++ii) {
+    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
       // nonuniform grids are not supported for PadeTables
       TIN x = m_minArg + ii*m_stepSize;
       // grid points
       m_grid[ii] = x;
-      
+
       // build the matrix of taylor coefficients
       arma::mat T = arma::zeros(M+N+1, N+1);
       const auto derivs = (mp_boost_func)(make_fvar<TIN,M+N>(x));
@@ -93,7 +93,7 @@ public:
       /* Check if the denominator Q has any roots
          within the subinterval [-m_stepSize/2,m_stepSize/2).
          If any roots exist, then lower the degree of the denominator.
-        
+
          We'll check for the existence of a root by building a bracket,
          using Q(0)=1 as our positive endpoint. Thus, we just need
          to find a point where Q is negative. Hence this helper function: */
@@ -126,7 +126,7 @@ public:
               break;
             case 3:
               desc = Q[2]*Q[2]-3*Q[1]*Q[3];
-              Q_has_root = desc > 0.0 && 
+              Q_has_root = desc > 0.0 &&
                 (Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3])) || Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3])));
               break;
           }
@@ -172,7 +172,7 @@ public:
     // index of previous table entry
     unsigned x1 = ((unsigned) x1r);
     dx -= x1*m_stepSize;
-    
+
     // general degree horners method, evaluated from the inside out.
     TOUT P = dx*m_table[x1].coefs[M];
     for (int k=M-1; k>0; k--)

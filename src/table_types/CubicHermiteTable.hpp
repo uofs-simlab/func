@@ -47,7 +47,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
-    for (int ii=0; ii<m_numIntervals; ++ii) {
+    for (unsigned int ii=0; ii<m_numIntervals; ++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid

@@ -21,7 +21,7 @@
 Notes:
   - We seem to get better grids if f' is largest near the endpoints [a,b].
     If f' is largest near the middle of an interval (eg e^{-x^2} when a<-3 and b>3)
-    then that information is largely ignored.  
+    then that information is largely ignored.
   - We need Boost version 1.71.0 or newer to generate a candidate transfer function.
     Boost is not required if TransferFunctionSinh is given pre-generated coefficients.
  */
@@ -41,7 +41,7 @@ Notes:
 template <typename IN_TYPE>
 class TransferFunctionSinh final : public TransferFunctionInterface<IN_TYPE>
 {
-  IMPLEMENT_TRANSFER_FUNCTION_INTERFACE(IN_TYPE);
+  IMPLEMENT_TRANSFER_FUNCTION_INTERFACE(IN_TYPE)
 
   // aligned array of polynomial coefs approximating g_inv
   __attribute__((aligned)) std::array<IN_TYPE,4> m_inv_coefs;
@@ -110,7 +110,7 @@ public:
     m_inv_coefs[1] = (a*a*m1 - 6*a*b + b*b*m0 + 2*a*b*m0 + 2*a*b*m1)/(a - b)/(a - b);
     m_inv_coefs[2] = -(a*m0 - 3*b - 3*a + 2*a*m1 + 2*b*m0 + b*m1)/(a - b)/(a - b);
     m_inv_coefs[3] = (m0 + m1 - 2)/(a - b)/(a - b);
-    
+
     /* build the real version of g_inv by encoding the
        underlying table's hash into the transfer function eval. This
        will obfuscate our code, but now the only price of using
