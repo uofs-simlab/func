@@ -1,7 +1,8 @@
 # build our config file from the given cmake options
 file(WRITE config.hpp "#pragma once\n")
-if(USE_BOOST AND Boost_FOUND)
+if(USE_BOOST)
   file(APPEND config.hpp "#define FUNC_USE_BOOST\n")
+  list(APPEND func_link_boost Boost::boost)
 endif()
 
 if(USE_OPENMP)
@@ -12,6 +13,7 @@ endif()
 
 if(USE_QUADMATH)
   file(APPEND config.hpp "#define FUNC_USE_QUADMATH\n")
+  list(APPEND func_link_quadmath ${QUADMATH_LIBRARIES} )
 endif()
 
 # dev option limits our lookup table factory so each
@@ -20,15 +22,7 @@ if(USE_SMALL_REGISTRY)
   file(APPEND config.hpp "#define FUNC_USE_SMALL_REGISTRY\n")
 endif()
 
-# fill our lookup table factory with constructors
-list(APPEND func_src
-  table_types/RegistrarDefinitionsStandard.cpp
-)
-
-# Implementations are separated out into their own library
-list(APPEND func_include_dirs ./ table_types)
-
-if(USE_ARMADILLO AND ARMADILLO_FOUND)
+if(USE_ARMADILLO)
   # link with Armadillo add all the table types that use Armadillo
   list(APPEND func_include_dirs ${ARMADILLO_INCLUDE_DIR})
   list(APPEND func_link_arma ${ARMADILLO_LIBRARIES})
@@ -37,15 +31,20 @@ if(USE_ARMADILLO AND ARMADILLO_FOUND)
   # fill our lookup table factory with armadillo exclusive table constructors
   file(APPEND config.hpp "#define FUNC_USE_ARMADILLO\n")
 endif()
-# still register the armadillo tables so people can read them from a file
-list(APPEND func_src
-  table_types/RegistrarDefinitionsArmadillo.cpp
-)
+
+# Get all of the cpp files in table_types
+# TODO: Separate out table types again (parallel builds)
+# TODO: Re-add default lib builds for: double,double  ... float,float ... etc
+#       - maybe by forcing UniformLookupTableGenerator<TIN,TOUT> builds?
+file(GLOB func_src table_types/Registrar*.cpp)
+# Add to include directory
+# TODO: Re-add func_impls as its own separate library (again, parallel builds)
+list(APPEND func_include_dirs ./ table_types)
 
 # add the func lib with the lists we built above
 add_library(func SHARED ${func_src})
 target_include_directories(func PUBLIC ${func_include_dirs})
-target_link_libraries(func PUBLIC ${func_link_arma} ${QUADMATH_LIBRARIES} Boost::boost ${func_link_openmp})
+target_link_libraries(func PUBLIC ${func_link_arma} ${func_link_quadmath} Boost::boost ${func_link_openmp})
 
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
 config.hpp;func.hpp;\
