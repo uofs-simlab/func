@@ -78,7 +78,7 @@ public:
   // TODO remove table key argument
   std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string tableKey, std::string filename)
   {
-    return LookupTableFactory<IN_TYPE,OUT_TYPE,std::string>::Create(tableKey, mp_func_container, filename);
+    return factory.create(tableKey, mp_func_container, filename);
   }
 
   /* Generate a table that is accurate to desiredTolerance */

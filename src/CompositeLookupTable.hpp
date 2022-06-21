@@ -76,6 +76,8 @@ class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_T
   // collection of FunC lookup tables used to sample from
   std::vector<std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
 
+  LookupTableFactory<IN_TYPE,OUT_TYPE> factory;
+
   // names of each lookup table used
   std::vector<std::string> mv_LUT_names;
 
@@ -193,7 +195,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
       par.maxArg -= closeness;
 
     par.stepSize = stepSizes[i];
-    mv_LUT.push_back(LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(mv_LUT_names[i], func_container, par));
+    mv_LUT.push_back(factory.create(mv_LUT_names[i], func_container, par));
 
     // update the smallest interval and data size
     if(par.maxArg - par.minArg < m_len_smallest_interval)
