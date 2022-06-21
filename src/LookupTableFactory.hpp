@@ -15,10 +15,16 @@
  * Macro to easily add table types into the registry
  * - Call this inside ::initialize_registry() for all desired table types
  */
-#define FUNC_ADD_TO_REGISTRY(X)                                                                                        \
-  registry.insert({FUNC_STR(X), [](FunctionContainer<TIN, TOUT> *fc, OTHER args) -> LookupTable<TIN, TOUT> * {         \
-                     return new X<TIN, TOUT>(fc, args);                                                                \
+#define FUNC_ADD_TABLE_TO_REGISTRY(classname)                                                                          \
+  registry.insert({FUNC_STR(classname), [](FunctionContainer<TIN, TOUT> *fc, OTHER args) -> LookupTable<TIN, TOUT> * { \
+                     return new classname<TIN, TOUT>(fc, args);                                                        \
                    }});
+
+#define FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(classname, templates...)                                                  \
+  registry.insert(                                                                                                     \
+      {FUNC_STR(classname<templates>), [](FunctionContainer<TIN, TOUT> *fc, OTHER args) -> LookupTable<TIN, TOUT> * {  \
+         return new classname<TIN, TOUT, templates>(fc, args);                                                         \
+       }});
 
 template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>> class LookupTableFactory {
 public:
@@ -73,14 +79,38 @@ private:
  */
 template <typename TIN, typename TOUT, class OTHER> void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry() {
 
-  FUNC_ADD_TO_REGISTRY(UniformCubicHermiteTable);
-  FUNC_ADD_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TO_REGISTRY(UniformCubicTaylorTable);
-  FUNC_ADD_TO_REGISTRY(UniformLinearInterpolationTable);
-  FUNC_ADD_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
-  FUNC_ADD_TO_REGISTRY(UniformLinearTaylorTable);
-  FUNC_ADD_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TO_REGISTRY(UniformQuadraticTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
+
+#ifdef FUNC_USE_ARMADILLO
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,4);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
+
+#ifdef FUNC_USE_BOOST
+  // Pade tables need both Boost and Armadillo to work
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,1,1);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,2,1);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,3,1);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,4,1);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,5,1);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,6,1);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,2,2);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,3,2);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,4,2);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,5,2);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,3,3);
+  FUNC_ADD_TEMPLATED_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
+#endif // FUNC_USE_BOOST
+#endif // FUNC_USE_ARMADILLO
 
 }
 

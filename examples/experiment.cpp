@@ -60,11 +60,11 @@ int main(int argc, char* argv[])
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-    // "UniformArmadilloPrecomputedInterpolationTable<4>",
-    // "UniformArmadilloPrecomputedInterpolationTable<5>",
-    // "UniformArmadilloPrecomputedInterpolationTable<6>",
-    // "UniformArmadilloPrecomputedInterpolationTable<7>",
-    //"UniformConstantTaylorTable",
+    "UniformArmadilloPrecomputedInterpolationTable<4>",
+    "UniformArmadilloPrecomputedInterpolationTable<5>",
+    "UniformArmadilloPrecomputedInterpolationTable<6>",
+    "UniformArmadilloPrecomputedInterpolationTable<7>",
+    // "UniformConstantTaylorTable",
     "UniformCubicHermiteTable",
     "UniformCubicPrecomputedInterpolationTable",
     "UniformCubicTaylorTable",
