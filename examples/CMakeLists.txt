@@ -4,8 +4,10 @@
 #add_executable(compute_max_err_of_tables compute_max_err_of_tables.cpp)
 #target_link_libraries(compute_max_err_of_tables PUBLIC func)
 
+if(USE_BOOST)
 add_executable(experiment experiment.cpp)
 target_link_libraries(experiment PUBLIC func)
+endif()
 
 #add_executable(experiment_best_worst experiment_best_worst.cpp)
 #target_link_libraries(experiment_best_worst PUBLIC func)

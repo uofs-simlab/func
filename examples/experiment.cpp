@@ -45,11 +45,12 @@ int main(int argc, char* argv[])
   unsigned int seed   = std::stoi(argv[6]);
 
   FunctionContainer<double> func_container{SET_F(MyFunction,double)};
-  double stepSize;
+
+  LookupTableFactory<double> factory;
 
   /* Check which implementations are available */
   std::cout << "# Registered uniform tables: \n#  ";
-  for (auto it : UniformLookupTableFactory<double>::get_registry_keys() ) {
+  for (auto it : factory.get_registered_keys() ) {
     std::cout << it << "\n#  ";
   }
   std::cout << "\n";
@@ -63,6 +64,7 @@ int main(int argc, char* argv[])
     "UniformArmadilloPrecomputedInterpolationTable<5>",
     "UniformArmadilloPrecomputedInterpolationTable<6>",
     "UniformArmadilloPrecomputedInterpolationTable<7>",
+    // "UniformConstantTaylorTable",
     "UniformCubicHermiteTable",
     "UniformCubicPrecomputedInterpolationTable",
     "UniformCubicTaylorTable",
@@ -70,19 +72,34 @@ int main(int argc, char* argv[])
     "UniformLinearPrecomputedInterpolationTable",
     "UniformLinearTaylorTable",
     "UniformQuadraticPrecomputedInterpolationTable",
-    "UniformQuadraticTaylorTable"
+    "UniformQuadraticTaylorTable",
+  };
+
+  std::vector<std::string> padeNames {
+    "UniformPadeTable<1,1>",
+    "UniformPadeTable<2,1>",
+    "UniformPadeTable<3,1>",
+    "UniformPadeTable<4,1>",
+    "UniformPadeTable<5,1>",
+    "UniformPadeTable<6,1>",
+    "UniformPadeTable<2,2>",
+    "UniformPadeTable<3,2>",
+    "UniformPadeTable<4,2>",
+    "UniformPadeTable<5,2>",
+    "UniformPadeTable<3,3>",
+    "UniformPadeTable<4,3>",
   };
 
   UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
-    cerr << "Building " << itName << " ..." << endl; 
+    cerr << "Building " << itName << " ..." << endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
 
   cout << "Running timings ..." << endl;
- 
+
   ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 

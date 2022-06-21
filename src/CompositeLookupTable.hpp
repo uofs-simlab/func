@@ -1,7 +1,7 @@
 /*
   A wrapper for several FunC lookup tables. Good for approximating piecewise
   functions, and automatic table generation of discontinuous functions
-  given all their singularities. Can also be used as a naive non-uniform 
+  given all their singularities. Can also be used as a naive non-uniform
   lookup table. The hash for this table is O(logn) or O(n) depending on
   certain parameters, where n is the number of FunC LUTs.
 
@@ -10,7 +10,7 @@
     double val = comp_table(0.87354);
 
   Notes:
-  - Takes in a variable number of previously constructed lookup tables 
+  - Takes in a variable number of previously constructed lookup tables
   inside a std::initializer_list
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
@@ -20,8 +20,8 @@
 */
 #pragma once
 #include "EvaluationImplementation.hpp"
-#include "UniformLookupTable.hpp"
-#include "UniformLookupTableGenerator.hpp"
+#include "LookupTable.hpp"
+#include "LookupTableGenerator.hpp"
 #include <vector> // store LUTs, names, special points
 #include <memory> // shared_ptr
 #include <utility> // std::pair
@@ -74,7 +74,7 @@ class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_T
   INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
 
   // collection of FunC lookup tables used to sample from
-  std::vector<std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
+  std::vector<std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
 
   // names of each lookup table used
   std::vector<std::string> mv_LUT_names;
@@ -95,7 +95,7 @@ class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_T
   OUT_TYPE linearSearchLeft(IN_TYPE, int);
   OUT_TYPE linearSearchRight(IN_TYPE, int);
 
-  // Private constructor does all the work but needs to be called with all the 
+  // Private constructor does all the work but needs to be called with all the
   // special points in curly braces which is a bit awkward
   CompositeLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, double global_tol,
       std::initializer_list<SpecialPoint<IN_TYPE,OUT_TYPE>>);
@@ -127,10 +127,10 @@ public:
   }
 
   // TODO
-  void print_details_json(std::ostream &out) override
+  void print_details_json(std::ostream & /* out */) override
   {}
 
-  std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> get_table(unsigned int table_idx)
+  std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>> get_table(unsigned int table_idx)
   {
     return mv_LUT[table_idx];
   }
@@ -142,7 +142,7 @@ public:
 
 template <typename IN_TYPE, typename OUT_TYPE>
 inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
-    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, 
+    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
     std::vector<std::string> names,
     std::vector<IN_TYPE> stepSizes,
     std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points) :
@@ -155,7 +155,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
         "a corresponding stepsize but " + std::to_string(stepSizes.size()) + " stepsizes were given");
 
   if(names.size() != special_points.size() - 1)
-    throw std::invalid_argument("Function behaviour for the " + std::to_string(names.size() + 1) + 
+    throw std::invalid_argument("Function behaviour for the " + std::to_string(names.size() + 1) +
         " breakpoints and endpoints need to be defined with SpecialPoints but "
         "only " + std::to_string(special_points.size()) + " SpecialPoints were given");
 
@@ -176,8 +176,8 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 
   /* -- actually build the given tables and update cumulative member vars -- */
   for(unsigned int i=0; i<names.size(); i++){
-    // build a table from 
-    UniformLookupTableParameters<IN_TYPE> par;
+    // build a table from
+    LookupTableParameters<IN_TYPE> par;
 
     // if the discType is "+/- Inf" or "approaches" then we want to be careful w/ table bounds
     par.minArg = mv_special_points[i].get_x();
@@ -185,7 +185,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
         mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
         mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Approaches)
       par.minArg += closeness;
-    
+
     par.maxArg = mv_special_points[i+1].get_x();
     if(mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Inf ||
         mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
@@ -193,7 +193,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
       par.maxArg -= closeness;
 
     par.stepSize = stepSizes[i];
-    mv_LUT.push_back(UniformLookupTableFactory<IN_TYPE,OUT_TYPE>::Create(mv_LUT_names[i], func_container, par));
+    mv_LUT.push_back(LookupTableFactory<IN_TYPE,OUT_TYPE>::Create(mv_LUT_names[i], func_container, par));
 
     // update the smallest interval and data size
     if(par.maxArg - par.minArg < m_len_smallest_interval)
@@ -212,7 +212,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
     FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
     double global_tol,
     std::initializer_list<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points) :
-  EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "CompositeLookupTable"), 
+  EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "CompositeLookupTable"),
   mv_special_points(special_points)
 {
   /* TODO decide how the special points affect table generation
@@ -231,7 +231,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 
   this->m_minArg = mv_special_points.front().get_x();
   this->m_maxArg = mv_special_points.back().get_x();
-  // We have everything but the names of tables needed to use our UniformLookupTableGenerator
+  // We have everything but the names of tables needed to use our LookupTableGenerator
   // TODO could this be parallelized?
   for(unsigned int i=0; i < mv_special_points.size()-1; i++){
     IN_TYPE ith_min_arg = mv_special_points[i];
@@ -239,7 +239,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 
     // divvy up the tolerance based on how large this interval is
     double ith_tol = global_tol*(ith_max_arg - ith_min_arg)/(m_maxArg-m_minArg);
-    UniformLookupTableGenerator<IN_TYPE,OUT_TYPE> gen(func_container, ith_min_arg, ith_max_arg);
+    LookupTableGenerator<IN_TYPE,OUT_TYPE> gen(func_container, ith_min_arg, ith_max_arg);
 
     // now we just need to decide which of our tables to use
     std::string ith_table_name = chooseName(mv_special_points[i], mv_special_points[i+1]);
@@ -258,7 +258,7 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 {}
 
 template <typename IN_TYPE, typename OUT_TYPE>
-inline std::string CompositeLookupTable<IN_TYPE,OUT_TYPE>::chooseName(SpecialPoint<IN_TYPE,OUT_TYPE> p1, SpecialPoint<IN_TYPE,OUT_TYPE> p2)
+inline std::string CompositeLookupTable<IN_TYPE,OUT_TYPE>::chooseName(SpecialPoint<IN_TYPE,OUT_TYPE> /* p1 */, SpecialPoint<IN_TYPE,OUT_TYPE> /* p2 */)
 {
   /* Decide what table to use on this interval
      TODO because this table's operator() uses so many conditional statements
@@ -317,7 +317,7 @@ inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::binarySearch(IN_TYPE x, 
 template <typename IN_TYPE, typename OUT_TYPE>
 inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::linearSearchLeft(IN_TYPE x, int i)
 {
-  // Assuming this function is called with all the correct parameters and 
+  // Assuming this function is called with all the correct parameters and
   // mv_LUT[i] is defined
   if(x < mv_LUT[i]->min_arg())
     return linearSearchLeft(x, i-1);
@@ -329,7 +329,7 @@ inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::linearSearchLeft(IN_TYPE
 template <typename IN_TYPE, typename OUT_TYPE>
 inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::linearSearchRight(IN_TYPE x, int i)
 {
-  // Assuming this function is called with all the correct parameters and 
+  // Assuming this function is called with all the correct parameters and
   // mv_LUT[i] is defined
   if(x > mv_LUT[i]->max_arg())
     return linearSearchRight(x, i+1);
@@ -342,7 +342,7 @@ template <typename IN_TYPE, typename OUT_TYPE>
 inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::operator()(IN_TYPE x)
 {
   // If x is close, use a linear search. Otherwise, use a binary search
-  std::shared_ptr<UniformLookupTable<IN_TYPE,OUT_TYPE>> recentTable = mv_LUT[mostRecentlyUsed_idx];
+  std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>> recentTable = mv_LUT[mostRecentlyUsed_idx];
 
   if(x < recentTable->min_arg() - LENIENCE_FACTOR*m_len_smallest_interval){
     // x is far away, do binary search on the left

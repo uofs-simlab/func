@@ -114,8 +114,8 @@ class ArgumentRecord
       // naive initial member arg values
       m_peak_index = 0;
       m_num_out_of_bounds = 0;
-      m_max_recorded = -std::numeric_limits<IN_TYPE>::max();
-      m_min_recorded =  std::numeric_limits<IN_TYPE>::max();
+      m_max_recorded = std::numeric_limits<IN_TYPE>::lowest();
+      m_min_recorded = std::numeric_limits<IN_TYPE>::max();
     }
 
     ~ArgumentRecord(){}
@@ -134,9 +134,9 @@ class ArgumentRecord
       // rebuild the histogram's thread safety
       mv_histogram_mutex = std::vector<FuncMutex>(m_histSize);
 
-      m_peak_index = jsonStats["ArgumentRecord"]["peak_index"].get<unsigned int>();
-      m_max_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<IN_TYPE>();
-      m_min_recorded = jsonStats["ArgumentRecord"]["m_max_recorded"].get<IN_TYPE>();
+      m_peak_index   = jsonStats["ArgumentRecord"]["peak_index"].get<unsigned int>();
+      m_max_recorded = jsonStats["ArgumentRecord"]["m_max_recorded"].get<IN_TYPE>();
+      m_min_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<IN_TYPE>();
     }
 
     /* place x in the histogram */
@@ -242,5 +242,5 @@ inline void ArgumentRecord<IN_TYPE>::print_details(std::ostream& out)
       << m_minArg + (m_maxArg - m_minArg)*(m_peak_index+1)/(IN_TYPE)m_histSize << ") "
       << "with " << mv_histogram[m_peak_index] << " evaluations.\n";
   out << "The largest argument recorded was x=" << m_max_recorded << "\n";
-  out << "The smallest argument recorded was x=" << m_min_recorded << std::endl;
+  out << "The lowest argument recorded was x=" << m_min_recorded << std::endl;
 }

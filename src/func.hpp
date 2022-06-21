@@ -4,14 +4,10 @@
 #include "DirectEvaluation.hpp"
 #include "TableIncludes.hpp"
 
-#include "UniformLookupTableGenerator.hpp"
+#include "LookupTableGenerator.hpp"
 #include "ImplementationComparator.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"
-#include "TransferFunctionInterface.hpp"
 
-#ifdef FUNC_USE_ARMADILLO
-#ifdef FUNC_USE_BOOST_AUTODIFF
-//#include "TransferFunctionSinh.hpp"
-#endif
-#endif
+#include "TransferFunctionInterface.hpp"
+#include "TransferFunctionSinh.hpp"
