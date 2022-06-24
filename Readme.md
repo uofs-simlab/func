@@ -3,8 +3,8 @@ FunC
 
 `FunC` (Function Comparator) is a C++ tool for approximating any single variable, real valued function $f:\mathbb{R}\to\mathbb{R}$ with a lookup table (LUT). This tool aims to steamline the process of finding an optimal LUT of $f$ for a given program. This includes factors such as
 - error tolerance
-- domain usage (what are the inputs to f during runtime?)
-- evaluation pattern (how much work is being done in between calls to f?)
+- domain usage (ie the inputs to $f$ during runtime)
+- evaluation frequency (ie how much work is being done in between calls to $f$)
 
 `FunC` can build LUTs using interpolation (up to degree 7), Taylor polynomials, Pade approximants, or Hermite interpolation over a uniform or automatically generated nonuniform mesh.
 
