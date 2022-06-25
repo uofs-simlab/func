@@ -50,13 +50,16 @@ public:
     m_table.reset(new polynomial<TOUT,2>[m_numTableEntries]);
     for (unsigned int ii=0; ii<m_numIntervals; ++ii) {
       // nonuniform grids are not supported for Taylor tables
-      TIN x = m_minArg + ii*m_stepSize;
-
-      m_grid[ii] = x;
+      TIN xgrid = m_minArg + ii*m_stepSize;
+      TIN xcenter = xgrid + 0.5*m_stepSize;
+      m_grid[ii] = xgrid;
       // get every derivative up to the first
-      auto const derivs = (mp_boost_func)(make_fvar<TIN,1>(x));
-      m_table[ii].coefs[0] = derivs.derivative(0);
-      m_table[ii].coefs[1] = derivs.derivative(1);
+      auto const derivs = (mp_boost_func)(make_fvar<TIN,1>(xcenter));
+      auto const d1 = derivs.derivative(1);
+      auto const d0 = derivs.derivative(0);
+      auto const h  = m_stepSize;
+      m_table[ii].coefs[1] = h*d1;
+      m_table[ii].coefs[0] = d0 - 0.5*h*d1;
     }
 #endif
   }

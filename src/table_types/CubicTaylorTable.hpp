@@ -50,15 +50,19 @@ public:
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
     for (unsigned int ii=0;ii<m_numIntervals;++ii) {
       // nonuniform grids are not supported for Taylor tables
-      TIN x = m_minArg + ii*m_stepSize;
-
-      m_grid[ii] = x;
-      auto const derivs = (mp_boost_func)(make_fvar<TIN,3>(x));
-
-      m_table[ii].coefs[0] = derivs.derivative(0);
-      m_table[ii].coefs[1] = derivs.derivative(1);
-      m_table[ii].coefs[2] = derivs.derivative(2)/2;
-      m_table[ii].coefs[3] = derivs.derivative(3)/6;
+      TIN xgrid = m_minArg + ii*m_stepSize;
+      TIN xcenter = xgrid + 0.5*m_stepSize;
+      m_grid[ii] = xgrid;
+      auto const derivs = (mp_boost_func)(make_fvar<TIN,3>(xcenter));
+      auto const d3 = derivs.derivative(3);
+      auto const d2 = derivs.derivative(2);
+      auto const d1 = derivs.derivative(1);
+      auto const d0 = derivs.derivative(0);
+      auto const h  = m_stepSize;
+      m_table[ii].coefs[3] = h*h*h*d3/6;
+      m_table[ii].coefs[2] = h*h*(0.5*d2 - 0.25*h*d3);
+      m_table[ii].coefs[1] = h*(d1 - 0.5*h*d2 + 0.125*h*h*d3);
+      m_table[ii].coefs[0] = d0 - 0.5*h*d1 + 0.125*h*h*d2 - h*h*h*d3/48;
     }
 #endif
   }

@@ -48,7 +48,7 @@ std::string grid_type_to_string() {
     case NONUNIFORM_PSEUDO:
       return "NonUniformPseudo";
     default: { throw std::invalid_argument("Broken switch case in FunC"); }
-  } 
+  }
 }
 
 template <typename TIN, typename TOUT, unsigned int N, HashTypes HT, GridTypes GT=UNIFORM>
@@ -112,13 +112,13 @@ public:
     switch(HT){
     case TAYLOR:
       {
-      // nondimensionalized x position
-      dx = (x-m_minArg);
-      TOUT x0r = dx/m_stepSize+0.5;
-      // index of previous table entry
-      x0 = (unsigned) x0r;
-      dx -= x0*m_stepSize; 
-      break;
+	// nondimensionalized x position, scaled by step size
+	dx = (TOUT) m_stepSize_inv*(x-m_minArg);
+	// index of previous table entry
+	x0  = (unsigned) dx;
+	// value of table entries around x position
+	dx -= x0;
+	break;
       }
     case HORNER:
       {
