@@ -19,8 +19,6 @@ class ConstantTaylorTable final : public MetaTable<TIN,TOUT,1,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,1,GT);
 
-  FUNC_REGISTER_LUT(ConstantTaylorTable);
-
 public:
   ConstantTaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     MetaTable<TIN,TOUT,1,GT>(func_container, par)
@@ -33,7 +31,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
-    for (int ii=0; ii<m_numTableEntries; ++ii) {
+    for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
       TIN x;
       // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == UNIFORM)

@@ -46,9 +46,11 @@ int main(int argc, char* argv[])
 
   FunctionContainer<double> func_container{SET_F(MyFunction,double)};
 
+  LookupTableFactory<double> factory;
+
   /* Check which implementations are available */
   std::cout << "# Registered uniform tables: \n#  ";
-  for (auto it : UniformLookupTableFactory<double>::get_registry_keys() ) {
+  for (auto it : factory.get_registered_keys() ) {
     std::cout << it << "\n#  ";
   }
   std::cout << "\n";
@@ -62,7 +64,7 @@ int main(int argc, char* argv[])
     "UniformArmadilloPrecomputedInterpolationTable<5>",
     "UniformArmadilloPrecomputedInterpolationTable<6>",
     "UniformArmadilloPrecomputedInterpolationTable<7>",
-    //"UniformConstantTaylorTable",
+    // "UniformConstantTaylorTable",
     "UniformCubicHermiteTable",
     "UniformCubicPrecomputedInterpolationTable",
     "UniformCubicTaylorTable",
@@ -92,28 +94,12 @@ int main(int argc, char* argv[])
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
-    cout << "Building " << itName << " ..." << endl;
+    cerr << "Building " << itName << " ..." << endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
- 
-  //add a composite table. The generator doesn't converge with mid = the root 
-  //and also this is far too specific for this experiment.
-  //double mid = exp(7.7/13.0287)+1;
-
-  //cout << "Building composite" << " ..." << endl;
-  //impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(
-  //      new CompositeLookupTable<double>(&func_container,
-  //        {"UniformCubicPrecomputedInterpolationTable", "UniformCubicPrecomputedInterpolationTable"}, // names
-  //        {0.01, 0.1}, // stepsizes
-  //        { // special points
-  //          {tableMin,              MyFunction(tableMin)},
-  //          {(tableMin+tableMax)/2, MyFunction((tableMin+tableMax)/2)},
-  //          {tableMax,              MyFunction(tableMax)}
-  //        }
-  //      )));
 
   cout << "Running timings ..." << endl;
- 
+
   ImplementationComparator<double> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 

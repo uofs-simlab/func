@@ -2,16 +2,16 @@
   A data structure used to pass mathematical functions to FunC tables.
 
   Notes:
-  - needed for passing functions to tables. Tables using boost's 
+  - needed for passing functions to tables. Tables using boost's
     automatic differentiation (such as Taylor, Hermite, Pade, and every NonUniformLUT)
     take advantage of the adVar[1-7] functions.
   - easy to use if your mathematical function is easy to template
   - copy and paste the following example code into a new file and use
-    the command :%s/foo/new_name/g in vim or (TODO something else) in emacs 
+    the command :%s/foo/new_name/g in vim or (TODO something else) in emacs
     to rename the example to your own function.
   - Boils down to a std::function wrapper if Boost's version is lower than 1.71
   - the readability of this class has been sacrificed in order to have get_nth_func
-    return the ith order autodiff functions based on an index 
+    return the ith order autodiff functions based on an index
 
   Example usage:
   #include FunctionContainer.hpp
@@ -22,7 +22,7 @@
     FunctionContainer<double,double> foo_container{SET_F(foo,double)};
     // or if it's inconvenient to template your function
     FunctionContainer foo_container2 {foo<double>};
-    // you just can't use any of the lookup tables that need 
+    // you just can't use any of the lookup tables that need
     // automatic differentiation (FunC will throw an exception if you do)
     return 0;
   }
@@ -47,14 +47,14 @@
 
 #define GET_MACRO(_1,_2,_3,NAME,...) NAME
 // Call with SET_F(foo,template-type...)
-#define SET_F(...) GET_MACRO(__VA_ARGS__, SET_F_TWO_TYPE, SET_F_ONE_TYPE)(__VA_ARGS__)
+#define SET_F(...) GET_MACRO(__VA_ARGS__, SET_F_TWO_TYPE, SET_F_ONE_TYPE, )(__VA_ARGS__)
 
 // setup the automatically differentiable variable
 using boost::math::differentiation::autodiff_fvar;
 template <typename T, unsigned int N>
 using adVar = autodiff_fvar<T,N>;
 
-// create a set of structs so we can specify 
+// create a set of structs so we can specify
 // FunctionContainer::get_nth_func's return type with an index
 template<typename IN_TYPE, typename OUT_TYPE, unsigned int N>
 struct nth_differentiable{
@@ -80,9 +80,9 @@ class FunctionContainer
   // overload func_type 9 different ways to get a function that seemingly does different
   // things based on its template value.
   template<unsigned int N> typename func_type<N>::type get_nth_func(func_type<N>)
-  { 
+  {
     throw std::out_of_range("Template value must be in 0<=N<=7");
-  };
+  }
   typename func_type<0>::type get_nth_func(func_type<0>){ return standard_func;  };
   typename func_type<1>::type get_nth_func(func_type<1>){ return autodiff1_func; };
   typename func_type<2>::type get_nth_func(func_type<2>){ return autodiff2_func; };
@@ -92,13 +92,13 @@ class FunctionContainer
   typename func_type<6>::type get_nth_func(func_type<6>){ return autodiff6_func; };
   typename func_type<7>::type get_nth_func(func_type<7>){ return autodiff7_func; };
 
-public: 
+public:
   // call as func_container->template get_nth_func<N>() to get the member
   // function that is differentiated N times for each function call.
   template<unsigned int N>
   typename func_type<N>::type get_nth_func(){ return get_nth_func(func_type<N>()); }
 #endif // FUNC_USE_BOOST
-public: 
+public:
 
   std::function<OUT_TYPE(IN_TYPE)> standard_func;
 #ifdef FUNC_USE_BOOST
@@ -110,13 +110,13 @@ public:
   std::function<adVar<OUT_TYPE,6>(adVar<IN_TYPE,6>)> autodiff6_func;
   std::function<adVar<OUT_TYPE,7>(adVar<IN_TYPE,7>)> autodiff7_func;
 #endif // FUNC_USE_BOOST
-      
+
   // some constructors
   FunctionContainer(){}
 
   FunctionContainer(std::function<OUT_TYPE(IN_TYPE)> func) :
     standard_func(func) {};
- 
+
 #ifdef FUNC_USE_BOOST
   FunctionContainer(std::function<OUT_TYPE(IN_TYPE)>   func,
       std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> func1,
@@ -129,6 +129,6 @@ public:
     standard_func(func),   autodiff1_func(func1),
     autodiff2_func(func2), autodiff3_func(func3),
     autodiff4_func(func4), autodiff5_func(func5),
-    autodiff6_func(func6), autodiff7_func(func7) {}  
+    autodiff6_func(func6), autodiff7_func(func7) {}
 #endif // FUNC_USE_BOOST
 };

@@ -1,7 +1,7 @@
 /*
   TODO explain how this links up with MetaTable & each other implementation
   Intermediate abstract class for LUTs with uniformly spaced grid points.
-  
+
   This class handles everything required to work with a piecewise
   evaluation implementation. For each such object, we have a
   registry, plus reading & writing of table data to json
@@ -18,9 +18,7 @@
 #include "json.hpp"
 #include "config.hpp" // FUNC_USE_SMALL_REGISTRY
 
-#include <map>
 #include <memory>
-#include <vector>
 #include <functional>
 #include <fstream>
 
@@ -45,7 +43,7 @@ struct alignas(sizeof(TOUT)*alignments[N]) polynomial{
   TOUT coefs[N];
 };
 
-/* Use to inherit LookupTable's member variables 
+/* Use to inherit LookupTable's member variables
    without having to put "this->" everywhere. */
 #define INHERIT_LUT(TIN,TOUT) \
   using LookupTable<TIN,TOUT>::m_grid; \
@@ -190,207 +188,3 @@ public:
 // Legacy func typedef
 template <typename TIN, typename TOUT>
 using UniformLookupTable = LookupTable<TIN,TOUT>;
-
-/* ////////////////////////////////////////////////////////////////////////////
-  Factory and registration management
-
-  LookupTableFactory: singleton class responsible for
-  - creating Derived classes of LookupTable
-  - keeping a registry of derived classes
-  - It's usage throughout FunC implies 8 namespaces are made.
-  LookupTableFactory<double>::
-  LookupTableFactory<float>::
-  LookupTableFactory<double,float>::
-  LookupTableFactory<float,double>::
-  LookupTableFactory<double,double,std::string>::
-  LookupTableFactory<float,float,std::string>::
-  LookupTableFactory<double,float,std::string>::
-  LookupTableFactory<float,double,std::string>::
-  and NonUniformTables just add to the pile
-
-  Usage example:
-  // given the fc is an initialized function container
-  // and par is an initialized LookupTableParameters
-  std::unique_ptr<EvaluationImplementation<double>> p_table = 
-    LookupTableFactory<double>::Create("UniformCubicPrecomputedInterpolationTable",fc, par);
-
-//////////////////////////////////////////////////////////////////////////// */
-template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>>
-class LookupTableFactory
-{
-public:
-  // Only ever hand out unique pointers
-  static std::unique_ptr<LookupTable<TIN,TOUT>> Create(
-      std::string name, FunctionContainer<TIN,TOUT> *fc,
-      OTHER args)
-  {
-    // Create a LookupTable
-    LookupTable<TIN,TOUT> *instance = nullptr;
-
-    // find the name in the registry and call factory method.
-    auto it = get_registry().find(name);
-    if(it != get_registry().end())
-      instance = it->second(fc, args);
-
-    // try to help the user out if this lookup went poorly!
-    if(instance == nullptr){
-      std::string error_string = name + " not found in registry. ";
-      // TODO check for any trivial typos and say what the typo is!!!
-      // check if there were any linking problems
-      if(get_registry().empty()){
-        error_string += "FunC can't access a lookup table registry with the requested type combination. Either libfunc.so was not properly linked or FunC must be recompiled with knowledge of "
-          + std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " (where these typenames are likely mangled).";
-      }
-      
-      throw std::invalid_argument(error_string);
-    }
-
-    // wrap instance in a unique ptr and return (if created)
-    return std::unique_ptr<LookupTable<TIN,TOUT>>(instance);
-  }
-
-  // Actual registration function
-  static void RegisterFactoryFunction(std::string name,
-      std::function<LookupTable<TIN,TOUT>*(
-        FunctionContainer<TIN,TOUT>*, 
-        OTHER
-      )> classFactoryFunction)
-  {
-    // register a derived class factory function
-    get_registry()[name] = classFactoryFunction;
-  }
-
-  // Get all keys from the registry
-  static std::vector<std::string> get_registry_keys()
-  {
-    // copy all keys from the registry map into a vector
-    std::vector<std::string> keys;
-    for(auto const& elem : get_registry())
-      keys.push_back(elem.first);
-    return keys;
-  }
-
-private:
-  // the actual registry is private to this class
-  static std::map<std::string, std::function<LookupTable<TIN,TOUT>*(
-			FunctionContainer<TIN,TOUT>*, OTHER)>>& get_registry()
-  {
-    // Get the singleton instance of the registry map
-    static std::map<std::string, std::function<LookupTable<TIN,TOUT>*(
-               FunctionContainer<TIN,TOUT>*,OTHER)>> registry;
-    return registry;
-  }
-
-  // Do NOT implement copy methods
-  LookupTableFactory(){};
-  LookupTableFactory(LookupTableFactory<TIN,TOUT> const& copy);
-  LookupTableFactory& operator=(LookupTableFactory<TIN,TOUT> const& copy);
-};
-
-// Legacy func typedef
-template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>>
-using UniformLookupTableFactory = LookupTableFactory<TIN,TOUT,OTHER>;
-
-
-/*
-  Helper class for registering LUT implementations.
-
-  NOTE: implementation defined in this header so that templates get
-  instantiated in derived LUT class files
-*/
-template <class T, typename TIN, typename TOUT, class OTHER = LookupTableParameters<TIN>>
-class LookupTableRegistrar {
-public:
-  LookupTableRegistrar(std::string className)
-  {
-    LookupTableFactory<TIN,TOUT,OTHER>::RegisterFactoryFunction(className,
-      [](FunctionContainer<TIN,TOUT> *fc,
-         OTHER args
-      ) -> LookupTable<TIN,TOUT>* { return new T(fc, args); }
-    );
-  }
-};
-
-/*
-   Macros for class registration:
-   - FUNC_REGISTER_LUT goes inside class definition
-   - FUNC_REGISTER_EACH_ULUT_IMPL goes underneath the class definition.
-   Several different versions of this macro exist for registering templated classes
-   - other... is for template parameters unrelated to the tables TIN and TOUT
-   - FUNC_USE_ARMADILLO macro takes advantage of the fact that the tables templated
-   on more than just their types are the only tables that use armadillo
-*/
-
-#define FUNC_REGISTER_LUT(classname) \
-private: \
-  static const LookupTableRegistrar<classname,TIN,TOUT> registrar; \
-  static const LookupTableRegistrar<classname,TIN,TOUT,std::string> str_registrar
-
-#define FUNC_STR_EXPAND(x...) #x
-#define FUNC_STR(x...) FUNC_STR_EXPAND(x)
-
-#ifdef FUNC_USE_BOOST
-  #define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
-    template<> const \
-    LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT> \
-      classname<TIN,TOUT>::registrar(FUNC_STR(classname)); \
-    template<> const \
-    LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT,std::string> \
-      classname<TIN,TOUT>::str_registrar(FUNC_STR(classname))
-
-  #ifdef FUNC_USE_ARMADILLO
-    #define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
-      template<> const \
-        LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT> \
-        classname<TIN,TOUT,other>::registrar(FUNC_STR(classname<other>)); \
-      template<> const \
-        LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
-        classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
-  #else
-    #define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
-      template<> const \
-        LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
-        classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
-  #endif
-
-#else // only read table data from a file
-
-#define FUNC_REGISTER_ULUT_IMPL(classname,TIN,TOUT) \
-  template<> const \
-  LookupTableRegistrar<classname<TIN,TOUT>,TIN,TOUT,std::string> \
-    classname<TIN,TOUT>::str_registrar(FUNC_STR(classname))
-
-#define FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,TIN,TOUT,other...) \
-  template<> const \
-    LookupTableRegistrar<classname<TIN,TOUT,other>,TIN,TOUT,std::string> \
-    classname<TIN,TOUT,other>::str_registrar(FUNC_STR(classname<other>))
-#endif
-
-
-#ifndef FUNC_USE_SMALL_REGISTRY
-// macros used in each class to quickly register 4 different template instantiations
-#define FUNC_REGISTER_EACH_ULUT_IMPL(classname)\
-  FUNC_REGISTER_ULUT_IMPL(classname,double,double); \
-  FUNC_REGISTER_ULUT_IMPL(classname,float,float);   \
-  FUNC_REGISTER_ULUT_IMPL(classname,long double,double);   \
-  FUNC_REGISTER_ULUT_IMPL(classname,long double,long double)
-//  FUNC_REGISTER_ULUT_IMPL(classname,float,double);  \
-//  FUNC_REGISTER_ULUT_IMPL(classname,double,float);  \
-
-#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...)\
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,double,other); \
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,float,other);    \
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,long double,double,other);    \
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,long double,long double,other)
-// FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,float,double,other);  \
-// FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,float,other);  \
-
-#else // just build double -> double tables
-
-#define FUNC_REGISTER_EACH_ULUT_IMPL(classname)\
-  FUNC_REGISTER_ULUT_IMPL(classname,double,double); \
-
-#define FUNC_REGISTER_EACH_TEMPLATED_ULUT_IMPL(classname,other...) \
-  FUNC_REGISTER_TEMPLATED_ULUT_IMPL(classname,double,double,other); \
-
-#endif // FUNC_USE_SMALL_REGISTRY

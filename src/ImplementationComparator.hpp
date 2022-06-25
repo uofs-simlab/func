@@ -20,7 +20,7 @@
 #include <iostream>
 
 /*
-  Data types and containers used in Lutde
+  Data types and containers used in FunC's ImplementationComparator
 */
 typedef std::vector<double> TimeContainer;
 
@@ -44,7 +44,7 @@ struct ImplTimer
   ImplType<IN_TYPE,OUT_TYPE> *impl;
   TimeContainer evaluationTimes;
   double maxTime, minTime, meanTime;
-  ImplTimer(ImplType<IN_TYPE,OUT_TYPE> *inImpl) : impl(inImpl){};
+  ImplTimer(ImplType<IN_TYPE,OUT_TYPE> *inImpl) : impl(inImpl), maxTime(0), minTime(0), meanTime(0) {};
   void append_runtime(double time){ evaluationTimes.push_back(time); };
   void compute_timing_stats()
   {
@@ -71,8 +71,8 @@ class ImplementationComparator
 {
 private:
 
-  std::vector<ImplTimer<IN_TYPE,OUT_TYPE>> m_implTimers;
   ImplContainer<IN_TYPE,OUT_TYPE>          m_implementations;
+  std::vector<ImplTimer<IN_TYPE,OUT_TYPE>> m_implTimers;
   unsigned                                 m_numberOfImplementations;
 
   std::vector<TimeContainer>  m_evaluationTimers;
@@ -170,7 +170,7 @@ public:
 template <typename IN_TYPE, typename OUT_TYPE>
 inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
     ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals, unsigned int seed, std::unique_ptr<RngInterface<IN_TYPE>> inRng) :
-  m_implementations(std::move(inImpl)), m_nEvals(nEvals), mp_sampler(std::move(inRng))
+  m_implementations(std::move(inImpl)), mp_sampler(std::move(inRng)), m_nEvals(nEvals)
 {
   /*
      Allocate enough timer containers
@@ -183,7 +183,7 @@ inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
     Initialize the timer structs with pointers to implementations
   */
   for (auto & itImpl : m_implementations) {
-    m_implTimers.push_back(ImplTimer<IN_TYPE,OUT_TYPE>(itImpl.get()));
+    m_implTimers.emplace_back(ImplTimer<IN_TYPE,OUT_TYPE>(itImpl.get()));
   }
 
   /*
@@ -204,7 +204,7 @@ inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
   /*
     Prepare to generate random points in the table interval to evaluate.
     If an RngInterface was not provided, set mp_sampler to a uniform real
-    distribution on the table's endpoints 
+    distribution on the table's endpoints
   */
   if(mp_sampler == nullptr)
     mp_sampler = std::unique_ptr<StdRng<IN_TYPE>>(new StdRng<IN_TYPE>(m_minArg, m_maxArg));

@@ -10,4 +10,3 @@
 #include "StdRng.hpp"
 
 #include "TransferFunctionSinh.hpp"
-

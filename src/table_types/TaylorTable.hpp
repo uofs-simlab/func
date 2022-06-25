@@ -20,7 +20,6 @@ class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,N+1,GT);
-  FUNC_REGISTER_LUT(TaylorTable);
 
   static TOUT constexpr fact[] = {1,1,2,6,24,120,720,5040};
 
@@ -62,7 +61,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
-    for (int ii=0;ii<m_numIntervals;++ii) {
+    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN x = m_minArg + ii*m_stepSize;
 
@@ -93,7 +92,7 @@ public:
     // general degree horners method, evaluated from the inside out.
     // TODO time to see if the added generality leads to any slowdown
     TOUT sum = 0;
-    for (int k=N; k>0; k--)
+    for (unsigned int k=N; k>0; k--)
       sum = dx*(m_table[x0].coefs[k] + sum);
     return m_table[x0].coefs[0]+sum;
   }
