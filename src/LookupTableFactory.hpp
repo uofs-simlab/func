@@ -42,15 +42,15 @@
   FUNC_REGISTRY_GET_MACRO(__VA_ARGS__, FUNC_REGISTER_TEMPLATE, FUNC_REGISTER_TEMPLATE, FUNC_REGISTER_ONE, )(__VA_ARGS__)
 
 // nonuniform LUTs require Boost
-//#ifdef FUNC_USE_BOOST
-//#define FUNC_ADD_TABLE_TO_REGISTRY(classname,...)    \
-//  FUNC_ADD_TABLE_TO_REGISTRY(Uniform##classname,...);         \
-//  FUNC_ADD_TABLE_TO_REGISTRY(NonUniform##classname,...);      \
-//  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudo##classname,...)
-//#else
-//#define FUNC_ADD_TABLE_TO_REGISTRY(classname,...)    \
-//  FUNC_ADD_TABLE_TO_REGISTRY(Uniform##classname,...)
-//#endif
+/*#ifdef FUNC_USE_BOOST
+#define FUNC_ADD_TABLE_TO_REGISTRY(classname,...)    \
+  FUNC_ADD_TABLE_TO_REGISTRY(Uniform##classname,...);         \
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniform##classname,...);      \
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudo##classname,...)
+#else
+#define FUNC_ADD_TABLE_TO_REGISTRY(classname,...)    \
+  FUNC_ADD_TABLE_TO_REGISTRY(Uniform##classname,...)
+#endif*/
 
 template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>> class LookupTableFactory {
 public:
@@ -64,7 +64,7 @@ public:
   /*
    * Constructor initializes registry, default destructor.
    */
-  LookupTableFactory() { initialize_registry(); };
+  LookupTableFactory() { initialize_registry(registry); };
   ~LookupTableFactory() = default;
 
   /*
@@ -89,8 +89,10 @@ private:
 
   /*
    *  Register the desired table types (construct a valid map for the `registry`)
+   *  - templated because we have to specialize for std::string
    */
-  void initialize_registry();
+  template <class T>
+  void initialize_registry(T x);
 };
 
 /* --------------------------------------------------------------------------
@@ -102,10 +104,9 @@ private:
 /*
  *  Initialize the registry
  *  - New implementations of table types must be added to the registry here
- *  - TODO specialize OTHER=LUTparameters for a case where boost is not available (they're trying to generate a LUT in that case)
  */
-template <typename TIN, typename TOUT, class OTHER> void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry() {
-
+template <typename TIN, typename TOUT, class OTHER>
+void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry(registry_t) {
   // TODO our Taylor/Pade tables don't have nonuniform variants yet
   FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
 #ifdef FUNC_USE_BOOST
@@ -145,17 +146,19 @@ template <typename TIN, typename TOUT, class OTHER> void LookupTableFactory<TIN,
 }
 
 
-template <typename TIN, typename TOUT> class LookupTableFactory<TIN,TOUT,std::string>{
+
+/*template <typename TIN, typename TOUT> class LookupTableFactory<TIN,TOUT,std::string>{
   std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, std::string)>> registry;
   void initialize_registry(); // only this function changes
 public:  
   std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, std::string args);
   std::vector<std::string> get_registered_keys(); // does this actually need to change?
-};
+};*/
 
 /* We always want to be able to read these types from a json file */
-template <typename TIN, typename TOUT> void LookupTableFactory<TIN, TOUT, std::string>::initialize_registry() {
-#define OTHER std::string // this is a big kludge
+template <typename TIN, typename TOUT, class OTHER>
+void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry(std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, std::string)>>) {
+//#define OTHER std::string // this feels like a big time kludge
   // TODO our Taylor/Pade tables don't have nonuniform variants yet
   FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicTaylorTable);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticTaylorTable);
@@ -184,7 +187,7 @@ template <typename TIN, typename TOUT> void LookupTableFactory<TIN, TOUT, std::s
   FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
-#undef OTHER
+//#undef OTHER
 }
 
 /*
