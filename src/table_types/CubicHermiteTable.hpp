@@ -14,6 +14,7 @@
 #pragma once
 #include "MetaTable.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
+#include <stdexcept>
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,GT>

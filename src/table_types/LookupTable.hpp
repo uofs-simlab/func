@@ -16,11 +16,14 @@
 #include "EvaluationImplementation.hpp"
 #include "TransferFunctionSinh.hpp"
 #include "json.hpp"
-#include "config.hpp" // FUNC_USE_SMALL_REGISTRY
 
 #include <memory>
 #include <functional>
 #include <fstream>
+#include <stdexcept>
+
+//namespace func
+//{
 
 template <typename TIN>
 struct LookupTableParameters
@@ -35,6 +38,11 @@ struct LookupTableParameters
   LookupTableParameters(){}
 };
 
+
+/* This polynomials array might need to be moved into MetaTable if we want
+   LUTs with other things in their struct (2D arrays will have coefs for each square,
+   LUTs might have their derivative's coefs on the same cache grab, etc).
+   MetaTable handles any "polynomial based" interpolation. */
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
 
 template <typename TOUT, unsigned int N>
@@ -78,13 +86,15 @@ protected:
   TIN  m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
 public:
-
   /* Generate a LUT from func_container.
    * TODO How helpful is the error message if func_container == nullptr? */
   LookupTable(FunctionContainer<TIN,TOUT> *func_container,
       LookupTableParameters<TIN> par) :
     EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "lookup_table")
   {
+    if(func_container->standard_func == nullptr)
+      throw std::invalid_argument("function not defined in given FunctionContainer");
+
     /* Base class variables */
     m_minArg = par.minArg; m_maxArg = par.maxArg;
 
@@ -104,9 +114,6 @@ public:
     if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
     m_grid.reset(new TIN[m_numIntervals]); // TODO maybe only initialize if grid is nonuniform? This is probably optimized out anyways...
-
-    if(func_container->standard_func == nullptr)
-      throw std::invalid_argument("function not defined in given FunctionContainer");
   }
 
   /* Set every generic member variable from a json file */
@@ -137,6 +144,9 @@ public:
   }
 
   virtual ~LookupTable(){};
+  // std::unique_ptr m_grid implicitly deletes the copy ctor so we have to explicitly
+  // ask for the default copy ctor
+  LookupTable(LookupTable&&) = default;
 
   /* public access of protected data */
   TIN step_size(){ return m_stepSize; };
@@ -159,9 +169,6 @@ public:
      grid and rebuild their transfer function */
   virtual void print_details_json(std::ostream& out)
   {
-    // TODO if FunC gets a namespace we should consider renaming our json
-    // functions to to_json() and from_json() functions as seen here
-    // https://github.com/nlohmann/json
     nlohmann::json jsonStats;
 
     jsonStats["_comment"] = "FunC lookup table data";
@@ -185,6 +192,37 @@ public:
   }
 };
 
+/*
+void to_json(nlohmann::json& j, const person& p)
+{
+  j["_comment"] = "FunC lookup table data";
+  j["name"] = m_name;
+  j["minArg"] = m_minArg;
+  j["maxArg"] = m_maxArg;
+  j["stepSize"] = m_stepSize;
+  j["order"] = m_order;
+  j["dataSize"] = m_dataSize;
+  j["numIntervals"] = m_numIntervals;
+  j["numTableEntries"] = m_numTableEntries;
+  j["transfer_function_coefs"] = get_transfer_function_coefs();
+
+  // save the polynomial coefs of each lookup table
+  // Note: m_order is used as the number of polynomial coefs
+  for(unsigned int i=0; i<m_numTableEntries; i++)
+    for(unsigned int j=0; j<get_num_coefs(); j++)
+      j["table"][std::to_string(i)]["coefs"][std::to_string(j)] = get_table_entry(i,j);
+}
+
+// TODO is this legal?
+template <typename TIN, typename TOUT, class OTHER>
+void LookupTableFactory<TIN, TOUT, OTHER>::print_details_json(std::ostream& out)
+{
+  nlohmann::json jsonStats = this; // call to_json(jsonStats, this)
+  out << jsonStats.dump(2) << std::endl;
+}*/
+
 // Legacy func typedef
 template <typename TIN, typename TOUT>
 using UniformLookupTable = LookupTable<TIN,TOUT>;
+
+//} // namespace func

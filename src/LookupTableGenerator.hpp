@@ -22,6 +22,7 @@
 #include "config.hpp" // FUNC_USE_QUADMATH, FUNC_USE_BOOST
 
 #include <iostream>
+#include <string>
 #include <memory>
 #include <limits>
 
@@ -49,7 +50,6 @@ private:
   FunctionContainer<IN_TYPE,OUT_TYPE> *mp_func_container;
 
   LookupTableFactory<IN_TYPE,OUT_TYPE> factory;
-  LookupTableFactory<IN_TYPE,OUT_TYPE,std::string> str_factory;
 
   IN_TYPE m_min;
   IN_TYPE m_max;
@@ -77,6 +77,9 @@ public:
    * tableKey arg only exists as a sanity check (it's pointless otherwise) */
   std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string filename, std::string tableKey = "")
   {
+    if(filename.find(".json") == std::string::npos)
+      throw std::invalid_argument("FunC can only read LUTs from json files");
+
     // get the tableKey from filename
     if(tableKey == ""){
       nlohmann::json jsonStats;
@@ -84,16 +87,13 @@ public:
 
       tableKey = jsonStats["name"].get<std::string>();
     }
-    // MetaTable will check that tableKey actually matches the name in filename!
-    return str_factory.create(tableKey, mp_func_container, filename);
+    // MetaTable will check that tableKey actually matches the name in filename
+    return factory.create(tableKey, mp_func_container, LookupTableParameters<IN_TYPE>{0,0,0}, filename);
   }
 
   /* A wrapper for the LookupTableFactory */
   std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_step(std::string tableKey, IN_TYPE stepSize, std::string filename = "")
   {
-#ifndef FUNC_USE_BOOST
-    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by step without Boost");
-#else
     if(filename != "" && file_exists(filename))
       return generate_by_file(filename, tableKey);
 
@@ -111,7 +111,6 @@ public:
       lut->print_details_json(out_file);
     }
     return lut;
-#endif
   }
 
   /* Generate a table that is accurate to desiredTolerance */
@@ -218,9 +217,6 @@ template <typename IN_TYPE, typename OUT_TYPE>
 inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TYPE,OUT_TYPE>::generate_by_impl_size(
     std::string tableKey, unsigned long desiredSize, std::string filename)
 {
-#ifndef FUNC_USE_BOOST
-    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot generate any table by impl size without Boost");
-#else
   if(filename != "" && file_exists(filename))
     return generate_by_file(filename, tableKey);
 
@@ -262,7 +258,6 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
     lut->print_details_json(out_file);
   }
   return lut;
-#endif
 }
 
 template <typename IN_TYPE, typename OUT_TYPE>

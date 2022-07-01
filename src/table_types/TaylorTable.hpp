@@ -13,6 +13,7 @@
 #include "MetaTable.hpp"
 #include "FunctionContainer.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
+#include <stdexcept>
 
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
 class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>

@@ -2,6 +2,8 @@
   Factory for Lookup Tables
   - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
   - Note: New implementations must be added to the registry by adding to the ::initialize() member function
+
+  - TODO would it make sense to just hardcode OTHER to LookupTableParameters<TIN>
 */
 #pragma once
 #include "TableIncludes.hpp"
@@ -10,6 +12,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <stdexcept>
 
 /*
  * Two-stage string expansion macros
@@ -21,15 +24,15 @@
  * Macros to easily add table types into the registry
  * - Call this inside ::initialize_registry() for all desired table types
  */
-#define FUNC_REGISTER_ONE(classname)                                                                                   \
-  registry.insert({FUNC_STR(classname), [](FunctionContainer<TIN, TOUT> *fc, OTHER args) -> LookupTable<TIN, TOUT> * { \
-                     return new classname<TIN, TOUT>(fc, args);                                                        \
+#define FUNC_REGISTER_ONE(classname)                                                                                                         \
+  registry.insert({FUNC_STR(classname), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename) -> LookupTable<TIN, TOUT> * { \
+                     return new classname<TIN, TOUT>(fc, args, filename);                                                                    \
                    }})
 
-#define FUNC_REGISTER_TEMPLATE(classname, templates...)                                                                \
-  registry.insert(                                                                                                     \
-       {FUNC_STR(classname<templates>), [](FunctionContainer<TIN, TOUT> *fc, OTHER args) -> LookupTable<TIN, TOUT> * { \
-         return new classname<TIN, TOUT, templates>(fc, args);                                                         \
+#define FUNC_REGISTER_TEMPLATE(classname, templates...)                                                                                      \
+  registry.insert(                                                                                                                           \
+       {FUNC_STR(classname<templates>), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename) -> LookupTable<TIN, TOUT> * { \
+         return new classname<TIN, TOUT, templates>(fc, args, filename);                                                                     \
        }})
 
 // This will have to change slightly depending on the maximum number of template arguments,
@@ -59,12 +62,12 @@ public:
    * The map type that holds the registry
    */
   using registry_t =
-      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, OTHER)>>;
+      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, OTHER, std::string)>>;
 
   /*
    * Constructor initializes registry, default destructor.
    */
-  LookupTableFactory() { initialize_registry(registry); };
+  LookupTableFactory() { initialize_registry(); };
   ~LookupTableFactory() = default;
 
   /*
@@ -73,7 +76,7 @@ public:
    * - fc          - FunctionContainer holding the function that the table evaluates
    * - args        - Additional arguments needed for construcing the table
    */
-  std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, OTHER args);
+  std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename = "");
 
   /*
    * Return a container of the keys for table types that have been registered
@@ -91,8 +94,7 @@ private:
    *  Register the desired table types (construct a valid map for the `registry`)
    *  - templated because we have to specialize for std::string
    */
-  template <class T>
-  void initialize_registry(T x);
+  void initialize_registry();
 };
 
 /* --------------------------------------------------------------------------
@@ -106,88 +108,36 @@ private:
  *  - New implementations of table types must be added to the registry here
  */
 template <typename TIN, typename TOUT, class OTHER>
-void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry(registry_t) {
+void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry() {
   // TODO our Taylor/Pade tables don't have nonuniform variants yet
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
-#ifdef FUNC_USE_BOOST
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearTaylorTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticTaylorTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicTaylorTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearTaylorTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticTaylorTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicTaylorTable);
 
-#ifdef FUNC_USE_ARMADILLO
-  // Pade tables need both Boost and Armadillo to build
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,1,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,6,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,3);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
-#endif
-#endif
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,1,1);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,1);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,1);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,1);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,1);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,6,1);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,2);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,2);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,2);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,2);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,3);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
-
-#ifdef FUNC_USE_ARMADILLO
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
-#endif
-}
-
-
-
-/*template <typename TIN, typename TOUT> class LookupTableFactory<TIN,TOUT,std::string>{
-  std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, std::string)>> registry;
-  void initialize_registry(); // only this function changes
-public:  
-  std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, std::string args);
-  std::vector<std::string> get_registered_keys(); // does this actually need to change?
-};*/
-
-/* We always want to be able to read these types from a json file */
-template <typename TIN, typename TOUT, class OTHER>
-void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry(std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, std::string)>>) {
-//#define OTHER std::string // this feels like a big time kludge
-  // TODO our Taylor/Pade tables don't have nonuniform variants yet
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicTaylorTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticTaylorTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearTaylorTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,1,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,6,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,3);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
-
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
 
   FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
-//#undef OTHER
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
+  //FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
 }
 
 /*
@@ -207,14 +157,14 @@ std::vector<std::string> LookupTableFactory<TIN, TOUT, OTHER>::get_registered_ke
  */
 template <typename TIN, typename TOUT, class OTHER>
 std::unique_ptr<LookupTable<TIN, TOUT>>
-LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer<TIN, TOUT> *fc, OTHER args) {
+LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename) {
   // Create a LookupTable
   LookupTable<TIN, TOUT> *instance = nullptr;
 
   // find the name in the registry and call factory method.
   auto it = registry.find(name);
   if (it != registry.end())
-    instance = it->second(fc, args);
+    instance = it->second(fc, args, filename); // we found the constructor corresponding to name
 
   // wrap instance in a unique ptr and return (if created)
   // TODO typos are super common so suggest a "close match" to name in the thrown error
@@ -223,7 +173,7 @@ LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer
   return std::unique_ptr<LookupTable<TIN, TOUT>>(instance);
 }
 
-// Legacy func typedef (TODO is this ever used anymore???)
+// Legacy func typedef (TODO probably unnecessary. Can likely be removed)
 //template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>>
 //using UniformLookupTableFactory = LookupTableFactory<TIN,TOUT,OTHER>;
 

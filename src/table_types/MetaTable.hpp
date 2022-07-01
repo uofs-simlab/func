@@ -18,6 +18,7 @@
 #pragma once
 #include "LookupTable.hpp"
 #include <array>
+#include <stdexcept>
 
 #define INHERIT_META(TIN,TOUT,N,GT) \
   using MetaTable<TIN,TOUT,N,GT>::m_table; \
@@ -32,6 +33,7 @@
 // assuming each iteration will take about the same amount of time
 //#pragma omp parallel for schedule(static)
 
+//namespace func {
 // TODO do we actually need/want to assign numbers to this enum? Use an enum class instead?
 enum GridTypes {UNIFORM = 0, NONUNIFORM = 1, NONUNIFORM_PSEUDO = 2};
 
@@ -44,7 +46,7 @@ std::string grid_type_to_string() {
       return "NonUniform";
     case NONUNIFORM_PSEUDO:
       return "NonUniformPseudo";
-    default: { throw std::invalid_argument("Broken switch case in FunC"); }
+    default: { throw std::invalid_argument("Broken switch case in func::MetaTable"); }
   } 
 }
 
@@ -55,13 +57,17 @@ protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
 
-  TransferFunctionSinh<TIN> m_transferFunction; // used to make nonuniform grids
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table;
+  TransferFunctionSinh<TIN> m_transferFunction; // used to make nonuniform grids
+
   TOUT get_table_entry(unsigned int i, unsigned int j) override { return m_table[i].coefs[j]; }
   unsigned int get_num_coefs() override { return N; }
   std::array<TIN,4> get_transfer_function_coefs() override { return m_transferFunction.get_coefs(); }
 
 public:
+  // std::unique_ptr m_array implicitly deletes the copy ctor so we have to explicitly
+  // ask for the default copy ctor
+  MetaTable(MetaTable&&) = default;
 
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     LookupTable<TIN,TOUT>(func_container, par),
@@ -140,3 +146,16 @@ public:
     return m_table[x0].coefs[0]+sum;
   }
 };
+
+/* TODO
+void to_json(json& j, const person& p) {
+  j = json{{"name", p.name}, {"address", p.address}, {"age", p.age}};
+}
+
+void from_json(const json& j, person& p) {
+  j.at("name").get_to(p.name);
+  j.at("address").get_to(p.address);
+  j.at("age").get_to(p.age);
+}
+
+} // namespace func */
