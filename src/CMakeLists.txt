@@ -1,62 +1,71 @@
+# build our config file from the given cmake options
+file(WRITE config.hpp "#pragma once\n")
+if(USE_BOOST)
+  file(APPEND config.hpp "#define FUNC_USE_BOOST\n")
+  list(APPEND func_link_boost Boost::boost)
+endif()
 
-# Implementations are separated out into their own library
-# Create lists for func_impls source files, libs to link with, and include
-# dir in case the user doesn't have Armadillo installed
-list(APPEND func_impls_src
-    EvaluationImplementation.cpp
-    DirectEvaluation.cpp
-    ArgumentRecord.cpp
-    table_types/UniformConstantTaylorTable.cpp
-    table_types/UniformCubicHermiteTable.cpp
-    table_types/UniformCubicPrecomputedInterpolationTable.cpp
-    table_types/UniformCubicTaylorTable.cpp
-    table_types/UniformFailureProofTable.cpp
-    table_types/UniformLinearInterpolationTable.cpp
-    table_types/UniformLinearPrecomputedInterpolationTable.cpp
-    table_types/UniformLinearTaylorTable.cpp
-    table_types/UniformLookupTable.cpp
-    table_types/UniformQuadraticPrecomputedInterpolationTable.cpp
-    table_types/UniformQuadraticTaylorTable.cpp
-)
-list(APPEND func_impls_include_dirs ./ table_types)
+if(USE_OPENMP)
+  # just a nice option to have for profiling
+  # when we start building tables in parallel
+  list(APPEND func_link_openmp "OpenMP::OpenMP_CXX")
+endif()
 
-if(USE_ARMADILLO AND ARMADILLO_FOUND)
+if(USE_QUADMATH)
+  file(APPEND config.hpp "#define FUNC_USE_QUADMATH\n")
+  list(APPEND func_link_quadmath ${QUADMATH_LIBRARIES} )
+endif()
+
+if(USE_ARMADILLO)
   # link with Armadillo add all the table types that use Armadillo
-  list(APPEND func_impls_include_dirs ${ARMADILLO_INCLUDE_DIR})
-  list(APPEND func_impls_link_libs ${ARMADILLO_LIBRARIES})
+  list(APPEND func_include_dirs ${ARMADILLO_INCLUDE_DIR})
+  list(APPEND func_link_arma ${ARMADILLO_LIBRARIES})
 
-  list(APPEND func_impls_src
-      table_types/UniformArmadilloPrecomputedInterpolationTable.cpp
-      table_types/UniformPadeTable.cpp
-  )
+  # set our config file to use armadillo tables and
+  # fill our lookup table factory with armadillo exclusive table constructors
+  file(APPEND config.hpp "#define FUNC_USE_ARMADILLO\n")
 endif()
 
-# add the func_impls lib with the lists we built above
-add_library(func_impls SHARED ${func_impls_src})
-target_link_libraries(func_impls PUBLIC ${func_impls_link_libs})
-target_include_directories(func_impls PUBLIC ${func_impls_include_dirs})
+# Get all of the cpp files in table_types
+# TODO: Separate out table types again (parallel builds)
+# TODO: Re-add default lib builds for: double,double  ... float,float ... etc
+#       - maybe by forcing UniformLookupTableGenerator<TIN,TOUT> builds?
+#       - Registering each different numeric/grid type should be done in parallel
+file(GLOB func_src table_types/Registrar*.cpp)
+# Add to include directory
+# TODO: Re-add func_impls as its own separate library (again, parallel builds)
+list(APPEND func_include_dirs ./ table_types)
 
-# FunC library
-add_library(func SHARED
-    ImplementationComparator.cpp
-    Timer.cpp
-    UniformLookupTableGenerator.cpp
-)
+# add the func lib with the lists we built above
+add_library(func SHARED ${func_src})
+target_include_directories(func PUBLIC ${func_include_dirs})
+target_link_libraries(func PUBLIC ${func_link_arma} ${func_link_quadmath} Boost::boost ${func_link_openmp})
 
-target_link_libraries(func PUBLIC ${QUADMATH_LIBRARIES} Boost::boost func_impls)
-if(USE_QUADMATH AND QUADMATH_FOUND)
-  target_compile_definitions(func PUBLIC -DUSE_QUADMATH)
-endif()
+set_target_properties(func PROPERTIES PUBLIC_HEADER "\
+config.hpp;func.hpp;\
+FunctionContainer.hpp;EvaluationImplementation.hpp;\
+DirectEvaluation.hpp;ArgumentRecord.hpp;\
+ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
+json.hpp;\
+FailureProofTable.hpp;CompositeLookupTable.hpp;\
+TransferFunctionSinh.hpp;\
+LookupTableFactory.hpp;\
+LookupTableGenerator.hpp;\
+table_types/TableIncludes.hpp;\
+table_types/LookupTable.hpp;\
+table_types/MetaTable.hpp;\
+table_types/ArmadilloPrecomputedInterpolationTable.hpp;\
+table_types/ConstantTaylorTable.hpp;\
+table_types/CubicHermiteTable.hpp;\
+table_types/CubicPrecomputedInterpolationTable.hpp;\
+table_types/TaylorTable.hpp;\
+table_types/LinearInterpolationTable.hpp;\
+table_types/LinearPrecomputedInterpolationTable.hpp;\
+table_types/PadeTable.hpp;\
+table_types/QuadraticPrecomputedInterpolationTable.hpp;\
+")
 
-if(FUNC_RECORD)
-  target_compile_definitions(func PUBLIC -DFUNC_RECORD)
-  target_compile_definitions(func_impls PUBLIC -DFUNC_RECORD)
-endif()
-
-# TODO: Create a simplified public header? BTW every header is always being made
-set_target_properties(func PROPERTIES PUBLIC_HEADER "func.hpp;func_impls.hpp;EvaluationFunctor.hpp;EvaluationImplementation.hpp;DirectEvaluation.hpp;ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;UniformLookupTableGenerator.hpp;table_types/UniformArmadilloPrecomputedInterpolationTable.hpp;table_types/UniformConstantTaylorTable.hpp;table_types/UniformCubicHermiteTable.hpp;table_types/UniformCubicPrecomputedInterpolationTable.hpp;table_types/UniformCubicTaylorTable.hpp;table_types/UniformFailureProofTable.hpp;table_types/UniformLinearInterpolationTable.hpp;table_types/UniformLinearPrecomputedInterpolationTable.hpp;table_types/UniformLinearTaylorTable.hpp;table_types/UniformLookupTable.hpp;table_types/UniformPadeTable.hpp;table_types/UniformQuadraticPrecomputedInterpolationTable.hpp;table_types/UniformQuadraticTaylorTable.hpp;table_types/UniformTables.hpp")
-
-install(TARGETS func func_impls
+install(TARGETS func
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
     PUBLIC_HEADER DESTINATION include/func

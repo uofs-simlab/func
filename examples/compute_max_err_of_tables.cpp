@@ -14,7 +14,7 @@ int main()
 {
   using namespace std;
 
-  MyFunction func;
+  FunctionContainer<double> func_container{SET_F(MyFunction,double)};
 
   /* Which implementations to use */
   std::vector<std::string> implNames {"UniformLinearInterpolationTable",
@@ -24,7 +24,7 @@ int main()
       "UniformQuadraticTaylorTable",
       "UniformCubicTaylorTable"};
 
-  UniformLookupTableGenerator gen(&func, MIN_ARG, MAX_ARG);
+  UniformLookupTableGenerator<double> gen(&func_container, MIN_ARG, MAX_ARG);
 
   cout << "# Function: " << FUNCNAME << endl;
   cout << "# h ";

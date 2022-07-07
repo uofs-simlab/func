@@ -6,15 +6,8 @@
       ./experiment_best_worst <tableMin> <tableMax> <tableTol> <nExperiments> <nEvals> <seed>
  */
 
-// #include "sin.hpp"
-// #include "func.hpp"
+#include "func.hpp"
 #include "ZeroFunction.hpp"
-// #include "chaste_log_function.hpp"
-
-#include "ImplementationComparator.hpp"
-#include "UniformLookupTableGenerator.hpp"
-#include "UniformTables.hpp"
-#include "DirectEvaluation.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -43,7 +36,8 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[3]);
   int    seed         = std::stoi(argv[4]);
 
-  ZeroFunction func;
+  FunctionContainer<double> func_container {SET_F(ZeroFunction,double)};
+
   double stepSize;
 
   /* Which LUT implementations to use */
@@ -68,10 +62,10 @@ int main(int argc, char* argv[])
   std::cout << "\n# impls using ~ " << percentRam <<"% of RAM\n";
   cout << "# Function:  " << FUNCNAME << endl << endl;
 
-  UniformLookupTableGenerator gen(&func, 0, 1);
+  UniformLookupTableGenerator<double> gen(&func_container, 0, 1);
 
   /* Fill in the implementations */
-  std::vector<unique_ptr<EvaluationImplementation>> impls;
+  std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
 
 
   /* Run the best case */
@@ -82,7 +76,7 @@ int main(int argc, char* argv[])
   }
 
   /* Run comparator */
-  ImplementationComparator implCompare_best(impls, nEvals, seed);
+  ImplementationComparator<double> implCompare_best(impls, nEvals, seed);
   implCompare_best.run_timings(nExperiments);
 
   /* Summarize the results */
@@ -108,7 +102,7 @@ int main(int argc, char* argv[])
   }
 
   /* Run comparator */
-  ImplementationComparator implCompare_worst(impls, nEvals, seed);
+  ImplementationComparator<double> implCompare_worst(impls, nEvals, seed);
   implCompare_worst.run_timings(nExperiments);
 
   /* Summarize the results */
