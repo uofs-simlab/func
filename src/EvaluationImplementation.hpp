@@ -47,6 +47,7 @@ public:
     m_name(name), m_func(func), m_minArg(0), m_maxArg(0) {}
 
   virtual ~EvaluationImplementation(){};
+  EvaluationImplementation(EvaluationImplementation&&) = default;
 
   virtual OUT_TYPE operator()(IN_TYPE x) = 0;
   virtual void print_details(std::ostream& out)
@@ -56,10 +57,10 @@ public:
   virtual void print_details_json(std::ostream& out)=0;
 
   /* public access of protected data */
-  IN_TYPE min_arg(){ return m_minArg; };
-  IN_TYPE max_arg(){ return m_maxArg; };
-  unsigned order(){ return m_order; };
-  unsigned size(){ return m_dataSize; };
-  std::string name(){ return m_name; };
-  std::function<OUT_TYPE(IN_TYPE)> function(){ return m_func; };
+  IN_TYPE min_arg() const { return m_minArg; };
+  IN_TYPE max_arg() const { return m_maxArg; };
+  unsigned int order() const { return m_order; };
+  unsigned int size() const { return m_dataSize; };
+  std::string name() const { return m_name; };
+  std::function<OUT_TYPE(IN_TYPE)> function() const { return m_func; };
 };

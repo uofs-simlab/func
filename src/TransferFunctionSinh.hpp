@@ -58,9 +58,10 @@ public:
   TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize, std::array<IN_TYPE,4> inv_coefs) :
     m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) { m_inv_coefs = inv_coefs; }
 
+  TransferFunctionSinh() = default;
   /* initialize the identity transfer function */
-  TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
-    TransferFunctionSinh<IN_TYPE>(minArg, tableMaxArg, stepSize, {-minArg/stepSize,1/stepSize,0,0}) {}
+  //TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
+  //  TransferFunctionSinh<IN_TYPE>(minArg, tableMaxArg, stepSize, {-minArg/stepSize,1/stepSize,0,0}) {}
 
   /* Build the coefficients in g_inv */
   template<typename OUT_TYPE>
@@ -72,12 +73,14 @@ public:
     // Template code is only compiled if the template is instantiated
     // so this will cause a compile time error only when this
     // constructor is called without Boost available:
-    static_assert(sizeof(IN_TYPE) != sizeof(IN_TYPE), "Cannot build a nonuniform grid without Boost verion 1.71.0 or higher");
+    static_assert(sizeof(IN_TYPE) != sizeof(IN_TYPE), "Cannot generate a nonuniform grid without Boost verion 1.71.0 or higher");
 #else
     using boost::math::quadrature::gauss_kronrod;
     using boost::math::differentiation::make_fvar;
 
-    // TODO check that the first derivative is not null
+    if(fc->autodiff1_func == nullptr)
+      throw std::invalid_argument("Error in func::TransferFunction. 1st derivative of function is needed to generate nonuniform grids but is null");
+
     // build a function to return the first derivative of f
     std::function<OUT_TYPE(IN_TYPE)> f_prime = [fc](IN_TYPE x) -> OUT_TYPE {
       return (fc->autodiff1_func)(make_fvar<IN_TYPE,1>(x)).derivative(1);
@@ -165,9 +168,7 @@ public:
       std::to_string(m_inv_coefs[1]) << "x + " << std::to_string(m_inv_coefs[0]) << std::endl;
   }
 
-  std::array<IN_TYPE,4> get_coefs() {
-    return m_inv_coefs;
-  }
+  std::array<IN_TYPE,4> get_coefs() const { return m_inv_coefs; }
 
   std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_tableMaxArg); }
 };
