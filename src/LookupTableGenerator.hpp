@@ -77,18 +77,17 @@ public:
    * tableKey arg only exists as a sanity check (it's pointless otherwise) */
   std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string filename, std::string tableKey = "")
   {
-    if(filename.find(".json") == std::string::npos)
+    if(filename.find(".json") == std::string::npos) // TODO does this work for binary json files?????
       throw std::invalid_argument("FunC can only read LUTs from json files");
 
+    nlohmann::json jsonStats;
+    std::ifstream(filename) >> jsonStats;
     // get the tableKey from filename
     if(tableKey == ""){
-      nlohmann::json jsonStats;
-      std::ifstream(filename) >> jsonStats;
-
       tableKey = jsonStats["name"].get<std::string>();
     }
     // MetaTable will check that tableKey actually matches the name in filename
-    return factory.create(tableKey, mp_func_container, LookupTableParameters<IN_TYPE>{0,0,0}, filename);
+    return factory.create(tableKey, mp_func_container, LookupTableParameters<IN_TYPE>{0,0,0}, jsonStats);
   }
 
   /* A wrapper for the LookupTableFactory */
@@ -420,9 +419,6 @@ template <typename IN_TYPE, typename OUT_TYPE>
 inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_size(
     std::string tableKey, IN_TYPE stepSize)
 {
-#ifndef FUNC_USE_BOOST
-    static_assert(sizeof(IN_TYPE)!=sizeof(IN_TYPE), "Cannot compute error at step without Boost");
-#else
   /*
     Can be implemented in terms of the Functor used in solving for a specific
     tolerance, so that is reused.
@@ -441,7 +437,6 @@ inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_
       (impl->function())(x) << " " <<
       (*impl)(x) << std::endl;
   }
-#endif
 }
 
 // Legacy func typedef

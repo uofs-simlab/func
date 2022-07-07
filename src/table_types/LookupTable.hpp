@@ -1,4 +1,7 @@
 /*
+  This class isn't much more than a convenient interface that we can use with
+  the LookupTableFactory
+
   TODO explain how this links up with MetaTable & each other implementation
   Intermediate abstract class for LUTs with uniformly spaced grid points.
 
@@ -10,6 +13,10 @@
   Notes:
   - In the case where (max-min)/stepsize is not an integer then
   the real table max is greater than the user supplied max
+
+  - Making this base class handle saving LUTs to json has possibly
+  given this class too much information about 
+
 */
 #pragma once
 #include "FunctionContainer.hpp"
@@ -39,22 +46,9 @@ struct LookupTableParameters
 };
 
 
-/* This polynomials array might need to be moved into MetaTable if we want
-   LUTs with other things in their struct (2D arrays will have coefs for each square,
-   LUTs might have their derivative's coefs on the same cache grab, etc).
-   MetaTable handles any "polynomial based" interpolation. */
-static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
-
-template <typename TOUT, unsigned int N>
-struct alignas(sizeof(TOUT)*alignments[N]) polynomial{
-  static const unsigned int num_coefs = N;
-  TOUT coefs[N];
-};
-
 /* Use to inherit LookupTable's member variables
    without having to put "this->" everywhere. */
 #define INHERIT_LUT(TIN,TOUT) \
-  using LookupTable<TIN,TOUT>::m_grid; \
   using LookupTable<TIN,TOUT>::m_numIntervals; \
   using LookupTable<TIN,TOUT>::m_numTableEntries; \
   using LookupTable<TIN,TOUT>::m_stepSize; \
@@ -68,21 +62,13 @@ class LookupTable : public EvaluationImplementation<TIN,TOUT>
 protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
 
-  std::unique_ptr<TIN[]> m_grid;  // pointers to grid and evaluation data
-  // a polynomial (above) array needs to be provided by each implementation
-
-  // get the ith polynomial's jth coefficient
-  virtual TOUT get_table_entry(unsigned int i, unsigned int j)=0;
-  // get the number of coefficients used
-  virtual unsigned int get_num_coefs()=0;
-  virtual std::array<TIN,4> get_transfer_function_coefs()=0;
+  // a polynomial (defn above) array must be provided by each implementation. 
 
   unsigned int m_numIntervals;   // sizes of grid and evaluation data
   unsigned int m_numTableEntries;
 
   TIN  m_stepSize;    // fixed grid spacing (and its inverse)
   TIN  m_stepSize_inv;
-
   TIN  m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
 public:
@@ -90,7 +76,7 @@ public:
    * TODO How helpful is the error message if func_container == nullptr? */
   LookupTable(FunctionContainer<TIN,TOUT> *func_container,
       LookupTableParameters<TIN> par) :
-    EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "lookup_table")
+    EvaluationImplementation<TIN,TOUT>(func_container->standard_func)
   {
     if(func_container->standard_func == nullptr)
       throw std::invalid_argument("function not defined in given FunctionContainer");
@@ -113,47 +99,26 @@ public:
     m_tableMaxArg = m_maxArg;
     if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
       m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
-    m_grid.reset(new TIN[m_numIntervals]); // TODO maybe only initialize if grid is nonuniform? This is probably optimized out anyways...
   }
 
-  /* Set every generic member variable from a json file */
-  LookupTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    EvaluationImplementation<TIN,TOUT>(func_container == nullptr ? nullptr : func_container->standard_func, "lookup_table")
-  {
-    // func_container is unused here and could just be nullptr...
-    nlohmann::json jsonStats;
-    std::ifstream(filename) >> jsonStats;
+  // TODO
+  // virtual + and * methods for curried LUTs (implementation in MetaTable ideally)
+  /* return an approximation to f^(N)(x) */
+  //template <unsigned int N>
+  //virtual TOUT diff(TIN x) = 0;
 
-    // name checking happens in MetaTable
-    m_minArg = jsonStats["minArg"].get<TIN>();
-    m_maxArg = jsonStats["maxArg"].get<TIN>();
-    m_stepSize = jsonStats["stepSize"].get<TIN>();
-    m_stepSize_inv = 1.0/m_stepSize;
-    m_order = jsonStats["order"].get<unsigned int>();
-    m_dataSize = jsonStats["dataSize"].get<unsigned int>();
-    m_numIntervals = jsonStats["numIntervals"].get<unsigned int>();
-    m_numTableEntries = jsonStats["numTableEntries"].get<unsigned int>();
-
-    // recompute m_tableMaxArg
-    m_tableMaxArg = m_maxArg;
-    if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
-      m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
-
-    // Recompute m_table, m_grid (the array of polynomials), and the
-    // transfer function in MetaTable
-  }
-
+  LookupTable() = default;
   virtual ~LookupTable(){};
   // std::unique_ptr m_grid implicitly deletes the copy ctor so we have to explicitly
   // ask for the default copy ctor
   LookupTable(LookupTable&&) = default;
 
   /* public access of protected data */
-  TIN step_size(){ return m_stepSize; };
-  unsigned num_table_entries(){ return m_numTableEntries; };
-  unsigned num_intervals(){ return m_numIntervals; };
+  TIN step_size() const { return m_stepSize; };
+  unsigned num_table_entries() const { return m_numTableEntries; };
+  unsigned num_intervals() const { return m_numIntervals; };
 
-  void print_details(std::ostream &out)
+  void print_details(std::ostream &out) override
   {
     out << m_name << " " << m_minArg << " " << m_maxArg << " "
         << m_stepSize << " " << m_numIntervals << " ";
@@ -163,66 +128,8 @@ public:
   {
     return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
   }
-
-  /* Write table data to the provided ostream in the form of json. Virtual in case derived
-     classes need to save their own member vars. eg. NonuniformLUTs will store their
-     grid and rebuild their transfer function */
-  virtual void print_details_json(std::ostream& out)
-  {
-    nlohmann::json jsonStats;
-
-    jsonStats["_comment"] = "FunC lookup table data";
-    jsonStats["name"] = m_name;
-    jsonStats["minArg"] = m_minArg;
-    jsonStats["maxArg"] = m_maxArg;
-    jsonStats["stepSize"] = m_stepSize;
-    jsonStats["order"] = m_order;
-    jsonStats["dataSize"] = m_dataSize;
-    jsonStats["numIntervals"] = m_numIntervals;
-    jsonStats["numTableEntries"] = m_numTableEntries;
-    jsonStats["transfer_function_coefs"] = get_transfer_function_coefs();
-
-    // save the polynomial coefs of each lookup table
-    // Note: m_order is used as the number of polynomial coefs
-    for(unsigned int i=0; i<m_numTableEntries; i++)
-      for(unsigned int j=0; j<get_num_coefs(); j++)
-        jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)] = get_table_entry(i,j);
-
-    out << jsonStats.dump(2) << std::endl;
-  }
 };
 
-/*
-void to_json(nlohmann::json& j, const person& p)
-{
-  j["_comment"] = "FunC lookup table data";
-  j["name"] = m_name;
-  j["minArg"] = m_minArg;
-  j["maxArg"] = m_maxArg;
-  j["stepSize"] = m_stepSize;
-  j["order"] = m_order;
-  j["dataSize"] = m_dataSize;
-  j["numIntervals"] = m_numIntervals;
-  j["numTableEntries"] = m_numTableEntries;
-  j["transfer_function_coefs"] = get_transfer_function_coefs();
-
-  // save the polynomial coefs of each lookup table
-  // Note: m_order is used as the number of polynomial coefs
-  for(unsigned int i=0; i<m_numTableEntries; i++)
-    for(unsigned int j=0; j<get_num_coefs(); j++)
-      j["table"][std::to_string(i)]["coefs"][std::to_string(j)] = get_table_entry(i,j);
-}
-
-// TODO is this legal?
-template <typename TIN, typename TOUT, class OTHER>
-void LookupTableFactory<TIN, TOUT, OTHER>::print_details_json(std::ostream& out)
-{
-  nlohmann::json jsonStats = this; // call to_json(jsonStats, this)
-  out << jsonStats.dump(2) << std::endl;
-}*/
-
-// Legacy func typedef
-template <typename TIN, typename TOUT>
-using UniformLookupTable = LookupTable<TIN,TOUT>;
-
+/* Can we partialially specialize operator() when TOUT = std::unique_ptr<LookupTable<TIN, TOUT2>> to fully evaluate everything?
+ * Or potentially, when TOUT is any callable type (just to simplify user syntax) */
 //} // namespace func

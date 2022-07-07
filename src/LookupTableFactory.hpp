@@ -24,15 +24,15 @@
  * Macros to easily add table types into the registry
  * - Call this inside ::initialize_registry() for all desired table types
  */
-#define FUNC_REGISTER_ONE(classname)                                                                                                         \
-  registry.insert({FUNC_STR(classname), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename) -> LookupTable<TIN, TOUT> * { \
-                     return new classname<TIN, TOUT>(fc, args, filename);                                                                    \
+#define FUNC_REGISTER_ONE(classname)                                                                                                                    \
+  registry.insert({FUNC_STR(classname), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
+                     return new classname<TIN, TOUT>(fc, args, jsonStats);                                                                              \
                    }})
 
-#define FUNC_REGISTER_TEMPLATE(classname, templates...)                                                                                      \
-  registry.insert(                                                                                                                           \
-       {FUNC_STR(classname<templates>), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename) -> LookupTable<TIN, TOUT> * { \
-         return new classname<TIN, TOUT, templates>(fc, args, filename);                                                                     \
+#define FUNC_REGISTER_TEMPLATE(classname, templates...)                                                                                                 \
+  registry.insert(                                                                                                                                      \
+       {FUNC_STR(classname<templates>), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
+         return new classname<TIN, TOUT, templates>(fc, args, jsonStats);                                                                               \
        }})
 
 // This will have to change slightly depending on the maximum number of template arguments,
@@ -62,7 +62,7 @@ public:
    * The map type that holds the registry
    */
   using registry_t =
-      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, OTHER, std::string)>>;
+      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, OTHER, const nlohmann::json& jsonStats)>>;
 
   /*
    * Constructor initializes registry, default destructor.
@@ -76,7 +76,8 @@ public:
    * - fc          - FunctionContainer holding the function that the table evaluates
    * - args        - Additional arguments needed for construcing the table
    */
-  std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename = "");
+  std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, OTHER args,
+      const nlohmann::json& jsonStats=nlohmann::json());
 
   /*
    * Return a container of the keys for table types that have been registered
@@ -157,14 +158,14 @@ std::vector<std::string> LookupTableFactory<TIN, TOUT, OTHER>::get_registered_ke
  */
 template <typename TIN, typename TOUT, class OTHER>
 std::unique_ptr<LookupTable<TIN, TOUT>>
-LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer<TIN, TOUT> *fc, OTHER args, std::string filename) {
+LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer<TIN, TOUT> *fc, OTHER args, const nlohmann::json& jsonStats) {
   // Create a LookupTable
   LookupTable<TIN, TOUT> *instance = nullptr;
 
   // find the name in the registry and call factory method.
   auto it = registry.find(name);
   if (it != registry.end())
-    instance = it->second(fc, args, filename); // we found the constructor corresponding to name
+    instance = it->second(fc, args, jsonStats); // we found the constructor corresponding to name
 
   // wrap instance in a unique ptr and return (if created)
   // TODO typos are super common so suggest a "close match" to name in the thrown error
@@ -173,7 +174,23 @@ LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer
   return std::unique_ptr<LookupTable<TIN, TOUT>>(instance);
 }
 
-// Legacy func typedef (TODO probably unnecessary. Can likely be removed)
-//template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>>
-//using UniformLookupTableFactory = LookupTableFactory<TIN,TOUT,OTHER>;
+
+/* from_json for unique_ptr<LookupTable> which unlocks this fancy syntax:
+```c++
+  nlohmann::json jsonStats;
+  std::ifstream(filename) >> jsonStats;
+  auto lut = jsonStats.get<std::unique_ptr<func::LookupTable<TIN,TOUT>>>(); // call the constructor (or the from_json) referred to by "name"
+```
+*/
+
+// std::unique_ptr<T> is default constructable. TODO does this actually work though?
+template <typename TIN, typename TOUT>
+void from_json(const nlohmann::json& jsonStats, std::unique_ptr<LookupTable<TIN,TOUT>>& lut) {
+  std::string name = jsonStats.at("name");
+  LookupTableFactory<TIN,TOUT> factory; // TODO this might possibly be woefully slow
+
+  //lut.reset(); // TODO double check this isn't actually necessary
+  lut = factory.create(name, nullptr, LookupTableParameters<TIN>{0,0,0}, jsonStats);
+}
+
 

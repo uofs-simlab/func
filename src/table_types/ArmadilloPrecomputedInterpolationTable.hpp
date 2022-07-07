@@ -11,8 +11,8 @@
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
-  - the template implementation is only for N=4,5,6,7 (ie, available polynomial interpolation is
-  of degrees 4 up to degree 7)
+  - the template implementation is only registered for N=4,5,6,7
+  (ie, available polynomial interpolation is of degrees 4 up to degree 7)
 */
 #pragma once
 #include "MetaTable.hpp"
@@ -20,7 +20,7 @@
 #include <stdexcept>
 
 #ifdef FUNC_USE_ARMADILLO
-#define ARMA_USE_CXX11 // TODO does this affect a libraries that use FunC?
+#define ARMA_USE_CXX11 // TODO does this affect libraries that use FunC?
 #include <armadillo>
 #endif
 
@@ -43,21 +43,28 @@ class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,N+1,GT);
 
+  static const std::string classname;
 public:
+  //TODO add a constructor that reads table type from a filename (much like what the lookup table generator does)
+
   // build the LUT from scratch or look in filename for an existing LUT
-  ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par, std::string filename = "") :
-    MetaTable<TIN,TOUT,N+1,GT>((filename == "") ? // use the default move constructor for MetaTable (probably not elided...)
+  ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+      const nlohmann::json& jsonStats=nlohmann::json()) :
+    MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
       std::move(MetaTable<TIN,TOUT,N+1,GT>(func_container, par)) :
-      std::move(MetaTable<TIN,TOUT,N+1,GT>(func_container, filename, grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">")))
+      std::move(MetaTable<TIN,TOUT,N+1,GT>(jsonStats, classname, func_container)))
   {
 #ifndef FUNC_USE_ARMADILLO
     // throw a descriptive exception. This could theoretically be a compile time error; however, that will only stop us from
     // registering this table (in which case, users would just get a vague "table not registered" error)
-    if(filename == "")
+    if(jsonStats.empty())
       throw std::invalid_argument("Armadillo tables need Armadillo to be generated");
 #else
+    if(!jsonStats.empty())
+      return; // all our work is already done
+
     /* Base class default variables */
-    m_name = grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
+    m_name = classname;
     m_numTableEntries = m_numIntervals+1;
     m_order = N+1; // N is the degree of the polynomial interpolant so the order is N+1
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -114,6 +121,9 @@ public:
 
   // operator() comes straight from the MetaTable
 };
+
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
+const std::string ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
 
 // define friendlier names
 template <typename TIN, typename TOUT, unsigned int N>
