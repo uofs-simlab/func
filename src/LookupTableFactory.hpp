@@ -44,17 +44,6 @@
 #define FUNC_ADD_TABLE_TO_REGISTRY(...) \
   FUNC_REGISTRY_GET_MACRO(__VA_ARGS__, FUNC_REGISTER_TEMPLATE, FUNC_REGISTER_TEMPLATE, FUNC_REGISTER_ONE, )(__VA_ARGS__)
 
-// nonuniform LUTs require Boost
-/*#ifdef FUNC_USE_BOOST
-#define FUNC_ADD_TABLE_TO_REGISTRY(classname,...)    \
-  FUNC_ADD_TABLE_TO_REGISTRY(Uniform##classname,...);         \
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniform##classname,...);      \
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudo##classname,...)
-#else
-#define FUNC_ADD_TABLE_TO_REGISTRY(classname,...)    \
-  FUNC_ADD_TABLE_TO_REGISTRY(Uniform##classname,...)
-#endif*/
-
 template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>> class LookupTableFactory {
 public:
 
@@ -111,34 +100,56 @@ private:
 template <typename TIN, typename TOUT, class OTHER>
 void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry() {
   // TODO our Taylor/Pade tables don't have nonuniform variants yet
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearTaylorTable);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticTaylorTable);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticTaylorTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicTaylorTable);
 
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,1,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,6,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,3);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,1,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,6,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,2,2);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,2);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,2);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,5,2);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,3);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
 
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
 
   FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,4);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
-  //FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
+
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicHermiteTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformQuadraticPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearInterpolationTable);
+
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,7);
+
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicHermiteTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoQuadraticPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearInterpolationTable);
+
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,7);
 }
 
 /*

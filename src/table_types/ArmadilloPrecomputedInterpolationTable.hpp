@@ -114,11 +114,6 @@ public:
 #endif
   }
 
-  // Look for this LUT in filename. MetaTable builds m_table and LookupTable initializes every other member variable
-  // I think this can probably just be a from_json() method ...
-  //ArmadilloPrecomputedInterpolationTable(std::string filename, FunctionContainer<TIN,TOUT> *func_container = nullptr) :
-  //  ArmadilloPrecomputedInterpolationTable(func_container, {0,0,0}, filename)
-
   // operator() comes straight from the MetaTable
 };
 

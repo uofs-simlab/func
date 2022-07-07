@@ -32,23 +32,31 @@ class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,M+N+1,GT);
 
-  static TOUT constexpr fact[] = {1,1,2,6,24,120,720,5040};
-
+  static const std::string classname;
+  // should be guaranteed that TIN is a numeric type
+  static TIN constexpr fact[] = {1,1,2,6,24,120,720,5040};
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> mp_boost_func;
 #endif
 
 public:
-  PadeTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,M+N+1,GT>(func_container, par)
+  // build the LUT from scratch or look in filename for an existing LUT
+  PadeTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+      const nlohmann::json& jsonStats=nlohmann::json()) :
+    MetaTable<TIN,TOUT,M+N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<TIN,TOUT,M+N+1,GT>(func_container, par)) :
+      std::move(MetaTable<TIN,TOUT,M+N+1,GT>(jsonStats, classname, func_container)))
   {
 #if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
     static_assert(sizeof(TIN)!=sizeof(TIN), "Pade tables need both Armadillo and Boost to be generated");
 #else
+    if(!jsonStats.empty())
+      return; // all our work is already done
+
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
-    m_name = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
+    m_name = classname;
     m_order = M+N+1;
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -157,11 +165,6 @@ public:
 #endif
   }
 
-  /* build this table from a file. Everything other than m_table is built by MetaTable */
-  PadeTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,M+N+1,GT>(func_container, filename,
-        grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">") {}
-
   // override operator() from MetaTable so we work with rational functions instead
   TOUT operator()(TIN x) override
   {
@@ -189,6 +192,9 @@ public:
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> boost_function(){ return mp_boost_func; }
 #endif
 };
+
+template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT>
+const std::string PadeTable<TIN,TOUT,M,N,GT>::classname = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
 using UniformPadeTable = PadeTable<TIN,TOUT,M,N,UNIFORM>;

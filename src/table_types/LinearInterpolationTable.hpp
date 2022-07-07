@@ -21,13 +21,21 @@ class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,1,GT);
 
+  static const std::string classname;
 public:
+  // build the LUT from scratch or look in filename for an existing LUT
   //#pragma omp declare simd
-  LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,1,GT>(func_container, par)
+  LinearInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+      const nlohmann::json& jsonStats=nlohmann::json()) :
+    MetaTable<TIN,TOUT,1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<TIN,TOUT,1,GT>(func_container, par)) :
+      std::move(MetaTable<TIN,TOUT,1,GT>(jsonStats, classname, func_container)))
   {
+    if(!jsonStats.empty())
+      return; // all our work is already done
+
     /* Base class variables */
-    m_name  = grid_type_to_string<GT>() + "LinearInterpolationTable";
+    m_name  = classname;
     m_order = 1;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -97,6 +105,9 @@ public:
     return y1+dx*(y2-y1);
   }
 };
+
+template <typename TIN, typename TOUT, GridTypes GT>
+const std::string LinearInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "LinearInterpolationTable";
 
 template <typename TIN, typename TOUT=TIN>
 using UniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,UNIFORM>;

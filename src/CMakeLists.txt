@@ -54,16 +54,16 @@ LookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/LookupTable.hpp;\
 table_types/MetaTable.hpp;\
-table_types/ArmadilloPrecomputedInterpolationTable.hpp;")
-#table_types/ConstantTaylorTable.hpp;\
-#table_types/CubicHermiteTable.hpp;\
-#table_types/CubicPrecomputedInterpolationTable.hpp;\
-#table_types/TaylorTable.hpp;\
-#table_types/LinearInterpolationTable.hpp;\
-#table_types/LinearPrecomputedInterpolationTable.hpp;\
-#table_types/PadeTable.hpp;\
-#table_types/QuadraticPrecomputedInterpolationTable.hpp;\
-#")
+table_types/ArmadilloPrecomputedInterpolationTable.hpp;\
+table_types/ConstantTaylorTable.hpp;\
+table_types/CubicHermiteTable.hpp;\
+table_types/CubicPrecomputedInterpolationTable.hpp;\
+table_types/TaylorTable.hpp;\
+table_types/LinearInterpolationTable.hpp;\
+table_types/LinearPrecomputedInterpolationTable.hpp;\
+table_types/PadeTable.hpp;\
+table_types/QuadraticPrecomputedInterpolationTable.hpp;\
+")
 
 install(TARGETS func
     LIBRARY DESTINATION lib

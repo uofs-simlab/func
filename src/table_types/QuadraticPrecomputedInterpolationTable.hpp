@@ -21,12 +21,20 @@ class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,3,GT);
 
+  static const std::string classname;
 public:
-  QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,3,GT>(func_container, par)
+  // build the LUT from scratch or look in filename for an existing LUT
+  QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+      const nlohmann::json& jsonStats=nlohmann::json()) :
+    MetaTable<TIN,TOUT,3,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<TIN,TOUT,3,GT>(func_container, par)) :
+      std::move(MetaTable<TIN,TOUT,3,GT>(jsonStats, classname, func_container)))
   {
+    if(!jsonStats.empty())
+      return; // all our work is already done
+
     /* Base class default variables */
-    m_name = grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable";
+    m_name = classname;
     m_order = 3;
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -55,11 +63,10 @@ public:
       m_table[ii].coefs[2] = 2*y0+-4*y1+2*y2;
     }
   }
-
-  QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,3,GT>(func_container, filename,
-        grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable") {}
 };
+
+template <typename TIN, typename TOUT, GridTypes GT>
+const std::string QuadraticPrecomputedInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable";
 
 template <typename TIN, typename TOUT=TIN>
 using UniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,UNIFORM>;

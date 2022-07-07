@@ -22,13 +22,14 @@ class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,N+1,GT);
 
-  static TOUT constexpr fact[] = {1,1,2,6,24,120,720,5040};
-
+  static const std::string classname;
+  // should be guaranteed that TIN is a numeric type
+  static TIN constexpr fact[] = {1,1,2,6,24,120,720,5040};
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,N>(adVar<TOUT,N>)> mp_boost_func;
 #endif
 
-  std::string degree_to_string(){
+  static const std::string degree_to_string() {
     switch(N){
       case 1:
         return "Linear";
@@ -42,16 +43,23 @@ class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>
   }
 
 public:
-  TaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,N+1,GT>(func_container, par)
+  // build the LUT from scratch or look in filename for an existing LUT
+  TaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+      const nlohmann::json& jsonStats=nlohmann::json()) :
+    MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<TIN,TOUT,N+1,GT>(func_container, par)) :
+      std::move(MetaTable<TIN,TOUT,N+1,GT>(jsonStats, classname, func_container)))
   {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate a TaylorTable without Boost version 1.71.0 or newer");
 #else
+    if(!jsonStats.empty())
+      return; // all our work is already done
+
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
-    m_name = grid_type_to_string<GT>()+degree_to_string()+"TaylorTable";
+    m_name = classname;
     m_order = N+1;
     m_numTableEntries = m_numIntervals;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -73,11 +81,6 @@ public:
     }
 #endif
   }
-
-  /* build this table from a file. Everything other than m_table is built by MetaTable */
-  TaylorTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
-    MetaTable<TIN,TOUT,N+1,GT>(func_container, filename,
-        grid_type_to_string<GT>() + degree_to_string() + "TaylorTable") {}
 
   TOUT operator()(TIN x) override
   {
@@ -102,6 +105,9 @@ public:
   std::function<adVar<TOUT,N>(adVar<TOUT,N>)> boost_function(){ return mp_boost_func; }
 #endif
 };
+
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
+const std::string TaylorTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>()+TaylorTable<TIN,TOUT,N,GT>::degree_to_string()+"TaylorTable";
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>

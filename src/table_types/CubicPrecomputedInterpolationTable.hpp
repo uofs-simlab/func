@@ -23,12 +23,20 @@ class CubicPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,4,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,4,GT);
 
+  static const std::string classname;
 public:
-  CubicPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    MetaTable<TIN,TOUT,4,GT>(func_container, par)
+  // build the LUT from scratch or look in filename for an existing LUT
+  CubicPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+      const nlohmann::json& jsonStats=nlohmann::json()) :
+    MetaTable<TIN,TOUT,4,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<TIN,TOUT,4,GT>(func_container, par)) :
+      std::move(MetaTable<TIN,TOUT,4,GT>(jsonStats, classname, func_container)))
   {
+    if(!jsonStats.empty())
+      return; // all our work is already done
+
     /* Base class default variables */
-    m_name = grid_type_to_string<GT>() + "CubicPrecomputedInterpolationTable";
+    m_name = classname;
     m_order = 4;
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -66,6 +74,9 @@ public:
         grid_type_to_string<GT>() + "CubicPrecomputedInterpolationTable") {}
   // operator() comes straight from the MetaTable
 };
+
+template <typename TIN, typename TOUT, GridTypes GT>
+const std::string CubicPrecomputedInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "CubicPrecomputedInterpolationTable";
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
