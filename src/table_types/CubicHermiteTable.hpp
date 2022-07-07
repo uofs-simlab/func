@@ -14,6 +14,7 @@
 #pragma once
 #include "MetaTable.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
+#include <stdexcept>
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,GT>
@@ -22,22 +23,28 @@ class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,GT>
   INHERIT_LUT(TIN,TOUT);
   INHERIT_META(TIN,TOUT,4,GT);
 
-  FUNC_REGISTER_LUT(CubicHermiteTable);
-
+  static const std::string classname;
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,1>(adVar<TIN,1>)> mp_boost_func;
 #endif
 
 public:
-  CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-      MetaTable<TIN,TOUT,4,GT>(func_container, par)
+  // build the LUT from scratch or look in filename for an existing LUT
+  CubicHermiteTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+      const nlohmann::json& jsonStats=nlohmann::json()) :
+    MetaTable<TIN,TOUT,4,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<TIN,TOUT,4,GT>(func_container, par)) :
+      std::move(MetaTable<TIN,TOUT,4,GT>(jsonStats, classname, func_container)))
   {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate a CubicHermiteTable without Boost version 1.71.0 or newer");
 #else
+    if(!jsonStats.empty())
+      return; // all our work is already done
+
     using boost::math::differentiation::make_fvar;
     /* Base class default variables */
-    m_name = grid_type_to_string<GT>() + "CubicHermiteTable";
+    m_name = classname;
     m_order = 4;
     m_numTableEntries = m_numIntervals+1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
@@ -48,7 +55,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
-    for (int ii=0; ii<m_numIntervals; ++ii) {
+    for (unsigned int ii=0; ii<m_numIntervals; ++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
@@ -85,6 +92,9 @@ public:
   std::function<adVar<TOUT,1>(adVar<TOUT,1>)> boost_function(){ return mp_boost_func; }
 #endif
 };
+
+template <typename TIN, typename TOUT, GridTypes GT>
+const std::string CubicHermiteTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "CubicHermiteTable";
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>

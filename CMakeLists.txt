@@ -12,6 +12,19 @@ project(
 
 set(CMAKE_CXX_STANDARD 11)
 
+# Enable compiler warnings, error on warnings
+if (MSVC) # Microsoft
+    # warning level 4 and all warnings as errors
+    add_compile_options(/W4 /WX)
+else() # GCC and Clang
+    add_compile_options(-Wall -Wextra -pedantic -Werror)
+    # Disable variadic macros warnings (Needed in FUNC_STR_EXPAND)
+    add_compile_options(-Wno-variadic-macros)
+endif()
+
+# Enable alignment of `new` operator
+add_compile_options(-faligned-new)
+
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 option(USE_BOOST "Use Boost library" ON)

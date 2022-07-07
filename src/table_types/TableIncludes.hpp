@@ -1,25 +1,19 @@
-/*
-  Header file for every table type
-*/
 #pragma once
-
-/* ---- Parent Tables ---- */
+/* LUT superclasses */
 #include "LookupTable.hpp"
 #include "MetaTable.hpp"
 
-// standard interpolation tables
+/* LUT implementations */
+#include "ArmadilloPrecomputedInterpolationTable.hpp"
 #include "ConstantTaylorTable.hpp"
+#include "CubicHermiteTable.hpp"
+#include "CubicPrecomputedInterpolationTable.hpp"
 #include "LinearInterpolationTable.hpp"
 #include "LinearPrecomputedInterpolationTable.hpp"
-#include "QuadraticPrecomputedInterpolationTable.hpp"
-#include "CubicPrecomputedInterpolationTable.hpp"
-#include "ArmadilloPrecomputedInterpolationTable.hpp"
-
-// tables using derivatives
-#include "TaylorTable.hpp"
-#include "CubicHermiteTable.hpp"
 #include "PadeTable.hpp"
+#include "QuadraticPrecomputedInterpolationTable.hpp"
+#include "TaylorTable.hpp"
 
-/* ---- Table Containers ---- */
-#include "FailureProofTable.hpp"
-#include "CompositeLookupTable.hpp"
+// TODO
+//#include "RegistrarDefinitionsArmadillo.cpp"
+//#include "RegistrarDefinitionsStandard.cpp"
