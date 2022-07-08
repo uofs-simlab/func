@@ -9,8 +9,11 @@ add_executable(experiment experiment.cpp)
 target_link_libraries(experiment PUBLIC func)
 endif()
 
-#add_executable(experiment_best_worst experiment_best_worst.cpp)
-#target_link_libraries(experiment_best_worst PUBLIC func)
+add_executable(plot_impl plot_impl.cpp)
+target_link_libraries(plot_impl PUBLIC func)
+
+add_executable(experiment_best_worst experiment_best_worst.cpp)
+target_link_libraries(experiment_best_worst PUBLIC func)
 
 #add_executable(generate_tables_at_tol generate_tables_at_tol.cpp)
 #target_link_libraries(generate_tables_at_tol PUBLIC func)
