@@ -3,4 +3,4 @@
 #define FUNCNAME "Zero"
 
 template <typename T>
-T ZeroFunction(T x) { return FUNC(X); }
+T ZeroFunction(T /* x */) { return FUNC(X); }

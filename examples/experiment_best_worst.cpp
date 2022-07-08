@@ -38,10 +38,11 @@ int main(int argc, char* argv[])
 
   FunctionContainer<double> func_container {SET_F(ZeroFunction,double)};
 
-  double stepSize;
+  // double stepSize;
 
   /* Which LUT implementations to use */
-  std::vector<std::string> implNames {"UniformLinearInterpolationTable",
+  std::vector<std::string> implNames {
+    // "UniformLinearInterpolationTable",
       "UniformLinearPrecomputedInterpolationTable",
       "UniformQuadraticPrecomputedInterpolationTable",
       "UniformCubicPrecomputedInterpolationTable",
@@ -50,7 +51,7 @@ int main(int argc, char* argv[])
       "UniformCubicTaylorTable"};
 
   /* get cache sizes running something like `lscpu | grep cache` */
-  const unsigned long cacheSize = (3072u+256u+32u)*1024u;
+  // const unsigned long cacheSize = (3072u+256u+32u)*1024u;
   const unsigned long ramSize = 8192lu*1024lu*1024lu;
   const unsigned desiredTableSize = (unsigned)(tableSizeFactor*ramSize/implNames.size());
   // const unsigned desiredTableSize = (unsigned)tableSizeFactor*cacheSize;

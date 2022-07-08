@@ -12,7 +12,10 @@
 #include "LinearPrecomputedInterpolationTable.hpp"
 #include "PadeTable.hpp"
 #include "QuadraticPrecomputedInterpolationTable.hpp"
-#include "TaylorTable.hpp"
+#include "LinearTaylorTable.hpp"
+#include "QuadraticTaylorTable.hpp"
+#include "CubicTaylorTable.hpp"
+//#include "TaylorTable.hpp"
 
 // TODO
 //#include "RegistrarDefinitionsArmadillo.cpp"
