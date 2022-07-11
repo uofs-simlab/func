@@ -4,7 +4,6 @@
   Usage example:
     TaylorTable look(&function,0,10,0.0001);
     double val = look(0.87354);
-
   Notes:
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
@@ -23,8 +22,6 @@ class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>
   INHERIT_META(TIN,TOUT,N+1,GT);
 
   static const std::string classname;
-  // should be guaranteed that TIN is a numeric type
-  static TIN constexpr fact[] = {1,1,2,6,24,120,720,5040};
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,N>(adVar<TOUT,N>)> mp_boost_func;
 #endif
@@ -61,7 +58,7 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = N+1;
-    m_numTableEntries = m_numIntervals;
+    m_numTableEntries = m_numIntervals + 1;
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
     if(func_container->template get_nth_func<N>() == nullptr)
@@ -70,35 +67,51 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
-      // nonuniform grids are not supported for Taylor tables
-      TIN x = m_minArg + ii*m_stepSize;
+    for (unsigned int ii=0; ii<m_numIntervals; ++ii) {
+      auto xgrid = m_minArg + ii*m_stepSize;
+      auto h = m_stepSize;
+      // (possibly) transform the uniform grid into a nonuniform grid
+      if (GT != UNIFORM){
+        xgrid = m_transferFunction.g(xgrid);
+        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - xgrid;
+      }
+      auto xcenter = xgrid + 0.5*h;
+      m_grid[ii] = xgrid;
 
-      m_grid[ii] = x;
-      auto const derivs = (mp_boost_func)(make_fvar<TIN,N>(x));
+      auto const derivs = (mp_boost_func)(make_fvar<TIN,N>(xcenter));
+      // convenient rename:
+      std::array<TOUT,N+1> d;
       for(unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = derivs.derivative(k)/(fact[k]);     
+        d[k] = derivs.derivative(k);
+
+      /* TODO there is certainly a nice enough closed form solution for the coefs of 
+       * an arbitrary degree shifted Taylor approx. but we can figure that out another day */
+      switch(N){
+        case 1:
+          {
+          m_table[ii].coefs[1] = h*d[1];
+          m_table[ii].coefs[0] = d[0] - 0.5*h*d[1];
+          break;
+          }
+        case 2:
+          {
+          m_table[ii].coefs[2] = 0.5*h*h*d[2];
+          m_table[ii].coefs[1] = h*(d[1] - 0.5*h*d[2]);
+          m_table[ii].coefs[0] = d[0] - 0.5*h*d[1] + 0.125*h*h*d[2];
+          break;
+          }
+        case 3:
+          {
+          m_table[ii].coefs[3] = h*h*h*d[3]/6;
+          m_table[ii].coefs[2] = h*h*(0.5*d[2] - 0.25*h*d[3]);
+          m_table[ii].coefs[1] = h*(d[1] - 0.5*h*d[2] + 0.125*h*h*d[3]);
+          m_table[ii].coefs[0] = d[0] - 0.5*h*d[1] + 0.125*h*h*d[2] - h*h*h*d[3]/48;
+          break;
+          }
+        default: { throw std::invalid_argument("Broken switch case in func::TaylorTable"); }
+      }
     }
 #endif
-  }
-
-  TOUT operator()(TIN x) override
-  {
-    TOUT dx;
-    unsigned int x0;
-    // nondimensionalized x position
-    dx = (x-m_minArg);
-    TOUT x0r = dx/m_stepSize+0.5;
-    // index of previous table entry
-    x0 = (unsigned) x0r;
-    dx -= x0*m_stepSize; 
-
-    // general degree horners method, evaluated from the inside out.
-    // TODO time to see if the added generality leads to any slowdown
-    TOUT sum = 0;
-    for (unsigned int k=N; k>0; k--)
-      sum = dx*(m_table[x0].coefs[k] + sum);
-    return m_table[x0].coefs[0]+sum;
   }
 
 #ifdef FUNC_USE_BOOST
@@ -109,10 +122,24 @@ public:
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
 const std::string TaylorTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>()+TaylorTable<TIN,TOUT,N,GT>::degree_to_string()+"TaylorTable";
 
-// define friendlier names
+/* define friendlier names */
 template <typename TIN, typename TOUT=TIN>
 using UniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
+using NonUniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,NONUNIFORM>;
+template <typename TIN, typename TOUT=TIN>
+using NonUniformPseudoLinearTaylorTable = TaylorTable<TIN,TOUT,1,NONUNIFORM_PSEUDO>;
+
+template <typename TIN, typename TOUT=TIN>
 using UniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
+using NonUniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,NONUNIFORM>;
+template <typename TIN, typename TOUT=TIN>
+using NonUniformPseudoQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,NONUNIFORM_PSEUDO>;
+
+template <typename TIN, typename TOUT=TIN>
 using UniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,UNIFORM>;
+template <typename TIN, typename TOUT=TIN>
+using NonUniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,NONUNIFORM>;
+template <typename TIN, typename TOUT=TIN>
+using NonUniformPseudoCubicTaylorTable = TaylorTable<TIN,TOUT,3,NONUNIFORM_PSEUDO>;

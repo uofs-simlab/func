@@ -57,10 +57,10 @@ public:
   virtual void print_details_json(std::ostream& out)=0;
 
   /* public access of protected data */
-  IN_TYPE min_arg() const { return m_minArg; };
-  IN_TYPE max_arg() const { return m_maxArg; };
-  unsigned int order() const { return m_order; };
-  unsigned int size() const { return m_dataSize; };
-  std::string name() const { return m_name; };
-  std::function<OUT_TYPE(IN_TYPE)> function() const { return m_func; };
+  virtual IN_TYPE min_arg() { return m_minArg; }
+  virtual IN_TYPE max_arg() { return m_maxArg; }
+  unsigned int order() const { return m_order; }
+  unsigned int size() const { return m_dataSize; }
+  std::string name() const { return m_name; }
+  std::function<OUT_TYPE(IN_TYPE)> function() const { return m_func; }
 };

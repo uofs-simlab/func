@@ -96,9 +96,7 @@ public:
       arg of the table is set to the nearest value above such that it
       does.
      */
-    m_tableMaxArg = m_maxArg;
-    if ( m_tableMaxArg < m_minArg+m_stepSize*(m_numIntervals-1) )
-      m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
+    m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
   }
 
   // TODO
@@ -118,7 +116,7 @@ public:
   unsigned num_table_entries() const { return m_numTableEntries; };
   unsigned num_intervals() const { return m_numIntervals; };
 
-  void print_details(std::ostream &out) override
+  virtual void print_details(std::ostream &out) override
   {
     out << m_name << " " << m_minArg << " " << m_maxArg << " "
         << m_stepSize << " " << m_numIntervals << " ";

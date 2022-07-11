@@ -197,12 +197,12 @@ template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
 void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
 {
   jsonStats["_comment"] = "FunC lookup table data";
-  jsonStats["name"] = lut.name();
-  jsonStats["minArg"] = lut.min_arg();
-  jsonStats["maxArg"] = lut.max_arg();
-  jsonStats["order"] = lut.order();
-  jsonStats["dataSize"] = lut.size();
-  jsonStats["stepSize"] = lut.step_size();
+  jsonStats["name"] = lut.m_name;
+  jsonStats["minArg"] = lut.m_minArg;
+  jsonStats["maxArg"] = lut.m_maxArg;
+  jsonStats["order"] = lut.m_order;
+  jsonStats["dataSize"] = lut.m_dataSize;
+  jsonStats["stepSize"] = lut.m_stepSize;
   jsonStats["numTableEntries"] = lut.num_table_entries();
   jsonStats["numIntervals"] = lut.num_intervals();
   jsonStats["tableMaxArg"] = lut.m_tableMaxArg;
