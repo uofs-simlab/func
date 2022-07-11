@@ -195,6 +195,7 @@ struct LookupTableGenerator<IN_TYPE,OUT_TYPE>::OptimalStepSizeFunctor
 
     /* want return to be 0 if the same, +/- on either side */
     max_err = -max_err;
+    //std::cerr << m_tableKey << " with stepSize=" << stepSize << " has approx error=" << double(max_err) << "\n";
     return double(max_err-m_tol);
   }
 
@@ -279,12 +280,9 @@ inline std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> LookupTableGenerator<IN_TY
   OptimalStepSizeFunctor f(*this,tableKey,0);
 
   /* quit now if this table is amazing already. Useful for high order tables on small intervals
-   * where toms748 tries to use a stepsize larger than the table range */
+   * where bracket_and_solve tries to use a stepsize larger than the table range */
   auto fmax_step = f(m_max-m_min);
   if(fmax_step <= desiredTolerance){
-#ifdef FUNC_DEBUG
-    std::cerr << "generate_by_tol built " << tableKey << " with a max error of " << fmax_step << " which satisfies tol=" << desiredTolerance << "\n";
-#endif
     if(filename != ""){
       std::ofstream out_file(filename);
       impl->print_details_json(out_file);

@@ -1,19 +1,16 @@
 /*
-   Attempts to factor out common differences between table types
+   MetaTable handles any _piecewise polynomial based_ interpolation:
+   - Reduce code redundancy by factoring out common differences between table types
    (eg method of generating a nonuniform grid type, setup/reading polynomial coefficients)
    which can be pieced together based on template parameters.
 
    N = number of coefficients used in underlying piecewise polynomials
    Provided Horner's method which is the most common table evaluation method in FunC
 
-   UNIFORM: Distance between each subinterval is always the same so we
-   can use a faster hash in exchange for (probably) higher error.
-   NONUNIFORM: Use a transfer function to create a nonuniform grid
-   with a quicker hash.
-   NONUNIFORM_PSEUDO: same as NONUNIFORM but uses a faster, less accurate
-   hash.
-
-   This template style approach greatly reduces code redundancy
+   UNIFORM: Every subinterval is the same length so the hash is super fast; however,
+    many more subintervals might be needed
+   NONUNIFORM: Use a transfer function to create a nonuniform grid with an O(1) hash.
+   NONUNIFORM_PSEUDO: same as NONUNIFORM but uses a faster, less accurate hash.
 
    TODO we could make another template which makes FunC save derivative coefs
    on the same cache line as the original coefs (hopefully with implementation
@@ -41,11 +38,15 @@
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
 
-/* LUTs with other things in their struct (2D arrays will have coefs for each square,
- * LUTs might have their derivative's coefs on the same cache grab, etc).
- * MetaTable handles any "polynomial based" interpolation. */
+/* Our convention for writing polynomials is:
+ *  p(x) = m_table[x0].coefs[0] + m_table[x0].coefs[1]*x + ... + m_table[x0].coefs[N-1]x^(N-1)
+ * but using a Horner's style eval (see operator() below)
+ *
+ * LUTs can have other things in their polynomial struct
+ * (2D arrays will have coefs for x & y dimensions of each subsquare,
+ * LUTs could have their derivative's coefs in polynomial x0, etc). */
 template <typename TOUT, unsigned int N>
-struct alignas(sizeof(TOUT)*alignments[N]) polynomial{
+struct alignas(sizeof(TOUT)*alignments[N]) polynomial {
   static const unsigned int num_coefs = N;
   TOUT coefs[N];
 };
