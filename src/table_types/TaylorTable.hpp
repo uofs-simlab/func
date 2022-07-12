@@ -14,6 +14,8 @@
 #include "config.hpp" // FUNC_USE_BOOST
 #include <stdexcept>
 
+namespace func {
+
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
 class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>
 {
@@ -143,3 +145,4 @@ template <typename TIN, typename TOUT=TIN>
 using NonUniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
 using NonUniformPseudoCubicTaylorTable = TaylorTable<TIN,TOUT,3,NONUNIFORM_PSEUDO>;
+} // namespace func

@@ -19,7 +19,7 @@
   T foo(T x){ return x; }
 
   int main(){
-    FunctionContainer<double,double> foo_container{SET_F(foo,double)};
+    FunctionContainer<double,double> foo_container {FUNC_SET_F(foo,double)};
     // or if it's inconvenient to template your function
     FunctionContainer foo_container2 {foo<double>};
     // you just can't use any of the lookup tables that need
@@ -35,20 +35,21 @@
 
 #ifdef FUNC_USE_BOOST
 /* Let the user quickly define their function container with a macro */
-#define SET_F_ONE_TYPE(F,TYPE)                                \
+#define FUNC_SET_F_ONE_TYPE(F,TYPE)                                \
   F<TYPE>, F<adVar<TYPE,1>>, F<adVar<TYPE,2>>, F<adVar<TYPE,3>>, \
   F<adVar<TYPE,4>>, F<adVar<TYPE,5>>, F<adVar<TYPE,6>>, F<adVar<TYPE,7>>
 
-#define SET_F_TWO_TYPE(F,IN_TYPE,OUT_TYPE)                                  \
+#define FUNC_SET_F_TWO_TYPE(F,IN_TYPE,OUT_TYPE)                                  \
   F<IN_TYPE,OUT_TYPE>, F<adVar<IN_TYPE,1>,adVar<OUT_TYPE,1>>,                 \
   F<adVar<IN_TYPE,2>,adVar<OUT_TYPE,2>>, F<adVar<IN_TYPE,3>,adVar<OUT_TYPE,3>>, \
   F<adVar<IN_TYPE,4>,adVar<OUT_TYPE,4>>, F<adVar<IN_TYPE,5>,adVar<OUT_TYPE,5>>, \
   F<adVar<IN_TYPE,6>,adVar<OUT_TYPE,6>>, F<adVar<IN_TYPE,7>,adVar<OUT_TYPE,7>>
 
-#define GET_MACRO(_1,_2,_3,NAME,...) NAME
-// Call with SET_F(foo,template-type...)
-#define SET_F(...) GET_MACRO(__VA_ARGS__, SET_F_TWO_TYPE, SET_F_ONE_TYPE, )(__VA_ARGS__)
+#define FUNC_GET_MACRO_FUNCTION_CONTAINER(_1,_2,_3,NAME,...) NAME
+// Call with FUNC_SET_F(foo,template-type...)
+#define FUNC_SET_F(...) FUNC_GET_MACRO_FUNCTION_CONTAINER(__VA_ARGS__, FUNC_SET_F_TWO_TYPE, FUNC_SET_F_ONE_TYPE, )(__VA_ARGS__)
 
+namespace func {
 // setup the automatically differentiable variable
 using boost::math::differentiation::autodiff_fvar;
 template <typename T, unsigned int N>
@@ -67,7 +68,7 @@ struct nth_differentiable<IN_TYPE,OUT_TYPE,0>{
 };
 
 #else
-#define SET_F(F,TYPE) F<TYPE>
+#define FUNC_SET_F(F,TYPE) F<TYPE>
 #endif // FUNC_USE_BOOST
 
 template<typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
@@ -132,3 +133,4 @@ public:
     autodiff6_func(func6), autodiff7_func(func7) {}
 #endif // FUNC_USE_BOOST
 };
+} // namespace func

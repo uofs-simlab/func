@@ -39,6 +39,8 @@
   #include "ArgumentRecord.hpp"
 #endif
 
+namespace func {
+
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class LUT_TYPE = LookupTable<IN_TYPE,OUT_TYPE>>
 class FailureProofTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
   std::unique_ptr<LUT_TYPE> mp_LUT;
@@ -143,3 +145,4 @@ public:
     out << jsonStats.dump(2) << std::endl;
   }  
 };
+} // namespace func

@@ -14,6 +14,7 @@
 #include "FunctionContainer.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
 
+namespace func {
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class LinearTaylorTable final : public MetaTable<TIN,TOUT,2,GT>
@@ -80,3 +81,4 @@ const std::string LinearTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_strin
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
 using UniformLinearTaylorTable = LinearTaylorTable<TIN,TOUT,UNIFORM>;
+} // namespace func

@@ -44,6 +44,8 @@
 #define FUNC_ADD_TABLE_TO_REGISTRY(...) \
   FUNC_REGISTRY_GET_MACRO(__VA_ARGS__, FUNC_REGISTER_TEMPLATE, FUNC_REGISTER_TEMPLATE, FUNC_REGISTER_ONE, )(__VA_ARGS__)
 
+namespace func {
+
 template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>> class LookupTableFactory {
 public:
 
@@ -204,4 +206,6 @@ void from_json(const nlohmann::json& jsonStats, std::unique_ptr<LookupTable<TIN,
   lut = factory.create(name, nullptr, LookupTableParameters<TIN>{0,0,0}, jsonStats);
 }
 
+extern template class LookupTableFactory<double>;
 
+} // namespace func

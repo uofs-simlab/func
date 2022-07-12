@@ -31,9 +31,10 @@ endif()
 # TODO: Re-add default lib builds for: double,double  ... float,float ... etc
 #       - maybe by forcing UniformLookupTableGenerator<TIN,TOUT> builds?
 #       - Registering each different numeric/grid type should be done in parallel
-file(GLOB func_src table_types/Registrar*.cpp)
+file(GLOB func_src table_types/Registrar*.cpp *.cpp)
+#file(GLOB func_src *.cpp)
+
 # Add to include directory
-# TODO: Re-add func_impls as its own separate library (again, parallel builds)
 list(APPEND func_include_dirs ./ table_types)
 
 # add the func lib with the lists we built above

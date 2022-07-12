@@ -29,8 +29,7 @@
 #include <fstream>
 #include <stdexcept>
 
-//namespace func
-//{
+namespace func {
 
 template <typename TIN>
 struct LookupTableParameters
@@ -128,6 +127,6 @@ public:
   }
 };
 
-/* Can we partialially specialize operator() when TOUT = std::unique_ptr<LookupTable<TIN, TOUT2>> to fully evaluate everything?
+/* TODO Can we partialially specialize operator() when TOUT = std::unique_ptr<LookupTable<TIN, TOUT2>> to fully evaluate everything?
  * Or potentially, when TOUT is any callable type (just to simplify user syntax) */
-//} // namespace func
+} // namespace func

@@ -36,6 +36,8 @@
 #define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::refine
 #endif
 
+namespace func {
+
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
 class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N+1,GT>
 {
@@ -128,3 +130,4 @@ using NonUniformArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInt
 template <typename TIN, typename TOUT, unsigned int N>
 using NonUniformPseudoArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,NONUNIFORM_PSEUDO>;
 
+} // namespace func

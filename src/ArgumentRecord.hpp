@@ -19,6 +19,7 @@
 #include <cmath> // pow, floor, ceil
 #include "json.hpp"
 
+namespace func {
 /* TODO 
    The histogram will never have that many buckets so 
    we could likely get away with just making every one of
@@ -265,3 +266,4 @@ class ArgumentRecord
     }
 };
 
+} // namespace func

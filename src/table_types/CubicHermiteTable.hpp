@@ -16,6 +16,8 @@
 #include "config.hpp" // FUNC_USE_BOOST
 #include <stdexcept>
 
+namespace func {
+
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class CubicHermiteTable final : public MetaTable<TIN,TOUT,4,GT>
 {
@@ -103,3 +105,4 @@ template <typename TIN, typename TOUT=TIN>
 using NonUniformCubicHermiteTable = CubicHermiteTable<TIN,TOUT,NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
 using NonUniformPseudoCubicHermiteTable = CubicHermiteTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
+} // namespace func

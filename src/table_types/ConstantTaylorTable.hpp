@@ -12,6 +12,8 @@
 #pragma once
 #include "MetaTable.hpp"
 
+namespace func {
+
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class ConstantTaylorTable final : public MetaTable<TIN,TOUT,1,GT>
 {
@@ -65,3 +67,4 @@ const std::string ConstantTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_str
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
 using UniformConstantTaylorTable = ConstantTaylorTable<TIN,TOUT,UNIFORM>;
+} // namespace func

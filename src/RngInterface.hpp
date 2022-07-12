@@ -3,8 +3,9 @@
   that can generate random numbers
 */
 #pragma once
+namespace func {
 template <typename POINT_TYPE>
-class RngInterface{
+class RngInterface {
   public:
     // build a random generator for sampling from a distribution
     virtual void init(unsigned int seed)=0;
@@ -17,3 +18,4 @@ class RngInterface{
 
     virtual ~RngInterface(){}
 };
+}

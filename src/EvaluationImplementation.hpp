@@ -24,6 +24,7 @@
   using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_minArg; \
   using EvaluationImplementation<IN_TYPE,OUT_TYPE>::m_maxArg
 
+namespace func {
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class EvaluationImplementation
@@ -64,3 +65,4 @@ public:
   std::string name() const { return m_name; }
   std::function<OUT_TYPE(IN_TYPE)> function() const { return m_func; }
 };
+}

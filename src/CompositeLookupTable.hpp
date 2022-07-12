@@ -28,9 +28,12 @@
 #include <stdexcept> // domain_error, invalid_argument
 #include <string> // to_string
 
+// TODO don't do this
 // LENIENCE_FACTOR is at most how many comparisons are we'll do with
 // a linear search before switching to a binary search
 #define LENIENCE_FACTOR 4
+
+namespace func {
 
 /* A subclass used to define function behaviour at table endpoints and breakpoints */
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
@@ -366,3 +369,5 @@ inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::operator()(IN_TYPE x)
   return binarySearch(x, (int)(mostRecentlyUsed_idx+mv_LUT.size()-1)/2,
       mostRecentlyUsed_idx, mv_LUT.size()-1);
 }
+
+} // namespace func

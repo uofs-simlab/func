@@ -34,7 +34,7 @@
 // assuming each iteration will take about the same amount of time
 //#pragma omp parallel for schedule(static)
 
-//namespace func {
+namespace func {
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
 
@@ -253,4 +253,4 @@ void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut) {
       jsonStats["transfer_function_coefs"].get<std::array<TIN,4>>());
 }
 
-//} // namespace func
+} // namespace func

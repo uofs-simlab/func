@@ -2,7 +2,7 @@
 #define MAKE_UNIQUE_HPP
 /*
  * implementation of make_unique for use with c++11
- *
+ * This is currently never used
  */
 namespace std {
   template<typename T, typename... Args>

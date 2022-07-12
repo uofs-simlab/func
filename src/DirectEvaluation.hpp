@@ -33,6 +33,8 @@
   #include "ArgumentRecord.hpp"
 #endif
 
+namespace func {
+
 template <typename TIN, typename TOUT = TIN>
 class DirectEvaluation final : public EvaluationImplementation<TIN,TOUT>
 {
@@ -117,3 +119,4 @@ inline void DirectEvaluation<TIN,TOUT>::print_details_json(std::ostream& out)
 
   out << jsonStats.dump(2) << std::endl;
 }
+} // namespace func

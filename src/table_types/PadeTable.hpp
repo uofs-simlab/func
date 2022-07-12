@@ -25,6 +25,8 @@
 #include <stdexcept>
 #include <cmath> //isinfite
 
+namespace func {
+
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
 class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
 {
@@ -202,3 +204,4 @@ using UniformPadeTable = PadeTable<TIN,TOUT,M,N,UNIFORM>;
 //using NonUniformPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM>;
 //template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
 //using NonUniformPseudoPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM_PSEUDO>;
+} // namespace func

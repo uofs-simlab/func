@@ -32,8 +32,11 @@
 #include <boost/math/special_functions/next.hpp>
 #endif
 
-// TODO we need this errprecision to change based on IN_TYPE and OUT_TYPE somehow
-// ideally epsilon_errprecision = sqrt(epsilon_OUTTYPE)
+namespace func {
+
+/* TODO Ideally errprecision will change based on IN_TYPE and OUT_TYPE
+    We need epsilon_errprecision <= sqrt(epsilon_OUTTYPE), but it's prooobably
+    okay if we just use the max precision available */
 // If quadmath is used, work in the boost::multiprecision namespace
 #ifdef FUNC_USE_QUADMATH
 #include <boost/multiprecision/float128.hpp>
@@ -77,7 +80,7 @@ public:
    * tableKey arg only exists as a sanity check (it's pointless otherwise) */
   std::unique_ptr<LookupTable<IN_TYPE,OUT_TYPE>> generate_by_file(std::string filename, std::string tableKey = "")
   {
-    if(filename.find(".json") == std::string::npos) // TODO does this work for binary json files?????
+    if(filename.find(".json") == std::string::npos) // TODO are there any other json filename extensions?
       throw std::invalid_argument("FunC can only read LUTs from json files");
 
     nlohmann::json jsonStats;
@@ -437,6 +440,6 @@ inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_
   }
 }
 
-// Legacy func typedef
-template <typename IN_TYPE, typename OUT_TYPE=IN_TYPE>
-using UniformLookupTableGenerator = LookupTableGenerator<IN_TYPE,OUT_TYPE>;
+extern template class LookupTableGenerator<double>;
+
+} // namespace func

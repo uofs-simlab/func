@@ -14,6 +14,8 @@
 #pragma once
 #include "MetaTable.hpp"
 
+namespace func {
+
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class LinearPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,2,GT>
 {
@@ -75,3 +77,4 @@ template <typename TIN, typename TOUT=TIN>
 using NonUniformLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
 using NonUniformPseudoLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
+} // namespace func

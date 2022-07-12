@@ -14,6 +14,7 @@
 #include "FunctionContainer.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
 
+namespace func {
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
 class QuadraticTaylorTable final : public MetaTable<TIN,TOUT,3,GT>
@@ -81,3 +82,4 @@ const std::string QuadraticTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_st
 
 template <typename TIN, typename TOUT=TIN>
 using UniformQuadraticTaylorTable = QuadraticTaylorTable<TIN,TOUT,UNIFORM>;
+} // namespace func

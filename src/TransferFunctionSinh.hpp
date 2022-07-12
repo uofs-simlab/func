@@ -40,6 +40,7 @@ Notes:
 #include <boost/math/tools/roots.hpp> // newton_raphson_iterate
 #endif
 
+namespace func {
 
 template <typename IN_TYPE>
 class TransferFunctionSinh
@@ -172,3 +173,4 @@ public:
 
   std::pair<IN_TYPE,IN_TYPE> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_tableMaxArg); }
 };
+}

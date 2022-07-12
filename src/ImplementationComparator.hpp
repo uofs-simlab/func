@@ -1,5 +1,3 @@
-#ifndef LUTDE_HPP
-#define LUTDE_HPP
 /*
   Class for comparing variations of EvaluationImplementations
 
@@ -19,6 +17,7 @@
 #include <cassert>
 #include <iostream>
 
+namespace func {
 /*
   Data types and containers used in FunC's ImplementationComparator
 */
@@ -339,4 +338,4 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_summary(std::ostre
   out << "----------------------------------------------------------------------------\n";
 }
 
-#endif  // LUTDE_HPP
+} // namespace func

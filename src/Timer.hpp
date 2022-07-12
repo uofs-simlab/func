@@ -9,6 +9,7 @@
 #pragma once
 #include <chrono>
 
+namespace func {
 class Timer
 {
   std::chrono::high_resolution_clock::time_point m_start;
@@ -40,3 +41,4 @@ public:
 
   double duration(){ return m_duration.count(); };
 };
+}

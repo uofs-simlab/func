@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
 {
 
   using namespace std;
+  using namespace func;
 
   if (argc < 7) {
       print_usage();
@@ -44,12 +45,12 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  FunctionContainer<double> func_container{SET_F(MyFunction,double)};
+  FunctionContainer<double> func_container{FUNC_SET_F(MyFunction,double)};
 
   LookupTableFactory<double> factory;
 
   /* Check which implementations are available */
-  std::cout << "# Registered uniform tables: \n#  ";
+  std::cout << "# Registered tables: \n#  ";
   for (auto it : factory.get_registered_keys() ) {
     std::cout << it << "\n#  ";
   }
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
     "UniformPadeTable<4,3>",
   };
 
-  UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
+  LookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
 
   impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {

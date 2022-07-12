@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
 {
 
   using namespace std;
+  using namespace func;
 
   if (argc < 5) {
       print_usage();
@@ -36,7 +37,7 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[3]);
   int    seed         = std::stoi(argv[4]);
 
-  FunctionContainer<double> func_container {SET_F(ZeroFunction,double)};
+  FunctionContainer<double> func_container {FUNC_SET_F(ZeroFunction,double)};
 
   // double stepSize;
 
@@ -63,7 +64,7 @@ int main(int argc, char* argv[])
   std::cout << "\n# impls using ~ " << percentRam <<"% of RAM\n";
   cout << "# Function:  " << FUNCNAME << endl << endl;
 
-  UniformLookupTableGenerator<double> gen(&func_container, 0, 1);
+  LookupTableGenerator<double> gen(&func_container, 0, 1);
 
   /* Fill in the implementations */
   std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
