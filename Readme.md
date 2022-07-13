@@ -1,7 +1,7 @@
 FunC
 ====
 
-`FunC` (Function Comparator) is a C++ tool for approximating any single variable, real valued function $f:\mathbb{R}\to\mathbb{R}$ with a lookup table (LUT). This tool aims to steamline the process of finding an optimal LUT of $f$ for a given program. This includes factors such as
+`FunC` (Function Comparator) is a C++ tool for approximating any single variable, real valued function $f:\mathbb{R}\to\mathbb{R}$ with a lookup table (LUT). This tool aims to streamline the process of finding an optimal LUT of $f$ for a given program. This includes factors such as
 - error tolerance
 - domain usage (ie the inputs to $f$ during runtime)
 - evaluation frequency (ie how much work is being done in between calls to $f$)
@@ -30,11 +30,11 @@ make install
 After make install, linking to the library (outside of cmake build) requires:
 - `<install-dir>/lib` is in your `LD_LIBRARY_PATH` environment variable,
 - `<install-dir>/include/func` is in your include flags, and
-- `-lfunc` are in your link flags
+- `-lfunc` is in your link flags
 
 Notes
 -----
-- `FunC` is "pseudo header only." All of its functionality is available through headers only. Link with `libfunc.so` to greatly speed up the compile time of any program using our `LookupTableGenerator`.
+- `FunC` is "pseudo header only." So all of its functionality is available through headers only. But, linking with `libfunc.so` will greatly speed up the compile time of any program using our LUTs.
 
 
 References
