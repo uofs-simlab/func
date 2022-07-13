@@ -206,6 +206,6 @@ void from_json(const nlohmann::json& jsonStats, std::unique_ptr<LookupTable<TIN,
   lut = factory.create(name, nullptr, LookupTableParameters<TIN>{0,0,0}, jsonStats);
 }
 
-extern template class LookupTableFactory<double>;
+//extern template class LookupTableFactory<double>;
 
 } // namespace func

@@ -52,7 +52,7 @@ class TransferFunctionSinh
   IN_TYPE m_stepSize;
 
   // aligned array of polynomial coefs approximating g_inv
-  __attribute__((aligned)) std::array<IN_TYPE,4> m_inv_coefs;
+  __attribute__((aligned)) std::array<IN_TYPE,4> m_inv_coefs = {{0,0,0,0}};
 
 public:
   /* Set m_inv_coefs equal to a vector that is (presumably) either the identity or came from a json file */

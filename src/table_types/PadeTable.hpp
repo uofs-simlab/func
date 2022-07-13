@@ -26,6 +26,8 @@
 #include <cmath> //isinfite
 
 namespace func {
+// TODO does this cause problems for lower precision types?
+static double constexpr fact[] = {1,1,2,6,24,120,720,5040};
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
 class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
@@ -35,8 +37,6 @@ class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
   INHERIT_META(TIN,TOUT,M+N+1,GT);
 
   static const std::string classname;
-  // should be guaranteed that TIN is a numeric type
-  static TIN constexpr fact[] = {1,1,2,6,24,120,720,5040};
 #ifdef FUNC_USE_BOOST
   std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> mp_boost_func;
 #endif
