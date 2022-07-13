@@ -196,7 +196,7 @@ LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer
 ```
 */
 
-// std::unique_ptr<T> is default constructable. TODO does this actually work though?
+// std::unique_ptr<T> is default constructable. TODO does this actually work though? Might need to be in namespace std
 template <typename TIN, typename TOUT>
 void from_json(const nlohmann::json& jsonStats, std::unique_ptr<LookupTable<TIN,TOUT>>& lut) {
   std::string name = jsonStats.at("name");
