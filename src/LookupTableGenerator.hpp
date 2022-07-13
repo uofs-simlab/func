@@ -32,8 +32,6 @@
 #include <boost/math/special_functions/next.hpp>
 #endif
 
-namespace func {
-
 /* TODO Ideally errprecision will change based on IN_TYPE and OUT_TYPE
     We need epsilon_errprecision <= sqrt(epsilon_OUTTYPE), but it's prooobably
     okay if we just use the max precision available */
@@ -41,10 +39,16 @@ namespace func {
 #ifdef FUNC_USE_QUADMATH
 #include <boost/multiprecision/float128.hpp>
 using namespace boost::multiprecision;
+namespace func {
 using errprecision = float128;
+}
 #else
+namespace func {
 using errprecision = long double;
+}
 #endif
+
+namespace func {
 
 template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
 class LookupTableGenerator
