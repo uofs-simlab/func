@@ -8,104 +8,103 @@ SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
 project(
   FunC
   VERSION 2.0
+  DESCRIPTION "Build better lookup tables"
   LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 
-# Enable compiler warnings, error on warnings
-if (MSVC) # Microsoft
-    # warning level 4 and all warnings as errors
-    add_compile_options(/W4 /WX)
-else() # GCC and Clang
-    add_compile_options(-Wall -Wextra -pedantic -Werror)
-    # Disable variadic macros warnings (Needed in FUNC_STR_EXPAND)
-    add_compile_options(-Wno-variadic-macros)
-endif()
+include(GNUInstallDirs) # TODO what goes wrong if this is not included
 
-# Enable alignment of `new` operator
-add_compile_options(-faligned-new)
+# ==== Search for dependencies ====
+option(FUNC_USE_BOOST "Use Boost library" ON)
+find_package(Boost 1.71.0)
 
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
-
-option(USE_BOOST "Use Boost library" ON)
-
-find_package(Boost COMPONENTS QUIET)
-
-if(NOT USE_BOOST)
+if(FUNC_USE_BOOST)
+  if(Boost_FOUND AND NOT (Boost_VERSION VERSION_LESS 1.71.0))
+    message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
+  else()
+    set(FUNC_USE_BOOST OFF)
+    message(WARNING "CMake either could not find Boost or the copy of Boost found has version less than 1.71.0. You may still read table data from an existing json file but table generation is severly limited. If you wish to generate any lookup tables then you need a newer version of Boost. Silence this warning by setting -DUSE_BOOST=OFF")
+  endif()
+else()
   message(STATUS "Not using Boost")
 endif()
 
-if(USE_BOOST AND Boost_FOUND)
-  message(STATUS "Version of Boost found: ${Boost_VERSION}")
-  message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
-  message(STATUS "Boost libs to link: ${Boost_LIBRARIES}")
-  message(STATUS "Found boost lib: ${Boost_LIBRARY_DIRS}")
-endif()
-
-if(USE_BOOST AND (NOT Boost_FOUND OR Boost_VERSION VERSION_LESS 1.71.0))
-  set(USE_BOOST OFF)
-  message(WARNING "CMake either could not find Boost or the copy of Boost found has version less than 1.71.0. You may still read table data from an existing json file but table generation is severly limited. If you wish to generate any lookup tables then you need a newer version of Boost. Silence this warning by setting -DUSE_BOOST=OFF")
-endif()
 
 # Find Armadillo for the degree 4-7 polynomial interpolation and Pade tables
-option(USE_ARMADILLO "Use Armadillo library" ON)
+option(FUNC_USE_ARMADILLO "Use Armadillo library" ON)
+find_package(Armadillo)
 
-find_package(Armadillo COMPONENTS QUIET)
-
-if(NOT USE_ARMADILLO)
+if(FUNC_USE_ARMADILLO)
+  if(ARMADILLO_FOUND)
+    message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
+    message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
+    message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
+  else()
+    set(FUNC_USE_ARMADILLO OFF)
+    message(WARNING "Armadillo was not found. You can read higher order tables or Pade tables from existing json files, but these table types cannot be generated. If you wish to generate higher order tables or pade tables then reconfigure with Armadillo installed. Silence this warning by setting -DUSE_ARMADILLO=OFF")
+  endif()
+else()
   message(STATUS "Not using Armadillo")
 endif()
 
-if(USE_ARMADILLO AND ARMADILLO_FOUND)
-  message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
-  message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
-  message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
-endif()
+# use FindQuadmath.cmake so we can write find_package(Quadmath)
+# This will mostly just test whether we're compiling with gcc/icpc
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+option(FUNC_USE_QUADMATH "Use quadmath library" ON)
+find_package(Quadmath)
 
-if(USE_ARMADILLO AND NOT ARMADILLO_FOUND)
-  set(USE_ARMADILLO OFF)
-  message(WARNING "Armadillo was not found. You can read higher order tables or Pade tables from existing json files, but these table types cannot be generated. If you wish to generate higher order tables or pade tables then reconfigure with Armadillo installed. Silence this warning by setting -DUSE_ARMADILLO=OFF")
-endif()
-
-# Use quadmath if possible. Don't make a fuss if it's not there
-# Could be reconfigured if the user really doesn't want quadmath
-# even if they have it
-find_package(Quadmath QUIET)
-option(USE_QUADMATH "Use quadmath library" ON)
-
-if(USE_QUADMATH AND NOT QUADMATH_FOUND)
-  # we'll use long double instead, but tell the user what they're missing if they care
-  set(USE_QUADMATH OFF)
+if(FUNC_USE_QUADMATH AND NOT QUADMATH_FOUND)
+  # we'll use long double instead
+  set(FUNC_USE_QUADMATH OFF)
   message(WARNING "Could not find quadmath. If you wish to use higher accuracy error estimates with the LookupTableGenerator then reconfigure to use the gnu or intel c++ compilers: ie set -DCMAKE_CXX_COMPILER=(g++-XX|icpc) (g++ on MacOS might be an alias for clang++). Silence this warning by setting -DUSE_QUADMATH=OFF")
 endif()
 
-# openmp is really not required
-find_package(OpenMP QUIET)
+option(FUNC_USE_OPENMP "Use OpenMP" ON)
+find_package(OpenMP)
 if(OpenMP_FOUND)
   if(APPLE AND ${CMAKE_VERSION} VERSION_LESS 3.12.0)
     message(WARNING "Must have at least CMake version 3.12 to add openmp to FunC on MacOS")
-    option(USE_OPENMP "Use OpenMP" OFF)
+    set(FUNC_USE_OPENMP OFF)
   else()
     message(STATUS "Using OpenMP for threadsafety")
-    option(USE_OPENMP "Use OpenMP" ON)
   endif()
 else()
-  # use std::lib instead
-  option(USE_OPENMP "Use OpenMP" OFF)
+  # TODO use std::lib instead
+  option(FUNC_USE_OPENMP OFF)
 endif()
 
 
-# Add an option for turning on argument recording
-# TODO FunC is header only now, we should remove this, right?
-# option(FUNC_RECORD "Enable recording of arguments for DirectEvaluation" OFF)
-# message(STATUS "Argument recording is set to ${FUNC_RECORD} for DirectEvaluation")
+# ==== Generate Source Code ====
+# Every type that we want to use our LUTs with. IN_TYPES and OUT_TYPES must be the same length
+# TODO could the average user change these variables without wanting to cry? Does "option" support lists??
+set(TYPE_PAIRS "double,double")
+#set(TYPE_PAIRS "")
+
+# Every classname with no extra templates that we want to compile
+set(CLASSNAMES
+  LookupTableFactory
+)
+
+set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "#define FUNC_DECLARE_TEMPLATE_AS_EXTERN(classname)\\")
+
+# TODO do these configure_files need some fancy generator-ish path names?
+foreach(PAIR IN LISTS TYPE_PAIRS)
+  set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "${FUNC_DECLARE_TEMPLATE_AS_EXTERN}\n  extern template class classname<${PAIR}>;\\")
+  foreach(CLASSNAME IN LISTS CLASSNAMES)
+    # TODO can we leave this automatically generated source in ${CMAKE_CURRENT_BINARY_DIR}?
+    configure_file(${PROJECT_SOURCE_DIR}/include/src_template.cpp.cmake ${PROJECT_SOURCE_DIR}/include/${CLASSNAME}_${PAIR}.cpp @ONLY)
+  endforeach()
+endforeach()
+
+# declare the extern template types and let c++ know what dependencies we found
+configure_file(${PROJECT_SOURCE_DIR}/include/config.hpp.cmake ${PROJECT_SOURCE_DIR}/include/config.hpp @ONLY)
 
 # Primary source subdirectory
-add_subdirectory("src")
+add_subdirectory("include")
 
 # Examples subdirectory
 add_subdirectory("examples")
-
 
 # Summarize compilation flags for quick review on configuration
 macro(print_variable var)

@@ -443,5 +443,5 @@ inline void LookupTableGenerator<IN_TYPE,OUT_TYPE>::plot_implementation_at_step_
       (*impl)(x) << std::endl;
   }
 }
-//extern template class LookupTableGenerator<double>;
+//FUNC_DECLARE_TEMPLATE_AS_EXTERN(LookupTableGenerator)
 } // namespace func
