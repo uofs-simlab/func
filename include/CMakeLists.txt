@@ -3,7 +3,7 @@
 # TODO
 
 # We shouldn't have written any cpp files by hand so globbing here is fine
-file(GLOB func_src *.cpp)
+file(GLOB func_src ${func_src_dir}/*.cpp)
 
 # add the func lib with the lists we built above
 if("${func_src}" STREQUAL "")
@@ -13,7 +13,7 @@ if("${func_src}" STREQUAL "")
   set(FUNC_PRIVATE INTERFACE)
 else()
   message(STATUS "Compiling FunC with types ${TYPE_PAIRS}")
-  add_library(func SHARED ${func_src})
+  #add_library(func SHARED ${func_src})
   set(FUNC_PUBLIC PUBLIC)
   set(FUNC_PRIVATE PRIVATE)
 endif()

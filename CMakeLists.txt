@@ -79,12 +79,19 @@ endif()
 # Every type that we want to use our LUTs with. IN_TYPES and OUT_TYPES must be the same length
 # TODO could the average user change these variables without wanting to cry? Does "option" support lists??
 set(TYPE_PAIRS "double,double")
-#set(TYPE_PAIRS "")
 
-# Every classname with no extra templates that we want to compile
+# Every classname with whose source we want compiled into libfunc.so for each type_pair
+# This is the only file that showed material speedup
 set(CLASSNAMES
   LookupTableFactory
 )
+
+# cleanup any source-code that may have been generated in previous cmake runs
+set(func_src_dir ${CMAKE_CURRENT_BINARY_DIR}/src)
+file(GLOB old_func_src ${func_src_dir}/*.cpp)
+if(NOT "${old_func_src}" STREQUAL "")
+  file(REMOVE ${old_func_src})
+endif()
 
 set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "#define FUNC_DECLARE_TEMPLATE_AS_EXTERN(classname)\\")
 
@@ -93,7 +100,8 @@ foreach(PAIR IN LISTS TYPE_PAIRS)
   set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "${FUNC_DECLARE_TEMPLATE_AS_EXTERN}\n  extern template class classname<${PAIR}>;\\")
   foreach(CLASSNAME IN LISTS CLASSNAMES)
     # TODO can we leave this automatically generated source in ${CMAKE_CURRENT_BINARY_DIR}?
-    configure_file(${PROJECT_SOURCE_DIR}/include/src_template.cpp.cmake ${PROJECT_SOURCE_DIR}/include/${CLASSNAME}_${PAIR}.cpp @ONLY)
+    string(REPLACE "," "_to_" FORMAT_PAIR "${PAIR}")
+    configure_file(${PROJECT_SOURCE_DIR}/include/src_template.cpp.cmake ${func_src_dir}/${CLASSNAME}_${FORMAT_PAIR}.cpp @ONLY)
   endforeach()
 endforeach()
 
