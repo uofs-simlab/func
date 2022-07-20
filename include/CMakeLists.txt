@@ -13,7 +13,7 @@ if("${func_src}" STREQUAL "")
   set(FUNC_PRIVATE INTERFACE)
 else()
   message(STATUS "Compiling FunC with types ${TYPE_PAIRS}")
-  #add_library(func SHARED ${func_src})
+  add_library(func SHARED ${func_src})
   set(FUNC_PUBLIC PUBLIC)
   set(FUNC_PRIVATE PRIVATE)
 endif()
@@ -65,8 +65,18 @@ endif()
 # TODO does MSVC support this?
 target_compile_options(func ${FUNC_PRIVATE} -faligned-new)
 
+include(GNUInstallDirs) # TODO what goes wrong if this is not included
 install(TARGETS func
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-    PUBLIC_HEADER DESTINATION include/func
+  EXPORT func-targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  PUBLIC_HEADER DESTINATION include/func
+)
+
+install(EXPORT func-targets
+  FILE
+    FunCTargets.cmake
+  NAMESPACE
+    FunC::
+  DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/JSONUtils
 )

@@ -13,8 +13,6 @@ project(
 
 set(CMAKE_CXX_STANDARD 11)
 
-include(GNUInstallDirs) # TODO what goes wrong if this is not included
-
 # ==== Search for dependencies ====
 option(FUNC_USE_BOOST "Use Boost library" ON)
 find_package(Boost 1.71.0)
