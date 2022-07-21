@@ -34,8 +34,9 @@ After make install, linking to the library (outside of cmake build) requires:
 
 Notes
 -----
-- `FunC` is "pseudo header only." So all of its functionality is available through headers only. But, linking with `libfunc.so` will greatly speed up the compile time of any program using our LUTs.
+- `FunC` can be used as a header only library; however, files that take a long time to compile (eg. LookupTableFactory.hpp) can be compiled for various user provided types. As such, linking with `libfunc.so` is not necessary, but will greatly speed up the compile time of user code.
 
+TODO show off the process of compiling LUTFactory for other types
 
 References
 ----------
