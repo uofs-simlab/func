@@ -18,6 +18,7 @@
 */
 
 #include <iostream>
+#define TYPE float
 
 void print_usage()
 {
@@ -45,9 +46,9 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  FunctionContainer<double> func_container{FUNC_SET_F(MyFunction,double)};
+  FunctionContainer<TYPE> func_container{FUNC_SET_F(MyFunction,TYPE)};
 
-  LookupTableFactory<double> factory;
+  LookupTableFactory<TYPE> factory;
 
   /* Check which implementations are available */
   std::cout << "# Registered tables: \n#  ";
@@ -57,7 +58,7 @@ int main(int argc, char* argv[])
   std::cout << "\n";
 
   /* Fill in the implementations */
-  std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
+  std::vector<unique_ptr<EvaluationImplementation<TYPE>>> impls;
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
@@ -71,7 +72,7 @@ int main(int argc, char* argv[])
     "UniformCubicTaylorTable",
     "UniformLinearInterpolationTable",
     "UniformLinearPrecomputedInterpolationTable",
-    "UniformLinearTaylorTable",
+    //"UniformLinearTaylorTable",
     "UniformQuadraticPrecomputedInterpolationTable",
     "UniformQuadraticTaylorTable",
   };
@@ -91,9 +92,9 @@ int main(int argc, char* argv[])
     "UniformPadeTable<4,3>",
   };
 
-  LookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
+  LookupTableGenerator<TYPE> gen(&func_container, tableMin, tableMax);
 
-  impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
+  impls.emplace_back(unique_ptr<EvaluationImplementation<TYPE>>(new DirectEvaluation<TYPE>(&func_container,tableMin,tableMax)));
   for (auto itName : implNames) {
     cerr << "Building " << itName << " ..." << endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
@@ -101,7 +102,7 @@ int main(int argc, char* argv[])
 
   cout << "Running timings ..." << endl;
 
-  ImplementationComparator<double> implCompare(impls, nEvals, seed);
+  ImplementationComparator<TYPE> implCompare(impls, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
   /* Summarize the results */

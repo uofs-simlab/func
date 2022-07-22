@@ -35,15 +35,17 @@
 
 #ifdef FUNC_USE_BOOST
 /* Let the user quickly define their function container with a macro */
-#define FUNC_SET_F_ONE_TYPE(F,TYPE)                                \
-  F<TYPE>, F<adVar<TYPE,1>>, F<adVar<TYPE,2>>, F<adVar<TYPE,3>>, \
-  F<adVar<TYPE,4>>, F<adVar<TYPE,5>>, F<adVar<TYPE,6>>, F<adVar<TYPE,7>>
+#define FUNC_SET_F_ONE_TYPE(F,TYPE)               \
+  F<TYPE>, F<func::adVar<TYPE,1>>,                \
+  F<func::adVar<TYPE,2>>, F<func::adVar<TYPE,3>>, \
+  F<func::adVar<TYPE,4>>, F<func::adVar<TYPE,5>>, \
+  F<func::adVar<TYPE,6>>, F<func::adVar<TYPE,7>>
 
-#define FUNC_SET_F_TWO_TYPE(F,IN_TYPE,OUT_TYPE)                                  \
-  F<IN_TYPE,OUT_TYPE>, F<adVar<IN_TYPE,1>,adVar<OUT_TYPE,1>>,                 \
-  F<adVar<IN_TYPE,2>,adVar<OUT_TYPE,2>>, F<adVar<IN_TYPE,3>,adVar<OUT_TYPE,3>>, \
-  F<adVar<IN_TYPE,4>,adVar<OUT_TYPE,4>>, F<adVar<IN_TYPE,5>,adVar<OUT_TYPE,5>>, \
-  F<adVar<IN_TYPE,6>,adVar<OUT_TYPE,6>>, F<adVar<IN_TYPE,7>,adVar<OUT_TYPE,7>>
+#define FUNC_SET_F_TWO_TYPE(F,IN_TYPE,OUT_TYPE)                                                         \
+  F<IN_TYPE,OUT_TYPE>, F<func::adVar<IN_TYPE,1>,func::adVar<OUT_TYPE,1>>,                               \
+  F<func::adVar<IN_TYPE,2>,func::adVar<OUT_TYPE,2>>, F<func::adVar<IN_TYPE,3>,func::adVar<OUT_TYPE,3>>, \
+  F<func::adVar<IN_TYPE,4>,func::adVar<OUT_TYPE,4>>, F<func::adVar<IN_TYPE,5>,func::adVar<OUT_TYPE,5>>, \
+  F<func::adVar<IN_TYPE,6>,func::adVar<OUT_TYPE,6>>, F<func::adVar<IN_TYPE,7>,func::adVar<OUT_TYPE,7>>
 
 #define FUNC_GET_MACRO_FUNCTION_CONTAINER(_1,_2,_3,NAME,...) NAME
 // Call with FUNC_SET_F(foo,template-type...)
