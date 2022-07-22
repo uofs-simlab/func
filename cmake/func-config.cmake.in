@@ -1,0 +1,23 @@
+get_filename_component(FUNC_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${FUNC_CMAKE_DIR})
+if(Boost_FOUND)
+  find_dependency(Boost)
+endif()
+if(ARMADILLO_FOUND)
+  find_dependency(Armadillo)
+endif()
+if(QUADMATH_FOUND)
+  find_dependency(Quadmath)
+endif()
+if(OpenMP_FOUND)
+  find_dependency(OpenMP)
+endif()
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+if(NOT TARGET FunC::FunC)
+  include("${FUNC_CMAKE_DIR}/FunCTargets.cmake")
+endif()
+
+set(FUNC_LIBRARIES FunC::FunC)

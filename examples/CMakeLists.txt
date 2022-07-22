@@ -4,6 +4,7 @@
 #add_executable(compute_max_err_of_tables compute_max_err_of_tables.cpp)
 #target_link_libraries(compute_max_err_of_tables PUBLIC func)
 
+# TODO would it be good to test find_package(FunC) here????
 if(FUNC_USE_BOOST)
 add_executable(experiment experiment.cpp)
 target_link_libraries(experiment PUBLIC func)

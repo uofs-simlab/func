@@ -18,10 +18,7 @@ else()
   set(FUNC_PRIVATE PRIVATE)
 endif()
 
-# TODO I think this needs some fancy generator pathname in case we use make/ make install ???????
-target_include_directories(func ${FUNC_PUBLIC} ./ table_types ${ARMADILLO_INCLUDE_DIR}) # TODO should the arma include be there?
-target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
-
+# explicitly declare which headers we're distributing
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
 config.hpp;func.hpp;\
 FunctionContainer.hpp;EvaluationImplementation.hpp;\
@@ -48,6 +45,13 @@ table_types/PadeTable.hpp;\
 table_types/QuadraticPrecomputedInterpolationTable.hpp;\
 ")
 
+target_include_directories(func ${FUNC_PUBLIC}
+  $<INSTALL_INTERFACE:.> $<INSTALL_INTERFACE:table_types>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/table_types>
+  )
+
+target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
+
 # TODO add more required compile features (it's nice to have cmake determine the required standard on its own)
 target_compile_features(func ${FUNC_PRIVATE} cxx_range_for)
 
@@ -65,18 +69,56 @@ endif()
 # TODO does MSVC support this?
 target_compile_options(func ${FUNC_PRIVATE} -faligned-new)
 
-include(GNUInstallDirs) # TODO what goes wrong if this is not included
+
+# ==== Install Target func ====
+include(GNUInstallDirs) # defines CMAKE_INSTALL_XXX
 install(TARGETS func
   EXPORT func-targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  PUBLIC_HEADER DESTINATION include/func
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/func
 )
+set_target_properties(func PROPERTIES EXPORT_NAME FunC)
 
+# make every file in this directory accessable after installing FunC
+#install(DIRECTORY ./ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/func)
+
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/FunC)
 install(EXPORT func-targets
   FILE
     FunCTargets.cmake
   NAMESPACE
     FunC::
   DESTINATION
-    ${CMAKE_INSTALL_LIBDIR}/cmake/JSONUtils
+    ${INSTALL_CONFIGDIR}
 )
+
+# Create a ConfigVersion.cmake file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/func-config-version.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(${CMAKE_SOURCE_DIR}/cmake/func-config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/func-config.cmake
+  INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+install(FILES
+  ${CMAKE_SOURCE_DIR}/cmake/FindQuadmath.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/func-config.cmake
+  DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+# Exporting from the build tree
+configure_file(${CMAKE_SOURCE_DIR}/cmake/FindQuadmath.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/FindQuadmath.cmake
+  COPYONLY)
+
+export(EXPORT func-targets
+  FILE ${CMAKE_CURRENT_BINARY_DIR}/FunCTargets.cmake
+  NAMESPACE FunC::)
+
+# Register package in the User Package Registry (TODO is that helpful?)
+export(PACKAGE FunC)

@@ -13,9 +13,13 @@ project(
 
 set(CMAKE_CXX_STANDARD 11)
 
+# cmake will look in our cmake directory for FindXXX.cmake files
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+
 # ==== Search for dependencies ====
 option(FUNC_USE_BOOST "Use Boost library" ON)
-find_package(Boost 1.71.0)
+set(MIN_BOOST_VERSION 1.71.0)
+find_package(Boost ${MIN_BOOST_VERSION})
 
 if(FUNC_USE_BOOST)
   if(Boost_FOUND AND NOT (Boost_VERSION VERSION_LESS 1.71.0))
@@ -37,7 +41,6 @@ if(FUNC_USE_ARMADILLO)
   if(ARMADILLO_FOUND)
     message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
     message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
-    message(STATUS "Found Armadillo lib: ${ARMADILLO_LIBRARY_DIRS}")
   else()
     set(FUNC_USE_ARMADILLO OFF)
     message(WARNING "Armadillo was not found. You can read higher order tables or Pade tables from existing json files, but these table types cannot be generated. If you wish to generate higher order tables or pade tables then reconfigure with Armadillo installed. Silence this warning by setting -DUSE_ARMADILLO=OFF")
@@ -48,7 +51,9 @@ endif()
 
 # use FindQuadmath.cmake so we can write find_package(Quadmath)
 # This will mostly just test whether we're compiling with gcc/icpc
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+# TODO FunC LookupTableGenerator is header only so it will only be built in user code.
+# It's nice to give people our FindQuadmath.cmake, but it'd probably be better to
+# just use a template for the error-precision
 option(FUNC_USE_QUADMATH "Use quadmath library" ON)
 find_package(Quadmath)
 
@@ -99,12 +104,12 @@ foreach(PAIR IN LISTS TYPE_PAIRS)
   foreach(CLASSNAME IN LISTS CLASSNAMES)
     # TODO can we leave this automatically generated source in ${CMAKE_CURRENT_BINARY_DIR}?
     string(REPLACE "," "_to_" FORMAT_PAIR "${PAIR}")
-    configure_file(${PROJECT_SOURCE_DIR}/include/src_template.cpp.cmake ${func_src_dir}/${CLASSNAME}_${FORMAT_PAIR}.cpp @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/cmake/src_template.cpp.cmake ${func_src_dir}/${CLASSNAME}_${FORMAT_PAIR}.cpp @ONLY)
   endforeach()
 endforeach()
 
 # declare the extern template types and let c++ know what dependencies we found
-configure_file(${PROJECT_SOURCE_DIR}/include/config.hpp.cmake ${PROJECT_SOURCE_DIR}/include/config.hpp @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/config.hpp.cmake ${PROJECT_SOURCE_DIR}/include/config.hpp @ONLY)
 
 # Primary source subdirectory
 add_subdirectory("include")
