@@ -64,7 +64,9 @@ public:
   //TransferFunctionSinh(IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :
   //  TransferFunctionSinh<IN_TYPE>(minArg, tableMaxArg, stepSize, {-minArg/stepSize,1/stepSize,0,0}) {}
 
-  /* Build the coefficients in g_inv */
+  /* Build the coefficients in g_inv 
+   * TODO OUT_TYPE has to be numeric at the moment
+   * (ie cannot be LookupTable<...>) so we should enforce that (or change the algorithm somewhat) */
   template<typename OUT_TYPE>
   TransferFunctionSinh(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
       IN_TYPE minArg, IN_TYPE tableMaxArg, IN_TYPE stepSize) :

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
 
 # Default to "Release" build
-SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
 # options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) DEBUG RELEASE
-# RELWITHDEBINFO MINSIZEREL DEV.")
+# RELWITHDEBINFO MINSIZEREL.")
 
 project(
   FunC
@@ -81,7 +81,10 @@ endif()
 # ==== Generate Source Code ====
 # Every type that we want to use our LUTs with. IN_TYPES and OUT_TYPES must be the same length
 # TODO could the average user change these variables without wanting to cry? Does "option" support lists??
-set(TYPE_PAIRS "double,double")
+if(NOT DEFINED TYPE_PAIRS)
+  message(STATUS "Variable TYPE_PAIRS was not set by user")
+  set(TYPE_PAIRS "double,double;float,float;long double,long double")
+endif()
 
 # Every classname with whose source we want compiled into libfunc.so for each type_pair
 # This is the only file that showed material speedup
