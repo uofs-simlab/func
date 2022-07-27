@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 # Default to "Release" build
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
@@ -79,8 +79,8 @@ endif()
 
 
 # ==== Generate Source Code ====
-# Every type that we want to use our LUTs with. IN_TYPES and OUT_TYPES must be the same length
-# TODO could the average user change these variables without wanting to cry? Does "option" support lists??
+# TYPE_PAIRS contains every type we want to use out LUTs with.
+# TODO can the average user change TYPE_PAIRS without wanting to cry?
 if(NOT DEFINED TYPE_PAIRS)
   message(STATUS "Variable TYPE_PAIRS was not set by user")
   set(TYPE_PAIRS "double,double;float,float;long double,long double")
@@ -89,7 +89,7 @@ endif()
 # Every classname with whose source we want compiled into libfunc.so for each type_pair
 # This is the only file that showed material speedup
 set(CLASSNAMES
-  LookupTableFactory
+  LookupTableFactory # .hpp file must contain a line with FUNC_DECLARE_TEMPLATE_AS_EXTERN(classname)
 )
 
 # cleanup any source-code that may have been generated in previous cmake runs
@@ -101,11 +101,9 @@ endif()
 
 set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "#define FUNC_DECLARE_TEMPLATE_AS_EXTERN(classname)\\")
 
-# TODO do these configure_files need some fancy generator-ish path names?
 foreach(PAIR IN LISTS TYPE_PAIRS)
   set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "${FUNC_DECLARE_TEMPLATE_AS_EXTERN}\n  extern template class classname<${PAIR}>;\\")
   foreach(CLASSNAME IN LISTS CLASSNAMES)
-    # TODO can we leave this automatically generated source in ${CMAKE_CURRENT_BINARY_DIR}?
     string(REPLACE "," "_to_" FORMAT_PAIR "${PAIR}")
     configure_file(${PROJECT_SOURCE_DIR}/cmake/src_template.cpp.cmake ${func_src_dir}/${CLASSNAME}_${FORMAT_PAIR}.cpp @ONLY)
   endforeach()
