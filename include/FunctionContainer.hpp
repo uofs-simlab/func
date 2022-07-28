@@ -33,25 +33,22 @@
 #include <boost/math/differentiation/autodiff.hpp>
 #include "config.hpp" // FUNC_USE_BOOST
 
+namespace func {
+
 #ifdef FUNC_USE_BOOST
-/* Let the user quickly define their function container with a macro */
+// two helper macros to make FUNC_SET_F appear like a variadic macro
 #define FUNC_SET_F_ONE_TYPE(F,TYPE)               \
   F<TYPE>, F<func::adVar<TYPE,1>>,                \
   F<func::adVar<TYPE,2>>, F<func::adVar<TYPE,3>>, \
   F<func::adVar<TYPE,4>>, F<func::adVar<TYPE,5>>, \
   F<func::adVar<TYPE,6>>, F<func::adVar<TYPE,7>>
 
-#define FUNC_SET_F_TWO_TYPE(F,IN_TYPE,OUT_TYPE)                                                         \
-  F<IN_TYPE,OUT_TYPE>, F<func::adVar<IN_TYPE,1>,func::adVar<OUT_TYPE,1>>,                               \
-  F<func::adVar<IN_TYPE,2>,func::adVar<OUT_TYPE,2>>, F<func::adVar<IN_TYPE,3>,func::adVar<OUT_TYPE,3>>, \
-  F<func::adVar<IN_TYPE,4>,func::adVar<OUT_TYPE,4>>, F<func::adVar<IN_TYPE,5>,func::adVar<OUT_TYPE,5>>, \
-  F<func::adVar<IN_TYPE,6>,func::adVar<OUT_TYPE,6>>, F<func::adVar<IN_TYPE,7>,func::adVar<OUT_TYPE,7>>
+#define FUNC_SET_F_TWO_TYPE(F,TIN,TOUT)                                                         \
+  F<TIN,TOUT>, F<func::adVar<TIN,1>,func::adVar<TOUT,1>>,                               \
+  F<func::adVar<TIN,2>,func::adVar<TOUT,2>>, F<func::adVar<TIN,3>,func::adVar<TOUT,3>>, \
+  F<func::adVar<TIN,4>,func::adVar<TOUT,4>>, F<func::adVar<TIN,5>,func::adVar<TOUT,5>>, \
+  F<func::adVar<TIN,6>,func::adVar<TOUT,6>>, F<func::adVar<TIN,7>,func::adVar<TOUT,7>>
 
-#define FUNC_GET_MACRO_FUNCTION_CONTAINER(_1,_2,_3,NAME,...) NAME
-// Call with FUNC_SET_F(foo,template-type...)
-#define FUNC_SET_F(...) FUNC_GET_MACRO_FUNCTION_CONTAINER(__VA_ARGS__, FUNC_SET_F_TWO_TYPE, FUNC_SET_F_ONE_TYPE, )(__VA_ARGS__)
-
-namespace func {
 // setup the automatically differentiable variable
 using boost::math::differentiation::autodiff_fvar;
 template <typename T, unsigned int N>
@@ -59,26 +56,32 @@ using adVar = autodiff_fvar<T,N>;
 
 // create a set of structs so we can specify
 // FunctionContainer::get_nth_func's return type with an index
-template<typename IN_TYPE, typename OUT_TYPE, unsigned int N>
+template<typename TIN, typename TOUT, unsigned int N>
 struct nth_differentiable{
-  using type = std::function<adVar<OUT_TYPE,N>(adVar<IN_TYPE,N>)>;
+  using type = std::function<adVar<TOUT,N>(adVar<TIN,N>)>;
 };
 /* special case for N=0 */
-template<typename IN_TYPE, typename OUT_TYPE>
-struct nth_differentiable<IN_TYPE,OUT_TYPE,0>{
-  using type = std::function<OUT_TYPE(IN_TYPE)>;
+template<typename TIN, typename TOUT>
+struct nth_differentiable<TIN,TOUT,0>{
+  using type = std::function<TOUT(TIN)>;
 };
 
 #else
-#define FUNC_SET_F(F,TYPE) F<TYPE>
+#define FUNC_SET_F_ONE_TYPE(F,TYPE)     F<TYPE>
+#define FUNC_SET_F_TWO_TYPE(F,TIN,TOUT) F<TIN,TOUT>
 #endif // FUNC_USE_BOOST
 
-template<typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
+#define FUNC_GET_MACRO_FUNCTION_CONTAINER(_1,_2,_3,NAME,...) NAME
+// Call with FUNC_SET_F(foo,template-type...)
+#define FUNC_SET_F(...) FUNC_GET_MACRO_FUNCTION_CONTAINER(__VA_ARGS__, FUNC_SET_F_TWO_TYPE, FUNC_SET_F_ONE_TYPE, )(__VA_ARGS__)
+
+
+template<typename TIN, typename TOUT = TIN>
 class FunctionContainer
 {
 #ifdef FUNC_USE_BOOST
   template<unsigned int N>
-  using func_type = nth_differentiable<IN_TYPE,OUT_TYPE,N>;
+  using func_type = nth_differentiable<TIN,TOUT,N>;
   // 2 parter for providing a way to access each member function with a number.
   // overload func_type 9 different ways to get a function that seemingly does different
   // things based on its template value.
@@ -103,36 +106,37 @@ public:
 #endif // FUNC_USE_BOOST
 public:
 
-  std::function<OUT_TYPE(IN_TYPE)> standard_func;
+  std::function<TOUT(TIN)> standard_func;
 #ifdef FUNC_USE_BOOST
-  std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> autodiff1_func;
-  std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> autodiff2_func;
-  std::function<adVar<OUT_TYPE,3>(adVar<IN_TYPE,3>)> autodiff3_func;
-  std::function<adVar<OUT_TYPE,4>(adVar<IN_TYPE,4>)> autodiff4_func;
-  std::function<adVar<OUT_TYPE,5>(adVar<IN_TYPE,5>)> autodiff5_func;
-  std::function<adVar<OUT_TYPE,6>(adVar<IN_TYPE,6>)> autodiff6_func;
-  std::function<adVar<OUT_TYPE,7>(adVar<IN_TYPE,7>)> autodiff7_func;
+  std::function<adVar<TOUT,1>(adVar<TIN,1>)> autodiff1_func;
+  std::function<adVar<TOUT,2>(adVar<TIN,2>)> autodiff2_func;
+  std::function<adVar<TOUT,3>(adVar<TIN,3>)> autodiff3_func;
+  std::function<adVar<TOUT,4>(adVar<TIN,4>)> autodiff4_func;
+  std::function<adVar<TOUT,5>(adVar<TIN,5>)> autodiff5_func;
+  std::function<adVar<TOUT,6>(adVar<TIN,6>)> autodiff6_func;
+  std::function<adVar<TOUT,7>(adVar<TIN,7>)> autodiff7_func;
 #endif // FUNC_USE_BOOST
 
   // some constructors
   FunctionContainer(){}
 
-  FunctionContainer(std::function<OUT_TYPE(IN_TYPE)> func) :
+  FunctionContainer(std::function<TOUT(TIN)> func) :
     standard_func(func) {};
 
 #ifdef FUNC_USE_BOOST
-  FunctionContainer(std::function<OUT_TYPE(IN_TYPE)>   func,
-      std::function<adVar<OUT_TYPE,1>(adVar<IN_TYPE,1>)> func1,
-      std::function<adVar<OUT_TYPE,2>(adVar<IN_TYPE,2>)> func2,
-      std::function<adVar<OUT_TYPE,3>(adVar<IN_TYPE,3>)> func3,
-      std::function<adVar<OUT_TYPE,4>(adVar<IN_TYPE,4>)> func4,
-      std::function<adVar<OUT_TYPE,5>(adVar<IN_TYPE,5>)> func5,
-      std::function<adVar<OUT_TYPE,6>(adVar<IN_TYPE,6>)> func6,
-      std::function<adVar<OUT_TYPE,7>(adVar<IN_TYPE,7>)> func7) :
+  FunctionContainer(std::function<TOUT(TIN)>   func,
+      std::function<adVar<TOUT,1>(adVar<TIN,1>)> func1,
+      std::function<adVar<TOUT,2>(adVar<TIN,2>)> func2,
+      std::function<adVar<TOUT,3>(adVar<TIN,3>)> func3,
+      std::function<adVar<TOUT,4>(adVar<TIN,4>)> func4,
+      std::function<adVar<TOUT,5>(adVar<TIN,5>)> func5,
+      std::function<adVar<TOUT,6>(adVar<TIN,6>)> func6,
+      std::function<adVar<TOUT,7>(adVar<TIN,7>)> func7) :
     standard_func(func),   autodiff1_func(func1),
     autodiff2_func(func2), autodiff3_func(func3),
     autodiff4_func(func4), autodiff5_func(func5),
     autodiff6_func(func6), autodiff7_func(func7) {}
 #endif // FUNC_USE_BOOST
 };
+
 } // namespace func
