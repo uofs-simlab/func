@@ -103,8 +103,9 @@ set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "#define FUNC_DECLARE_TEMPLATE_AS_EXTERN(cla
 
 foreach(PAIR IN LISTS TYPE_PAIRS)
   set(FUNC_DECLARE_TEMPLATE_AS_EXTERN "${FUNC_DECLARE_TEMPLATE_AS_EXTERN}\n  extern template class classname<${PAIR}>;\\")
+
+  string(REPLACE "," "_to_" FORMAT_PAIR "${PAIR}")
   foreach(CLASSNAME IN LISTS CLASSNAMES)
-    string(REPLACE "," "_to_" FORMAT_PAIR "${PAIR}")
     configure_file(${PROJECT_SOURCE_DIR}/cmake/src_template.cpp.cmake ${func_src_dir}/${CLASSNAME}_${FORMAT_PAIR}.cpp @ONLY)
   endforeach()
 endforeach()

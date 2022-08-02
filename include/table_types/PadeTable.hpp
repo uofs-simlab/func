@@ -76,7 +76,7 @@ public:
       m_grid[ii] = x;
 
       // build the matrix of taylor coefficients
-      arma::mat T = arma::zeros(M+N+1, N+1);
+      arma::Mat<TOUT> T = arma::zeros<arma::Mat<TOUT>>(M+N+1, N+1);
       const auto derivs = (mp_boost_func)(make_fvar<TIN,M+N>(x));
       for(unsigned int i=0; i<M+N+1; i++)
         T(i,0) = derivs.derivative(i)/(fact[i]);
@@ -86,7 +86,7 @@ public:
         T(arma::span(i,N+M), i) = T(arma::span(0,N+M-i), 0);
 
       // find the coefficients of Q.
-      arma::mat Q = arma::null(T.rows(M+1, M+N));
+      arma::Mat<TOUT> Q = arma::null(T.rows(M+1, M+N));
       if(Q.n_elem != N+1)
         throw std::range_error(m_name + " is too poorly conditioned");
 
@@ -97,7 +97,7 @@ public:
           throw std::range_error(m_name + " is too poorly conditioned");
 
       // find the coefficients of P
-      arma::vec P = T.rows(0,M)*Q;
+      arma::Col<TOUT> P = T.rows(0,M)*Q;
 
       /* Check if the denominator Q has any roots
          within the subinterval [-m_stepSize/2,m_stepSize/2).
@@ -105,7 +105,7 @@ public:
 
          We'll check for the existence of a root by building a bracket,
          using Q(0)=1 as our positive endpoint. Thus, we just need
-         to find a point where Q is negative. Hence this helper function: */
+         to find a point where Q is negative. TODO factor out this helper function */
       auto Q_is_negative = [this, &Q, &ii](TIN x) -> bool {
         // Tell us if this point is within this subinterval's range
         if(((ii == 0 && x < 0.0) || (ii == m_numIntervals - 1 && x > 0.0)))
@@ -125,7 +125,7 @@ public:
         bool Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
 
         // Check Q for negativity at any of its vertexes
-        double desc = 0.0;
+        TOUT desc = 0.0;
         if(!Q_has_root)
           switch(k){
             case 1:
@@ -143,8 +143,8 @@ public:
         // switch to using the [M,k-1] pade approximant on this table interval
         if(Q_has_root){
           if(k == 1){
-            // our familiar Taylor series
-            Q = arma::zeros(N+1);
+            // just use a Taylor series
+            Q = arma::zeros<arma::Mat<TOUT>>(N+1);
             Q[0] = 1.0;
             P = T(arma::span(0,M),0);
           }else{

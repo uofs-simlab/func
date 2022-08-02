@@ -72,14 +72,14 @@ public:
     m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
 
     /* build the vandermonde system for finding the interpolating polynomial's coefficients */
-    arma::mat Van = arma::ones(N+1, N+1);
-    Van.col(1) = arma::linspace(0,1,N+1);
+    arma::Mat<TOUT> Van = arma::ones<arma::Mat<TOUT>>(N+1, N+1);
+    Van.col(1) = arma::linspace<arma::Col<TOUT>>(0,1,N+1);
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
 
 #ifdef FUNC_ARMA_LU_SOLVE
     // LU factor the matrix we just built
-    arma::mat L, U, P;
+    arma::Mat<TOUT> L, U, P;
     arma::lu(L,U,P,Van);
 #endif
 
@@ -98,13 +98,13 @@ public:
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
-      arma::vec y = arma::linspace(x,x+h,N+1);
+      arma::Col<TOUT> y = arma::linspace<arma::Col<TOUT>>(x,x+h,N+1);
       for (unsigned int k=0; k<N+1; k++)
         y[k] = m_func(y[k]);
 
       // make y the coefficients of the polynomial interpolant
 #ifdef FUNC_ARMA_LU_SOLVE
-      y = arma::solve(trimatu(U), arma::solve(trimatl(L), P*y));
+      y = arma::solve(U, arma::solve(L, P*y));
 #else
       y = arma::solve(Van, y, FUNC_ARMA_SOLVE_OPTS);
 #endif
