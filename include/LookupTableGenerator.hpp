@@ -12,6 +12,8 @@
 
   If Boost is not available then users can only build tables by file.
 
+  MUST be able to cast TERR to TIN
+
   Also equipped to
   - compute table error estimates at a given stepsize
   - plot a table implementation against the exact function
@@ -30,27 +32,19 @@
 #include <boost/math/tools/minima.hpp>
 #include <boost/math/tools/roots.hpp>
 #include <boost/math/special_functions/next.hpp>
+#include <boost/multiprecision/cpp_bin_float.hpp>
 #endif
 
-/* TODO Ideally errprecision will change based on TIN and TOUT
-    We need epsilon_errprecision <= sqrt(epsilon_OUTTYPE), but it's prooobably
-    okay if we just use the max precision available */
-// If quadmath is used, work in the boost::multiprecision namespace
-#ifdef FUNC_USE_QUADMATH
-#include <boost/multiprecision/float128.hpp>
-using namespace boost::multiprecision;
+/* Ideally TERR satisfies
+   sqrt(epsilon_TERR) <= epsilon_TOUT.
+   We'll make the default TERR the best available precision. */
 namespace func {
-using errprecision = float128;
-}
+
+#if defined(FUNC_USE_BOOST)
+template <typename TIN, typename TOUT = TIN, typename TERR = boost::multiprecision::cpp_bin_float_quad>
 #else
-namespace func {
-using errprecision = long double;
-}
+template <typename TIN, typename TOUT = TIN, typename TERR = long double> // TERR is unused if Boost is not available
 #endif
-
-namespace func {
-
-template <typename TIN, typename TOUT = TIN>
 class LookupTableGenerator
 {
 private:
@@ -126,7 +120,7 @@ public:
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize, std::string filename = "");
 
   /* Return the approx error in tableKey at stepSize */
-  double error_at_step_size(std::string tableKey, TIN stepSize);
+  long double error_at_step_size(std::string tableKey, TIN stepSize);
 
   /* compare tableKey to the original function at stepSize */
   void plot_implementation_at_step_size(std::string tableKey, TIN stepSize);
@@ -138,16 +132,16 @@ public:
 /*
    Nested Functor used for computing error in a given lookup table
 */
-template <typename TIN, typename TOUT>
-struct LookupTableGenerator<TIN,TOUT>::LookupTableErrorFunctor
+template <typename TIN, typename TOUT, typename TERR>
+struct LookupTableGenerator<TIN,TOUT,TERR>::LookupTableErrorFunctor
 {
   LookupTableErrorFunctor(LookupTable<TIN,TOUT>* impl) : m_impl(impl) {}
   /* operator() always returns a negative value */
-  errprecision operator()(errprecision const& x)
+  TERR operator()(TERR const& x)
   {
-    errprecision f_value = static_cast<errprecision>((m_impl->function())(TIN(x)));
-    errprecision lut_value = static_cast<errprecision>((*m_impl)(TIN(x)));
-    return -static_cast<errprecision>(2.0) * fabs( (f_value - lut_value) ) /
+    TERR f_value = static_cast<TERR>((m_impl->function())(TIN(x)));
+    TERR lut_value = static_cast<TERR>((*m_impl)(TIN(x)));
+    return -static_cast<TERR>(2.0) * fabs( (f_value - lut_value) ) /
       (fabs(f_value)+fabs(lut_value));
   }
 
@@ -157,13 +151,14 @@ private:
 };
 
 /* Nested Functor used for finding optimal stepsize that satisfies TOL */
-template <typename TIN, typename TOUT>
-struct LookupTableGenerator<TIN,TOUT>::OptimalStepSizeFunctor
+template <typename TIN, typename TOUT, typename TERR>
+struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 {
-  OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT> &parent, std::string tableKey, double tol) :
+  /* TODO does this cast well? */
+  OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR tol) :
     m_parent(parent), m_tableKey(tableKey), m_tol(tol) {}
 
-  double operator()(TIN const& stepSize)
+  TERR operator()(TIN const& stepSize)
   {
     using namespace boost::math::tools;
 
@@ -175,27 +170,26 @@ struct LookupTableGenerator<TIN,TOUT>::OptimalStepSizeFunctor
 
     boost::uintmax_t max_it = 20;
 
-    errprecision max_err = 0;
-    errprecision err;
+    TERR max_err = 0;
+    TERR err;
 
     /* get number of binary bits in mantissa */
-    int bits = std::numeric_limits<errprecision>::digits;
+    int bits = std::numeric_limits<TERR>::digits;
     /*
       for each interval in the table, compute the maximum error
       - be careful about the top most interval, it may reach beyond the
       table range due to rounding errors
     */
     for(unsigned ii=0; ii<impl->num_intervals()-1; ii++){
-
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
-      errprecision x = static_cast<errprecision>(boost::math::float_next(intEndPoints.first));
-      errprecision xtop = static_cast<errprecision>(boost::math::float_prior(intEndPoints.second));
-      if ( double(xtop) > m_parent.m_max )
+      TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
+      TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
+      if( ((TIN)(xtop)) > m_parent.m_max )
         break;
-      std::pair<errprecision, errprecision> r =
-        brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
+
+      std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
       err = r.second;
-      if( err < max_err ) {
+      if(err < max_err){
         max_err = err;
       }
     }
@@ -203,14 +197,14 @@ struct LookupTableGenerator<TIN,TOUT>::OptimalStepSizeFunctor
     /* want return to be 0 if the same, +/- on either side */
     max_err = -max_err;
     //std::cerr << m_tableKey << " with stepSize=" << stepSize << " has approx error=" << double(max_err) << "\n";
-    return double(max_err-m_tol);
+    return (TOUT)(max_err-m_tol);
   }
 
 private:
 
-  LookupTableGenerator<TIN,TOUT> &m_parent;
+  LookupTableGenerator<TIN,TOUT,TERR> &m_parent;
   std::string m_tableKey;
-  double m_tol;
+  TERR m_tol;
 
 };
 
@@ -220,8 +214,8 @@ private:
   LookupTableGenerator functions
 */
 
-template <typename TIN, typename TOUT>
-std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT>::generate_by_impl_size(
+template <typename TIN, typename TOUT, typename TERR>
+std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::generate_by_impl_size(
     std::string tableKey, unsigned long desiredSize, std::string filename)
 {
   if(filename != "" && file_exists(filename))
@@ -257,7 +251,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT>::generate_
 
   /* approximate step size for for desired impl size
      (assuming linear relationship of num_intervals to size */
-  par1.stepSize = 1.0/((double)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
+  par1.stepSize = 1.0/((TIN)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
 
   auto lut = factory.create(tableKey, mp_func_container, par1);
   if(filename != ""){
@@ -267,8 +261,8 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT>::generate_
   return lut;
 }
 
-template <typename TIN, typename TOUT>
-std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT>::generate_by_tol(std::string tableKey, TIN desiredTolerance, std::string filename)
+template <typename TIN, typename TOUT, typename TERR>
+std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::generate_by_tol(std::string tableKey, TIN desiredTolerance, std::string filename)
 {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate any table by tol without Boost");
@@ -402,8 +396,8 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT>::generate_
 #endif
 }
 
-template <typename TIN, typename TOUT>
-double LookupTableGenerator<TIN,TOUT>::error_at_step_size(
+template <typename TIN, typename TOUT, typename TERR>
+long double LookupTableGenerator<TIN,TOUT,TERR>::error_at_step_size(
     std::string tableKey, TIN stepSize)
 {
 #ifndef FUNC_USE_BOOST
@@ -415,13 +409,13 @@ double LookupTableGenerator<TIN,TOUT>::error_at_step_size(
     tolerance, so that is reused.
   */
   OptimalStepSizeFunctor f(*this,tableKey,0);
-  double err = f(stepSize);
-  return err;
+  TERR err = f(stepSize);
+  return (long double) err;
 #endif
 }
 
-template <typename TIN, typename TOUT>
-void LookupTableGenerator<TIN,TOUT>::plot_implementation_at_step_size(
+template <typename TIN, typename TOUT, typename TERR>
+void LookupTableGenerator<TIN,TOUT,TERR>::plot_implementation_at_step_size(
     std::string tableKey, TIN stepSize)
 {
   /*
@@ -435,13 +429,13 @@ void LookupTableGenerator<TIN,TOUT>::plot_implementation_at_step_size(
   auto impl = factory.create(tableKey, mp_func_container, par);
 
   std::cout << "# x func impl" << std::endl;
-  for (double x=impl->min_arg();
-       x < impl->max_arg();
-       x+=impl->step_size()/10 ) {
+  for (TIN x = impl->min_arg();
+           x < impl->max_arg();
+           x+= impl->step_size()/10){
     std::cout << x << " " <<
       (impl->function())(x) << " " <<
       (*impl)(x) << std::endl;
   }
 }
-//FUNC_DECLARE_TEMPLATE_AS_EXTERN(LookupTableGenerator)
+
 } // namespace func
