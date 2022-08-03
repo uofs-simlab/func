@@ -72,9 +72,9 @@ public:
     case UNIFORM:
       {
       // nondimensionalized x position, scaled by step size
-      dx = (x-m_minArg)/m_stepSize;
+      dx = static_cast<TOUT>((x-m_minArg)/m_stepSize);
       // index of previous table entry
-      x0 = (unsigned) dx;
+      x0 = static_cast<unsigned>(dx);
       // value of table entries around x position
       dx -= x0;
       break;
@@ -83,7 +83,7 @@ public:
       {
       // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
       // where each of the above member vars are encoded into g_inv
-      x0 = m_transferFunction.g_inv(x);
+      x0 = static_cast<unsigned>(m_transferFunction.g_inv(x));
       TIN h   = m_grid[x0+1] - m_grid[x0];
       dx = (x - m_grid[x0])/h;
       break;
@@ -95,7 +95,7 @@ public:
       // where each of the above member vars are encoded into g_inv
       // The source of the pseudolinearity is from the way we compute dx
       dx = m_transferFunction.g_inv(x);
-      x0 = (unsigned) dx;
+      x0 = static_cast<unsigned>(dx);
       dx -= x0;
       break;
       }

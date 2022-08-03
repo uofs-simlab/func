@@ -139,15 +139,17 @@ public:
   /* Provide the most common hash. The compiler should simplify this method when templates are instantiated */
   TOUT operator()(TIN x) override
   {
+    /* might be able to get some speedup by using c++14's constexpr for this switch?
+     * But idk hopefully the compiler optimizes this out anyways */
     TOUT dx;
     unsigned int x0;
     switch(GT){
       case UNIFORM:
         {
         // nondimensionalized x position, scaled by step size
-        dx  = (TOUT) m_stepSize_inv*(x-m_minArg);
+        dx  = static_cast<TOUT>(m_stepSize_inv*(x-m_minArg));
         // index of previous table entry
-        x0  = (unsigned) dx;
+        x0  = static_cast<unsigned>(dx);
         // value of table entries around x position
         dx -= x0;
         break;
@@ -155,7 +157,7 @@ public:
       case NONUNIFORM:
         {
         // find the subinterval x lives in
-        x0 = m_transferFunction.g_inv(x);
+        x0 = static_cast<unsigned>(m_transferFunction.g_inv(x));
         // find where x is within that interval
         TIN h = m_grid[x0+1] - m_grid[x0];
         dx    = (x - m_grid[x0])/h;
@@ -166,7 +168,7 @@ public:
         // find the subinterval x lives in
         dx  = m_transferFunction.g_inv(x);
         // just take the fractional part of dx as x's location in this interval
-        x0  = (unsigned) dx;
+        x0  = static_cast<unsigned>(dx);
         dx -= x0;
         break;
         }
@@ -180,22 +182,21 @@ public:
   }
 };
 
-/* I really hope that somehow I can get the "friend" keyword to work
- * might just temporarily make member variables public while I figure out
- * the linking problem */
-
-
 /* Reading & writing functions for any LUT derived from MetaTable.
- * Enables the convenient "get" syntax from nlohmann::json. eg.
+ * Enables the convenient "get" syntax from nlohmann::json for specific implementations.
+   eg:
   ```c++
   nlohmann::json jsonStats;
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<func::UniformLinearPrecomputedInterpolationTable<TIN,TOUT>>();
   ```
+  TODO disable these if TIN/TOUT do not support to/from_json?
  * */
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
 void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
 {
+  //(void) jsonStats;
+  //(void) lut;
   jsonStats["_comment"] = "FunC lookup table data";
   jsonStats["name"] = lut.m_name;
   jsonStats["minArg"] = lut.m_minArg;
@@ -223,7 +224,9 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
  * inhereting from MetaTable */
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
 void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut) {
-  // name checking happens in MetaTable 
+  //(void) jsonStats;
+  //(void) lut;
+  // name checking happens in MetaTable's constructor
   jsonStats.at("name").get_to(lut.m_name);
   jsonStats.at("minArg").get_to(lut.m_minArg);
   jsonStats.at("maxArg").get_to(lut.m_maxArg);
