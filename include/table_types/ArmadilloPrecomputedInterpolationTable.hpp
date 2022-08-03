@@ -7,6 +7,10 @@
     double val = look(0.87354);
 
   Notes:
+  - This class only works if TOUT is a standard numeric type. I don't think there's a way
+    to around this because armadillo's `is_supported_elem_type` is strict, and currently
+    arma::field is pretty much useless atm
+    TODO disable constructor if template type is not supported
   - table precomputes and stores the linear coefficient so it doesn't have to
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
@@ -47,9 +51,8 @@ class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N
 
   static const std::string classname;
 public:
-  //TODO add a constructor that reads table type from a filename (much like what the lookup table generator does)
-
   // build the LUT from scratch or look in filename for an existing LUT
+  // TODO disable table construction if armadillo does not support TOUT???
   ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
@@ -80,7 +83,7 @@ public:
 #ifdef FUNC_ARMA_LU_SOLVE
     // LU factor the matrix we just built
     arma::Mat<TOUT> L, U, P;
-    arma::lu(L,U,P,Van);
+    arma::lu<arma::Mat<TOUT>>(L,U,P,Van);
 #endif
 
     /* Allocate and set table */
@@ -98,13 +101,14 @@ public:
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
-      arma::Col<TOUT> y = arma::linspace<arma::Col<TOUT>>(x,x+h,N+1);
+      arma::Col<TIN> xvec = arma::linspace<arma::Col<TIN>>(x,x+h,N+1);
+      arma::Col<TOUT> y(N+1);
       for (unsigned int k=0; k<N+1; k++)
-        y[k] = m_func(y[k]);
+        y[k] = m_func(xvec[k]); // TODO profile y.for_each([this](Mat<TIN>::elem_type& xk) { xk = m_func(xk); });
 
       // make y the coefficients of the polynomial interpolant
 #ifdef FUNC_ARMA_LU_SOLVE
-      y = arma::solve(U, arma::solve(L, P*y));
+      y = arma::solve(arma::trimatu(U), arma::solve(arma::trimatl(L), P*y));
 #else
       y = arma::solve(Van, y, FUNC_ARMA_SOLVE_OPTS);
 #endif

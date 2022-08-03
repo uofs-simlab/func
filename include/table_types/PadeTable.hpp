@@ -7,6 +7,10 @@
     double val = look(0.87354);
 
   Notes:
+  - This class only works if TOUT is a standard numeric type. I don't think there's a way
+    to around this because armadillo's `is_supported_elem_type` is strict, and currently
+    arma::field is pretty much useless atm
+    TODO disable constructor if template type is not supported
   - table precomputes and stores any coefficients so it doesn't have to
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
@@ -26,7 +30,7 @@
 #include <cmath> //isinfite
 
 namespace func {
-// TODO does this cause problems for lower precision types?
+// TODO does this cause problems for different precision types?
 static double constexpr fact[] = {1,1,2,6,24,120,720,5040};
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
