@@ -16,6 +16,7 @@
 #include <limits> // epsilon()
 #include <cassert>
 #include <iostream>
+#include <typeinfo> // typeid
 
 namespace func {
 /*
@@ -23,27 +24,27 @@ namespace func {
 */
 typedef std::vector<double> TimeContainer;
 
-template <typename IN_TYPE, typename OUT_TYPE>
-using ImplType = EvaluationImplementation<IN_TYPE,OUT_TYPE>;
+template <typename TIN, typename TOUT>
+using ImplType = EvaluationImplementation<TIN,TOUT>;
 
-template <typename IN_TYPE, typename OUT_TYPE>
-using ImplContainer = std::vector<std::unique_ptr<ImplType<IN_TYPE,OUT_TYPE>>>;
+template <typename TIN, typename TOUT>
+using ImplContainer = std::vector<std::unique_ptr<ImplType<TIN,TOUT>>>;
 
 /*
   ImplTimer struct attaches additional data for timing an implementation
   to the implementation
 */
-template <typename IN_TYPE, typename OUT_TYPE>
+template <typename TIN, typename TOUT>
 struct ImplTimer
 {
   /* Note the the ImplType can NOT be a reference here, because we
      want to be able to sort a container of these ImplTimers. sort
      requires operator=, and classes that have non-static reference
      members cannot implement this */
-  ImplType<IN_TYPE,OUT_TYPE> *impl;
+  ImplType<TIN,TOUT> *impl;
   TimeContainer evaluationTimes;
   double maxTime, minTime, meanTime;
-  ImplTimer(ImplType<IN_TYPE,OUT_TYPE> *inImpl) : impl(inImpl), maxTime(0), minTime(0), meanTime(0) {};
+  ImplTimer(ImplType<TIN,TOUT> *inImpl) : impl(inImpl), maxTime(0), minTime(0), meanTime(0) {};
   void append_runtime(double time){ evaluationTimes.push_back(time); };
   void compute_timing_stats()
   {
@@ -65,28 +66,28 @@ struct ImplTimer
 };
 
 /* ------------------------------------------------------------------------ */
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
+template <typename TIN, typename TOUT = TIN>
 class ImplementationComparator
 {
 private:
 
-  ImplContainer<IN_TYPE,OUT_TYPE>          m_implementations;
-  std::vector<ImplTimer<IN_TYPE,OUT_TYPE>> m_implTimers;
+  ImplContainer<TIN,TOUT>          m_implementations;
+  std::vector<ImplTimer<TIN,TOUT>> m_implTimers;
   unsigned                                 m_numberOfImplementations;
 
   std::vector<TimeContainer>  m_evaluationTimers;
 
-  IN_TYPE                     m_minArg,m_maxArg;
+  TIN                     m_minArg,m_maxArg;
 
-  std::unique_ptr<OUT_TYPE[]> m_evalHolder;
+  std::unique_ptr<TOUT[]> m_evalHolder;
 
   /*
     RNG for evaluations
-    - By default uses a std::uniform_real_distribution<IN_TYPE>
+    - By default uses a std::uniform_real_distribution<TIN>
       with the std::mt19937 variant of the std::mersenne_twister_engine
   */
-  std::unique_ptr<RngInterface<IN_TYPE>> mp_sampler;
-  std::unique_ptr<IN_TYPE[]>             mp_randomEvaluations;
+  std::unique_ptr<RngInterface<TIN>> mp_sampler;
+  std::unique_ptr<TIN[]>             mp_randomEvaluations;
   int                                    m_nEvals;
 
   struct TimingStatistics
@@ -116,8 +117,8 @@ private:
 
 public:
 
-  ImplementationComparator(ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals = 100000,
-      unsigned int seed = 2017, std::unique_ptr<RngInterface<IN_TYPE>> inRng = nullptr);
+  ImplementationComparator(ImplContainer<TIN,TOUT> &inImpl, int nEvals = 100000,
+      unsigned int seed = 2017, std::unique_ptr<RngInterface<TIN>> inRng = nullptr);
   ~ImplementationComparator(){}
 
   /* Run timings with different set of random arguments */
@@ -130,7 +131,7 @@ public:
   }
 
   /* Obtain a const reference to the current array of evaluation points */
-  const std::unique_ptr<IN_TYPE> sample_points(){ return mp_randomEvaluations; }
+  const std::unique_ptr<TIN> sample_points(){ return mp_randomEvaluations; }
 
   /* Compute fastest and slowest times */
   void compute_timing_statistics()
@@ -166,9 +167,9 @@ public:
 };
 
 /* Constructor's implementation */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
-    ImplContainer<IN_TYPE,OUT_TYPE> &inImpl, int nEvals, unsigned int seed, std::unique_ptr<RngInterface<IN_TYPE>> inRng) :
+template <typename TIN, typename TOUT>
+inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
+    ImplContainer<TIN,TOUT> &inImpl, int nEvals, unsigned int seed, std::unique_ptr<RngInterface<TIN>> inRng) :
   m_implementations(std::move(inImpl)), mp_sampler(std::move(inRng)), m_nEvals(nEvals)
 {
   /*
@@ -176,13 +177,13 @@ inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
   */
   m_numberOfImplementations = m_implementations.size();
   m_evaluationTimers.reserve(m_numberOfImplementations);
-  m_evalHolder.reset(new OUT_TYPE[m_nEvals]);
+  m_evalHolder.reset(new TOUT[m_nEvals]);
 
   /*
     Initialize the timer structs with pointers to implementations
   */
   for (auto & itImpl : m_implementations) {
-    m_implTimers.emplace_back(ImplTimer<IN_TYPE,OUT_TYPE>(itImpl.get()));
+    m_implTimers.emplace_back(ImplTimer<TIN,TOUT>(itImpl.get()));
   }
 
   /*
@@ -195,9 +196,9 @@ inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
   ++itImpl; // assert the rest of the impls are the same
   for (; (itImpl != m_implementations.end()); ++itImpl) {
     assert( abs( (**(itImpl)).min_arg() - m_minArg) <
-  	    (std::numeric_limits<IN_TYPE>::epsilon())   );
+  	    (std::numeric_limits<TIN>::epsilon())   );
     assert( abs( (*itImpl)->max_arg() - m_maxArg) <
-  	    (std::numeric_limits<IN_TYPE>::epsilon())   );
+  	    (std::numeric_limits<TIN>::epsilon())   );
   }
 
   /*
@@ -206,34 +207,34 @@ inline ImplementationComparator<IN_TYPE,OUT_TYPE>::ImplementationComparator(
     distribution on the table's endpoints
   */
   if(mp_sampler == nullptr)
-    mp_sampler = std::unique_ptr<StdRng<IN_TYPE>>(new StdRng<IN_TYPE>(m_minArg, m_maxArg));
+    mp_sampler = std::unique_ptr<StdRng<TIN>>(new StdRng<TIN>(m_minArg, m_maxArg));
   mp_sampler->init(seed);
-  mp_randomEvaluations = std::unique_ptr<IN_TYPE[]>(new IN_TYPE[m_nEvals]);
+  mp_randomEvaluations = std::unique_ptr<TIN[]>(new TIN[m_nEvals]);
 }
 
 /* sort the vector of timings based on the min, max, or mean times */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::sort_timings(std::string type)
+template <typename TIN, typename TOUT>
+inline void ImplementationComparator<TIN,TOUT>::sort_timings(std::string type)
 {
   // default sort by mean time
   if (!type.compare("mean")) {
     sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
+	       [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
 	       { return (a.meanTime < b.meanTime); } );
   } else if (!type.compare("min")) {   // or sort by minimum (ie. best cases)
     sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
+	       [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
 	       { return (a.minTime < b.minTime); } );
   } else if (!type.compare("max")) {   // or sort by maximum time (ie. worst cases)
     sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<IN_TYPE,OUT_TYPE> &a, const ImplTimer<IN_TYPE,OUT_TYPE> &b)
+	       [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
 	       { return (a.maxTime < b.maxTime); } );
   }
 }
 
 /* Implementation of functions that print to an ostream */
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_statistics_json(std::ostream &out)
+template <typename TIN, typename TOUT>
+inline void ImplementationComparator<TIN,TOUT>::print_statistics_json(std::ostream &out)
 {
   /* add implementations to vector */
   nlohmann::json jsonStats;
@@ -251,21 +252,21 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_statistics_json(st
   out << jsonStats.dump(2) << std::endl;
 }
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_details(std::ostream &out)
+template <typename TIN, typename TOUT>
+inline void ImplementationComparator<TIN,TOUT>::print_details(std::ostream &out)
 {
   /*
      Print details of all timings
-  */
-  // temporary vars to hopefully get the template values
-  IN_TYPE temp_in_type;
-  OUT_TYPE temp_out_type;
+     temp_tin and temp_tout are needed to print template values (but the string is probably mangled).
+     A solution involving decltype is probably more legible */
+  TIN temp_tin;
+  TOUT temp_tout;
 
   out << "----------------------------------------------------------------------------\n";
   out << "Table domain and range: "
-      << typeid(temp_in_type).name()
+      << typeid(temp_tin).name()
       << " -> "
-      << typeid(temp_out_type).name()
+      << typeid(temp_tout).name()
       << std::endl;
   out << "Number of trials performed: "
 	    << m_implTimers[0].evaluationTimes.size()
@@ -290,8 +291,8 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_details(std::ostre
   out << "----------------------------------------------------------------------------\n";
 }
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_csv_header(std::ostream &out)
+template <typename TIN, typename TOUT>
+inline void ImplementationComparator<TIN,TOUT>::print_csv_header(std::ostream &out)
 {
   /* Print header */
   for (auto itImplTimer : m_implTimers) {
@@ -300,8 +301,8 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_csv_header(std::os
   out << "\n";
 }
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_details_csv(std::ostream &out)
+template <typename TIN, typename TOUT>
+inline void ImplementationComparator<TIN,TOUT>::print_details_csv(std::ostream &out)
 {
   print_csv_header(out);
 
@@ -315,8 +316,8 @@ inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_details_csv(std::o
   }
 }
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline void ImplementationComparator<IN_TYPE,OUT_TYPE>::print_summary(std::ostream &out)
+template <typename TIN, typename TOUT>
+inline void ImplementationComparator<TIN,TOUT>::print_summary(std::ostream &out)
 {
   /*
     Print summary of the timing statistics

@@ -15,7 +15,7 @@
 #include <string> // to_string()
 #include <memory>
 #include <fstream>
-#include <limits> // numeric_limits<IN_TYPE>::max() / lowest()
+#include <limits> // numeric_limits<TIN>::max() / lowest()
 #include <cmath> // pow, floor, ceil
 #include "json.hpp"
 
@@ -77,7 +77,7 @@ public:
 #define COMPUTE_INDEX(X) \
   (((unsigned int) (m_histSize*(X-m_minArg)/(m_maxArg+1-m_minArg)))%m_histSize)
 
-template <typename IN_TYPE>
+template <typename TIN>
 class ArgumentRecord
 {
   // Histogram used to record locations of function evaluations
@@ -87,8 +87,8 @@ class ArgumentRecord
   unsigned int              m_histSize;
 
   // Set table bounds. Can be altered to result in nicer output
-  IN_TYPE m_minArg;
-  IN_TYPE m_maxArg;
+  TIN m_minArg;
+  TIN m_maxArg;
 
   /* vars containing any statistics */
   // the index of the bucket with the largest count
@@ -99,11 +99,11 @@ class ArgumentRecord
 
   // Record the extreme args to help the user
   // decide what bounds to use for their tables
-  IN_TYPE m_max_recorded;
-  IN_TYPE m_min_recorded;
+  TIN m_max_recorded;
+  TIN m_min_recorded;
 
   public:
-    ArgumentRecord(IN_TYPE min, IN_TYPE max, unsigned int histSize) :
+    ArgumentRecord(TIN min, TIN max, unsigned int histSize) :
       m_minArg(min), m_maxArg(max), m_histSize(histSize)
     {
       /* variables needed for recording function arguments.
@@ -114,8 +114,8 @@ class ArgumentRecord
       // naive initial member arg values
       m_peak_index = 0;
       m_num_out_of_bounds = 0;
-      m_max_recorded = std::numeric_limits<IN_TYPE>::lowest();
-      m_min_recorded = std::numeric_limits<IN_TYPE>::max();
+      m_max_recorded = std::numeric_limits<TIN>::lowest();
+      m_min_recorded = std::numeric_limits<TIN>::max();
     }
 
 #ifdef FUNC_DEBUG
@@ -129,8 +129,8 @@ class ArgumentRecord
        EvaluationImplementation gave us a valid json object */
     ArgumentRecord(nlohmann::json jsonStats)
     {
-      m_minArg = jsonStats["ArgumentRecord"]["minArg"].get<IN_TYPE>();
-      m_maxArg = jsonStats["ArgumentRecord"]["maxArg"].get<IN_TYPE>();
+      m_minArg = jsonStats["ArgumentRecord"]["minArg"].get<TIN>();
+      m_maxArg = jsonStats["ArgumentRecord"]["maxArg"].get<TIN>();
 
       m_histSize = jsonStats["ArgumentRecord"]["histogramSize"].get<unsigned int>();
       for(unsigned int i=0; i<m_histSize; i++)
@@ -139,12 +139,12 @@ class ArgumentRecord
       mv_histogram_mutex = std::vector<FuncMutex>(m_histSize);
 
       m_peak_index   = jsonStats["ArgumentRecord"]["peak_index"].get<unsigned int>();
-      m_max_recorded = jsonStats["ArgumentRecord"]["m_max_recorded"].get<IN_TYPE>();
-      m_min_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<IN_TYPE>();
+      m_max_recorded = jsonStats["ArgumentRecord"]["m_max_recorded"].get<TIN>();
+      m_min_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<TIN>();
     }
 
     /* place x in the histogram */
-    void record_arg(IN_TYPE x)
+    void record_arg(TIN x)
     {
       // Record x if it's within our histogram's limits
       if(m_minArg <= x && x <= m_maxArg){
@@ -194,8 +194,8 @@ class ArgumentRecord
     }
 
     std::string ith_interval(unsigned int i, const int n = 3){
-      return "[" + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*i/(IN_TYPE)m_histSize, n) + ", "
-          + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*(i+1)/(IN_TYPE)m_histSize, n) + ")";
+      return "[" + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*i/(TIN)m_histSize, n) + ", "
+          + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*(i+1)/(TIN)m_histSize, n) + ")";
     }
 
 

@@ -36,12 +36,12 @@
 namespace func {
 
 /* A subclass used to define function behaviour at table endpoints and breakpoints */
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
+template <typename TIN, typename TOUT = TIN>
 class SpecialPoint
 {
 protected:
   // coordinate such that (x,y) = (x,f(x))
-  std::pair<IN_TYPE,OUT_TYPE> m_point;
+  std::pair<TIN,TOUT> m_point;
 
 public:
   // explain why this point is special
@@ -53,18 +53,18 @@ protected:
 
 public:
   // TODO add support for initializer lists
-  SpecialPoint(IN_TYPE x, OUT_TYPE y, DiscontType dt = None, LimitType lt = Equals) :
+  SpecialPoint(TIN x, TOUT y, DiscontType dt = None, LimitType lt = Equals) :
     m_point(std::make_pair(x,y)), m_discType(dt), m_limType(lt) {}
 
-  SpecialPoint(std::pair<IN_TYPE,OUT_TYPE> pt, DiscontType dt = None, LimitType lt = Equals) :
+  SpecialPoint(std::pair<TIN,TOUT> pt, DiscontType dt = None, LimitType lt = Equals) :
     m_point(pt), m_discType(dt), m_limType(lt) {}
 
   // public getters
-  IN_TYPE get_x(){ return m_point.first; }
+  TIN get_x(){ return m_point.first; }
 
-  OUT_TYPE get_y(){
+  TOUT get_y(){
     if(m_limType % 2 != 0)
-      return m_limType*std::numeric_limits<OUT_TYPE>::max();
+      return m_limType*std::numeric_limits<TOUT>::max();
     return m_point.second;
   }
   DiscontType discType(){ return m_discType; }
@@ -72,57 +72,57 @@ public:
 };
 
 
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE>
-class CompositeLookupTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
-  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+template <typename TIN, typename TOUT = TIN>
+class CompositeLookupTable final : public EvaluationImplementation<TIN,TOUT> {
+  INHERIT_EVALUATION_IMPL(TIN,TOUT);
 
   // collection of FunC lookup tables used to sample from
-  std::vector<std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>>> mv_LUT;
+  std::vector<std::shared_ptr<LookupTable<TIN,TOUT>>> mv_LUT;
 
-  LookupTableFactory<IN_TYPE,OUT_TYPE> factory;
+  LookupTableFactory<TIN,TOUT> factory;
 
   // names of each lookup table used
   std::vector<std::string> mv_LUT_names;
 
   // describe function behaviour at the endpoints
-  std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> mv_special_points;
+  std::vector<SpecialPoint<TIN,TOUT>> mv_special_points;
 
   // index of the last table sampled from
   unsigned int mostRecentlyUsed_idx;
-  IN_TYPE m_len_smallest_interval;
+  TIN m_len_smallest_interval;
 
   // Based on this type of discontinuity in p1 and p2, return a table key
   // NOTE: ASSUMES p1 < p2
-  std::string chooseName(SpecialPoint<IN_TYPE,OUT_TYPE> p1, SpecialPoint<IN_TYPE,OUT_TYPE> p2);
+  std::string chooseName(SpecialPoint<TIN,TOUT> p1, SpecialPoint<TIN,TOUT> p2);
 
   // find which table to sample from
-  OUT_TYPE binarySearch(IN_TYPE, int, int min_idx, int max_idx);
-  OUT_TYPE linearSearchLeft(IN_TYPE, int);
-  OUT_TYPE linearSearchRight(IN_TYPE, int);
+  TOUT binarySearch(TIN, int, int min_idx, int max_idx);
+  TOUT linearSearchLeft(TIN, int);
+  TOUT linearSearchRight(TIN, int);
 
   // Private constructor does all the work but needs to be called with all the
   // special points in curly braces which is a bit awkward
-  CompositeLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, double global_tol,
-      std::initializer_list<SpecialPoint<IN_TYPE,OUT_TYPE>>);
+  CompositeLookupTable(FunctionContainer<TIN,TOUT> *func_container, double global_tol,
+      std::initializer_list<SpecialPoint<TIN,TOUT>>);
 
 public:
   // public constructors. Build this table with a global tolerance and a collection of special points
   // Note: This constructor may not converge if you use function roots as special points b/c of the metric
   // we use to quantify relative error
   template <typename... SPECIAL_POINTS>
-  CompositeLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, double global_tol, SPECIAL_POINTS ... points);
+  CompositeLookupTable(FunctionContainer<TIN,TOUT> *func_container, double global_tol, SPECIAL_POINTS ... points);
 
   // or with a vector of n table names, a vector of n step sizes, and a vector of n+1 special points. Order
   // determines which tables are used on which subintervals
-  CompositeLookupTable(FunctionContainer<IN_TYPE,OUT_TYPE> *func_container, std::vector<std::string> names,
-      std::vector<IN_TYPE> stepSizes, std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points);
+  CompositeLookupTable(FunctionContainer<TIN,TOUT> *func_container, std::vector<std::string> names,
+      std::vector<TIN> stepSizes, std::vector<SpecialPoint<TIN,TOUT>> special_points);
 
   ~CompositeLookupTable(){}
 
-  OUT_TYPE operator()(IN_TYPE x) override;
+  TOUT operator()(TIN x) override;
 
   // return the vector of special points in the domain
-  std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points(){ return mv_special_points; };
+  std::vector<SpecialPoint<TIN,TOUT>> special_points(){ return mv_special_points; };
 
   void print_details(std::ostream &out) override
   {
@@ -135,7 +135,7 @@ public:
   void print_details_json(std::ostream & /* out */) override
   {}
 
-  std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>> get_table(unsigned int table_idx)
+  std::shared_ptr<LookupTable<TIN,TOUT>> get_table(unsigned int table_idx)
   {
     return mv_LUT[table_idx];
   }
@@ -145,13 +145,13 @@ public:
 
 // TODO template or enum specifying pure linear search
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
-    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+template <typename TIN, typename TOUT>
+inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
+    FunctionContainer<TIN,TOUT> *func_container,
     std::vector<std::string> names,
-    std::vector<IN_TYPE> stepSizes,
-    std::vector<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points) :
-  EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "CompositeLookupTable"),
+    std::vector<TIN> stepSizes,
+    std::vector<SpecialPoint<TIN,TOUT>> special_points) :
+  EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "CompositeLookupTable"),
   mv_LUT_names(names), mv_special_points(special_points)
 {
   // check if names, stepSizes, and special_points are the right sizes
@@ -172,29 +172,29 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
           + std::to_string(i+1) + "].get_x()");
 
   // naive initial smallest interval
-  m_len_smallest_interval = std::numeric_limits<IN_TYPE>::max();
+  m_len_smallest_interval = std::numeric_limits<TIN>::max();
   mostRecentlyUsed_idx = names.size()/2;
   this->m_dataSize = 0;
   this->m_order = 0;
 
-  const IN_TYPE closeness = 0.001; // TODO something more robust and related to each intervals stepsizes
+  const TIN closeness = 0.001; // TODO something more robust and related to each intervals stepsizes
 
   /* -- actually build the given tables and update cumulative member vars -- */
   for(unsigned int i=0; i<names.size(); i++){
     // build a table from
-    LookupTableParameters<IN_TYPE> par;
+    LookupTableParameters<TIN> par;
 
     // if the discType is "+/- Inf" or "approaches" then we want to be careful w/ table bounds
     par.minArg = mv_special_points[i].get_x();
-    if(mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Inf ||
-        mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
-        mv_special_points[i].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Approaches)
+    if(mv_special_points[i].limType() == SpecialPoint<TIN,TOUT>::Inf ||
+        mv_special_points[i].limType() == SpecialPoint<TIN,TOUT>::NegInf ||
+        mv_special_points[i].limType() == SpecialPoint<TIN,TOUT>::Approaches)
       par.minArg += closeness;
 
     par.maxArg = mv_special_points[i+1].get_x();
-    if(mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Inf ||
-        mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::NegInf ||
-        mv_special_points[i+1].limType() == SpecialPoint<IN_TYPE,OUT_TYPE>::Approaches)
+    if(mv_special_points[i+1].limType() == SpecialPoint<TIN,TOUT>::Inf ||
+        mv_special_points[i+1].limType() == SpecialPoint<TIN,TOUT>::NegInf ||
+        mv_special_points[i+1].limType() == SpecialPoint<TIN,TOUT>::Approaches)
       par.maxArg -= closeness;
 
     par.stepSize = stepSizes[i];
@@ -212,12 +212,12 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 }
 
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
-    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+template <typename TIN, typename TOUT>
+inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
+    FunctionContainer<TIN,TOUT> *func_container,
     double global_tol,
-    std::initializer_list<SpecialPoint<IN_TYPE,OUT_TYPE>> special_points) :
-  EvaluationImplementation<IN_TYPE,OUT_TYPE>(func_container->standard_func, "CompositeLookupTable"),
+    std::initializer_list<SpecialPoint<TIN,TOUT>> special_points) :
+  EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "CompositeLookupTable"),
   mv_special_points(special_points)
 {
   /* TODO decide how the special points affect table generation
@@ -239,12 +239,12 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
   // We have everything but the names of tables needed to use our LookupTableGenerator
   // TODO could this be parallelized?
   for(unsigned int i=0; i < mv_special_points.size()-1; i++){
-    IN_TYPE ith_min_arg = mv_special_points[i];
-    IN_TYPE ith_max_arg = mv_special_points[i+1];
+    TIN ith_min_arg = mv_special_points[i];
+    TIN ith_max_arg = mv_special_points[i+1];
 
     // divvy up the tolerance based on how large this interval is
     double ith_tol = global_tol*(ith_max_arg - ith_min_arg)/(m_maxArg-m_minArg);
-    LookupTableGenerator<IN_TYPE,OUT_TYPE> gen(func_container, ith_min_arg, ith_max_arg);
+    LookupTableGenerator<TIN,TOUT> gen(func_container, ith_min_arg, ith_max_arg);
 
     // now we just need to decide which of our tables to use
     std::string ith_table_name = chooseName(mv_special_points[i], mv_special_points[i+1]);
@@ -253,17 +253,17 @@ inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
 }
 
 // Call the above constructor with an initializer list of special points
-template <typename IN_TYPE, typename OUT_TYPE>
+template <typename TIN, typename TOUT>
 template <typename ... SPECIAL_POINTS>
-inline CompositeLookupTable<IN_TYPE,OUT_TYPE>::CompositeLookupTable(
-    FunctionContainer<IN_TYPE,OUT_TYPE> *func_container,
+inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
+    FunctionContainer<TIN,TOUT> *func_container,
     double global_tol,
     SPECIAL_POINTS ... points) :
   CompositeLookupTable(func_container,global_tol,{points ...})
 {}
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline std::string CompositeLookupTable<IN_TYPE,OUT_TYPE>::chooseName(SpecialPoint<IN_TYPE,OUT_TYPE> /* p1 */, SpecialPoint<IN_TYPE,OUT_TYPE> /* p2 */)
+template <typename TIN, typename TOUT>
+inline std::string CompositeLookupTable<TIN,TOUT>::chooseName(SpecialPoint<TIN,TOUT> /* p1 */, SpecialPoint<TIN,TOUT> /* p2 */)
 {
   /* Decide what table to use on this interval
      TODO because this table's operator() uses so many conditional statements
@@ -291,8 +291,8 @@ inline std::string CompositeLookupTable<IN_TYPE,OUT_TYPE>::chooseName(SpecialPoi
 }
 
 // TODO reference special points for interval bounds
-template <typename IN_TYPE, typename OUT_TYPE>
-inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::binarySearch(IN_TYPE x, int i, int min_idx, int max_idx)
+template <typename TIN, typename TOUT>
+inline TOUT CompositeLookupTable<TIN,TOUT>::binarySearch(TIN x, int i, int min_idx, int max_idx)
 {
   // Binary search for the correct interval starting with i (most
   // recently used table index). Best for seemly random table evaluations.
@@ -310,44 +310,44 @@ inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::binarySearch(IN_TYPE x, 
   }
 
   // we're in the right interval. Check the special points
-  if(abs(x - mv_LUT[i]->min_arg()) < std::numeric_limits<IN_TYPE>::epsilon())
+  if(abs(x - mv_LUT[i]->min_arg()) < std::numeric_limits<TIN>::epsilon())
     return mv_special_points[i].get_y(); // use the left special point's value
-  if(abs(x - mv_LUT[i]->max_arg()) < std::numeric_limits<IN_TYPE>::epsilon())
+  if(abs(x - mv_LUT[i]->max_arg()) < std::numeric_limits<TIN>::epsilon())
     return mv_special_points[i+1].get_y(); // use the right special point's value
 
   // return the LUT value
   return (*mv_LUT[i])(x);
 }
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::linearSearchLeft(IN_TYPE x, int i)
+template <typename TIN, typename TOUT>
+inline TOUT CompositeLookupTable<TIN,TOUT>::linearSearchLeft(TIN x, int i)
 {
   // Assuming this function is called with all the correct parameters and
   // mv_LUT[i] is defined
   if(x < mv_LUT[i]->min_arg())
     return linearSearchLeft(x, i-1);
-  if(abs(x - mv_LUT[i]->min_arg()) < std::numeric_limits<IN_TYPE>::epsilon())
+  if(abs(x - mv_LUT[i]->min_arg()) < std::numeric_limits<TIN>::epsilon())
     return mv_special_points[i].get_y(); // use the left special point's value
   return (*mv_LUT[i])(x);
 }
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::linearSearchRight(IN_TYPE x, int i)
+template <typename TIN, typename TOUT>
+inline TOUT CompositeLookupTable<TIN,TOUT>::linearSearchRight(TIN x, int i)
 {
   // Assuming this function is called with all the correct parameters and
   // mv_LUT[i] is defined
   if(x > mv_LUT[i]->max_arg())
     return linearSearchRight(x, i+1);
-  if(abs(x - mv_LUT[i]->max_arg()) < std::numeric_limits<IN_TYPE>::epsilon())
+  if(abs(x - mv_LUT[i]->max_arg()) < std::numeric_limits<TIN>::epsilon())
     return mv_special_points[i+1].get_y(); // use the right special point's value
   return (*mv_LUT[i])(x);
 }
 
-template <typename IN_TYPE, typename OUT_TYPE>
-inline OUT_TYPE CompositeLookupTable<IN_TYPE,OUT_TYPE>::operator()(IN_TYPE x)
+template <typename TIN, typename TOUT>
+inline TOUT CompositeLookupTable<TIN,TOUT>::operator()(TIN x)
 {
   // If x is close, use a linear search. Otherwise, use a binary search
-  std::shared_ptr<LookupTable<IN_TYPE,OUT_TYPE>> recentTable = mv_LUT[mostRecentlyUsed_idx];
+  std::shared_ptr<LookupTable<TIN,TOUT>> recentTable = mv_LUT[mostRecentlyUsed_idx];
 
   if(x < recentTable->min_arg() - LENIENCE_FACTOR*m_len_smallest_interval){
     // x is far away, do binary search on the left

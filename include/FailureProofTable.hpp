@@ -33,7 +33,7 @@
 #include "json.hpp"
 #include <memory> // unique_ptr
 #include <fstream> //ifstream
-#include <limits> // std::numeric_limits<IN_TYPE>::max() / lowest()
+#include <limits> // std::numeric_limits<TIN>::max() / lowest()
 
 #ifdef FUNC_DEBUG
   #include "ArgumentRecord.hpp"
@@ -41,18 +41,18 @@
 
 namespace func {
 
-template <typename IN_TYPE, typename OUT_TYPE = IN_TYPE, class LUT_TYPE = LookupTable<IN_TYPE,OUT_TYPE>>
-class FailureProofTable final : public EvaluationImplementation<IN_TYPE,OUT_TYPE> {
+template <typename TIN, typename TOUT = TIN, class LUT_TYPE = LookupTable<TIN,TOUT>>
+class FailureProofTable final : public EvaluationImplementation<TIN,TOUT> {
   std::unique_ptr<LUT_TYPE> mp_LUT;
-  INHERIT_EVALUATION_IMPL(IN_TYPE,OUT_TYPE);
+  INHERIT_EVALUATION_IMPL(TIN,TOUT);
   #ifdef FUNC_DEBUG
-    std::unique_ptr<ArgumentRecord<IN_TYPE>> mp_recorder;
+    std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
   #endif
 public:
   /* Steal the given LUTs identity */
   FailureProofTable(std::unique_ptr<LUT_TYPE> LUT,
-      IN_TYPE histMin = 1,
-      IN_TYPE histMax = 0,
+      TIN histMin = 1,
+      TIN histMax = 0,
       unsigned int histSize = 10
       ) :
     mp_LUT(std::move(LUT))
@@ -71,7 +71,7 @@ public:
         histMin = m_minArg;
         histMax = m_maxArg;
       }
-      mp_recorder.reset(new ArgumentRecord<IN_TYPE>(
+      mp_recorder.reset(new ArgumentRecord<TIN>(
             histMin, histMax, histSize
             ));
     #endif
@@ -82,14 +82,14 @@ public:
   }
 
   /* Build our own LUT_TYPE. Only works if the template is specific enough */
-  FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc,
-      LookupTableParameters<IN_TYPE> par,
-      IN_TYPE histMin = 1, IN_TYPE histMax = 0, unsigned int histSize = 10) :
+  FailureProofTable(FunctionContainer<TIN,TOUT> *fc,
+      LookupTableParameters<TIN> par,
+      TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10) :
     FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,par)), histMin, histMax, histSize) {}
 
   /* Build our own LUT_TYPE from a file */
-  FailureProofTable(FunctionContainer<IN_TYPE,OUT_TYPE> *fc, std::string filename) :
-    FailureProofTable(LookupTableGenerator<IN_TYPE,OUT_TYPE>(fc,1,0).generate_by_file(filename))
+  FailureProofTable(FunctionContainer<TIN,TOUT> *fc, std::string filename) :
+    FailureProofTable(LookupTableGenerator<TIN,TOUT>(fc,1,0).generate_by_file(filename))
   {
     nlohmann::json jsonStats;
     std::ifstream(filename) >> jsonStats;
@@ -98,14 +98,14 @@ public:
       // reconstruct our arg record if it was ever saved to jsonStats
       try{
         mp_recorder =
-          std::unique_ptr<ArgumentRecord<IN_TYPE>>(new ArgumentRecord<IN_TYPE>(jsonStats));
+          std::unique_ptr<ArgumentRecord<TIN>>(new ArgumentRecord<TIN>(jsonStats));
       } catch (const nlohmann::detail::type_error&) {}
     #endif
   }
 
   /* if x isn't contained within the tables bounds,
    * then resort to evaluating the original function */
-  OUT_TYPE operator()(IN_TYPE x) override
+  TOUT operator()(TIN x) override
   {
     // check if x is in the range of the table
     if(x < m_minArg || m_maxArg < x){
