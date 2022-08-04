@@ -18,6 +18,8 @@
 */
 #pragma once
 #include "LookupTable.hpp"
+#include "TransferFunctionSinh.hpp"
+#include "json.hpp"
 #include <array>
 #include <stdexcept>
 

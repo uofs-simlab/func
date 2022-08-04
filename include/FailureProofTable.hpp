@@ -43,8 +43,8 @@ namespace func {
 
 template <typename TIN, typename TOUT = TIN, class LUT_TYPE = LookupTable<TIN,TOUT>>
 class FailureProofTable final : public EvaluationImplementation<TIN,TOUT> {
-  std::unique_ptr<LUT_TYPE> mp_LUT;
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
+  std::unique_ptr<LUT_TYPE> mp_LUT;
   #ifdef FUNC_DEBUG
     std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
   #endif
@@ -145,4 +145,5 @@ public:
     out << jsonStats.dump(2) << std::endl;
   }  
 };
+// TODO make to/from_json()
 } // namespace func

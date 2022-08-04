@@ -12,7 +12,13 @@
 
   If Boost is not available then users can only build tables by file.
 
-  MUST be able to cast TERR to TIN
+  MUST be able to cast TERR to TIN and vice versa.
+  TOUT
+
+  Ideally TERR satisfies
+  sqrt(epsilon_TERR) <= epsilon_TOUT.
+  We'll make the default TERR the best available precision.
+
 
   Also equipped to
   - compute table error estimates at a given stepsize
@@ -35,10 +41,8 @@
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #endif
 
-/* Ideally TERR satisfies
-   sqrt(epsilon_TERR) <= epsilon_TOUT.
-   We'll make the default TERR the best available precision. */
 namespace func {
+
 
 #if defined(FUNC_USE_BOOST)
 template <typename TIN, typename TOUT = TIN, typename TERR = boost::multiprecision::cpp_bin_float_quad>
@@ -139,8 +143,8 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::LookupTableErrorFunctor
   /* operator() always returns a negative value */
   TERR operator()(TERR const& x)
   {
-    TERR f_value = static_cast<TERR>((m_impl->function())(TIN(x)));
-    TERR lut_value = static_cast<TERR>((*m_impl)(TIN(x)));
+    TERR f_value = static_cast<TERR>((m_impl->function())(static_cast<TIN>(x)));
+    TERR lut_value = static_cast<TERR>((*m_impl)(static_cast<TIN>(x)));
     return -static_cast<TERR>(2.0) * fabs( (f_value - lut_value) ) /
       (fabs(f_value)+fabs(lut_value));
   }
@@ -154,11 +158,10 @@ private:
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 {
-  /* TODO does this cast well? */
   OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR tol) :
     m_parent(parent), m_tableKey(tableKey), m_tol(tol) {}
 
-  TERR operator()(TIN const& stepSize)
+  TIN operator()(TIN const& stepSize)
   {
     using namespace boost::math::tools;
 
@@ -179,12 +182,15 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
       for each interval in the table, compute the maximum error
       - be careful about the top most interval, it may reach beyond the
       table range due to rounding errors
+      TODO is that true? If we have to be careful about that here then I think
+      arg_bounds_of_interval is broken. I also think the rightmost interval
+      may not be initialized properly
     */
     for(unsigned ii=0; ii<impl->num_intervals()-1; ii++){
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
-      if( ((TIN)(xtop)) > m_parent.m_max )
+      if( static_cast<TIN>(xtop) > m_parent.m_max ) // TODO is this ever true?
         break;
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
@@ -197,7 +203,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     /* want return to be 0 if the same, +/- on either side */
     max_err = -max_err;
     //std::cerr << m_tableKey << " with stepSize=" << stepSize << " has approx error=" << double(max_err) << "\n";
-    return (TOUT)(max_err-m_tol);
+    return static_cast<TIN>(max_err-m_tol);
   }
 
 private:
@@ -223,9 +229,9 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
 
   /* Use 2 query points to get relationship */
   const unsigned long N1  = 2;
-  const double step1 = (m_max-m_min)/N1;
+  const TIN step1 = (m_max-m_min)/N1;
   const unsigned long N2  = 10;
-  const double step2 = (m_max-m_min)/N2;
+  const TIN step2 = (m_max-m_min)/N2;
 
   LookupTableParameters<TIN> par1;
   par1.minArg = m_min;
@@ -251,7 +257,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
 
   /* approximate step size for for desired impl size
      (assuming linear relationship of num_intervals to size */
-  par1.stepSize = 1.0/((TIN)((N2-N1)*(desiredSize-size1)/(size2-size1) + N1));
+  par1.stepSize = 1.0/static_cast<TIN>((N2-N1)*(desiredSize-size1)/(size2-size1) + N1);
 
   auto lut = factory.create(tableKey, mp_func_container, par1);
   if(filename != ""){

@@ -119,4 +119,5 @@ inline void DirectEvaluation<TIN,TOUT>::print_details_json(std::ostream& out)
 
   out << jsonStats.dump(2) << std::endl;
 }
+// TODO make to/from_json()
 } // namespace func

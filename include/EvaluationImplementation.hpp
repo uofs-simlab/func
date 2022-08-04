@@ -5,12 +5,11 @@
   - set up anything needed for 'evaluation'
   - determine size of data needed for 'evaluation'
   - override the brackets operator to perform 'evaluation'
+  - read/write data to json with print_details_json
   - cleanup in destructor
 */
 #pragma once
 #include <string>
-#include <vector>
-#include <iostream>
 #include <functional>
 
 /* macro to get the EvaluationImplementation's member variables

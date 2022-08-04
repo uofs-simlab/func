@@ -1,32 +1,18 @@
 /*
-  This class isn't much more than a convenient interface that we can use with
-  the LookupTableFactory
-
-  TODO explain how this links up with MetaTable & each other implementation
-  Intermediate abstract class for LUTs with uniformly spaced grid points.
-
-  This class handles everything required to work with a piecewise
-  evaluation implementation. For each such object, we have a
-  registry, plus reading & writing of table data to json
-  with print_details_json.
+  This class is an interface for any piecewise evaluation
+  implementation which we can use with LookupTableFactory.
 
   Notes:
   - In the case where (max-min)/stepsize is not an integer then
   the real table max is greater than the user supplied max
 
-  - Making this base class handle saving LUTs to json has possibly
-  given this class too much information about 
-
 */
 #pragma once
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
-#include "TransferFunctionSinh.hpp"
-#include "json.hpp"
 
 #include <memory>
 #include <functional>
-#include <fstream>
 #include <stdexcept>
 
 namespace func {

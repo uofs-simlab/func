@@ -75,7 +75,7 @@ public:
 
 // macro used to decide where an arg should be placed in the histogram
 #define COMPUTE_INDEX(X) \
-  (((unsigned int) (m_histSize*(X-m_minArg)/(m_maxArg+1-m_minArg)))%m_histSize)
+  (static_cast<unsigned int>(m_histSize*(X-m_minArg)/(m_maxArg+1.0-m_minArg))%m_histSize)
 
 template <typename TIN>
 class ArgumentRecord
@@ -143,7 +143,7 @@ class ArgumentRecord
       m_min_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<TIN>();
     }
 
-    /* place x in the histogram */
+    /* place x in the histogram. Mimic pipeline parallelism for any statistics with only one instance */
     void record_arg(TIN x)
     {
       // Record x if it's within our histogram's limits
@@ -183,7 +183,10 @@ class ArgumentRecord
       // record more statistics here
     }
 
-    // std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from stack overflow
+    /* std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from this SO post
+     * https://stackoverflow.com/questions/16605967/set-precision-of-stdto-string-when-converting-floating-point-values
+     * Default is the max possible precision by so users can choose how they'll round the answer on their own
+     */
     template <typename T>
     std::string to_string_with_precision(const T val, const int n = std::numeric_limits<T>::max_digits10)
     {
@@ -194,8 +197,8 @@ class ArgumentRecord
     }
 
     std::string ith_interval(unsigned int i, const int n = 3){
-      return "[" + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*i/(TIN)m_histSize, n) + ", "
-          + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*(i+1)/(TIN)m_histSize, n) + ")";
+      return "[" + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*i/static_cast<TIN>(m_histSize), n) + ", "
+          + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*(i+1)/static_cast<TIN>(m_histSize), n) + ")";
     }
 
 
@@ -208,7 +211,7 @@ class ArgumentRecord
       
       // print out the histogram horizontally such that
       // 1. the longest row is 15 stars wide
-      // 2. If a bucket recorded _any_ args then it gets at least 1 star
+      // 2. If a bucket recorded _any_ args then it gets at least 1 asterisk
       std::string hist_str;
       hist_str=to_string_with_precision(m_minArg,3)+'\n';
       for(unsigned int i=0; i<m_histSize; i++){
@@ -266,4 +269,5 @@ class ArgumentRecord
     }
 };
 
+//TODO make to/from_json()
 } // namespace func
