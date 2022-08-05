@@ -69,24 +69,20 @@ public:
     /* Base class variables */
     m_minArg = par.minArg; m_maxArg = par.maxArg;
 
-    /*
-       Uniform Lookup Table variables
-       - corresponds to the grid
-    */
+    /* Lookup Table variables
+     * - corresponds to the grid
+     * - If the step size does not exactly divide the arg domain, the max
+     *   arg of the table is set to the nearest value above such that it does. */
     m_stepSize     = par.stepSize;
     m_stepSize_inv = 1.0/m_stepSize;
-    m_numIntervals = (unsigned) ceil(m_stepSize_inv*(m_maxArg-m_minArg))+1;
-    /*
-      If the step size does not exactly divide the arg domain, the max
-      arg of the table is set to the nearest value above such that it
-      does.
-     */
-    m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1);
+    m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)))+1;
+    m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1); // >= m_maxArg
   }
 
-  // TODO
-  // virtual + and * methods for curried LUTs (implementation in MetaTable ideally)
-  /* return an approximation to f^(N)(x) */
+  /* TODO
+     1. virtual + and * methods for curried LUTs. Will have to make sure min, max,
+     tablemax, and stepsize are all within a very small tolerance.
+     2. return an approximation to f^(N)(x) with */
   //template <unsigned int N>
   //virtual TOUT diff(TIN x) = 0;
 
