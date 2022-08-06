@@ -11,6 +11,7 @@
     to around this because armadillo's `is_supported_elem_type` is strict, and currently
     arma::field is pretty much useless atm
     TODO disable constructor if template type is not supported
+  - TODO add a way to build these tables with a pole on the left or right endpoints
   - table precomputes and stores any coefficients so it doesn't have to
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
