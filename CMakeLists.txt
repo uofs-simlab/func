@@ -117,7 +117,7 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/config.hpp.cmake ${PROJECT_SOURCE_DIR
 add_subdirectory("include")
 
 # Examples subdirectory
-add_subdirectory("examples")
+#add_subdirectory("examples")
 
 # Summarize compilation flags for quick review on configuration
 macro(print_variable var)

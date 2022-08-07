@@ -7,10 +7,11 @@
     double val = look(0.87354);
 
   Notes:
-  - This class only works if TOUT is a standard numeric type. I don't think there's a way
-    to around this because armadillo's `is_supported_elem_type` is strict, and currently
-    arma::field is pretty much useless atm
-    TODO disable constructor if template type is not supported
+  - This class only works if TOUT can be cast to double. 
+    Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
+    with float or double (not even long double) and arma::field is useless.
+    TODO disable constructor if TOUT cannot be cast to double
+
   - TODO add a way to build these tables with a pole on the left or right endpoints
   - table precomputes and stores any coefficients so it doesn't have to
     perform that operation every lookup (but does have to look it up)
@@ -23,16 +24,16 @@
 #pragma once
 #include "MetaTable.hpp"
 #include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO
+#include <stdexcept>
+#include <cmath> //isinfite
 
 #ifdef FUNC_USE_ARMADILLO
 #include <armadillo>
 #endif
-#include <stdexcept>
-#include <cmath> //isinfite
 
 namespace func {
-// TODO does this cause problems for different precision types?
-static double constexpr fact[] = {1,1,2,6,24,120,720,5040};
+
+static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
 class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
@@ -81,28 +82,28 @@ public:
       m_grid[ii] = x;
 
       // build the matrix of taylor coefficients
-      arma::Mat<TOUT> T = arma::zeros<arma::Mat<TOUT>>(M+N+1, N+1);
+      arma::Mat<double> T = arma::zeros<arma::Mat<double>>(M+N+1, N+1);
       const auto derivs = (mp_boost_func)(make_fvar<TIN,M+N>(x));
       for(unsigned int i=0; i<M+N+1; i++)
-        T(i,0) = derivs.derivative(i)/(fact[i]);
+        T(i,0) = static_cast<double>(derivs.derivative(i))/(fact[i]);
 
-      // copy a shifted column 1 of T into the rest of the matrix
+      // copy the first column of T down and to the right
       for(unsigned int i=0; i<N+1; i++)
         T(arma::span(i,N+M), i) = T(arma::span(0,N+M-i), 0);
 
       // find the coefficients of Q.
-      arma::Mat<TOUT> Q = arma::null(T.rows(M+1, M+N));
-      if(Q.n_elem != N+1)
+      arma::Mat<double> Q = arma::null(T.rows(M+1, M+N));
+      if(Q.n_elem != N+1) // TODO can we prove that this should never be called?
         throw std::range_error(m_name + " is too poorly conditioned");
 
       // scale Q such that its first entry equals 1.
       Q=Q/Q[0];
       for(unsigned int i=1; i<M+N+1; i++)
-        if(!std::isfinite(Q[i]))
+        if(!std::isfinite(Q[i])) // check for any NaNs TODO will this ever be called?
           throw std::range_error(m_name + " is too poorly conditioned");
 
       // find the coefficients of P
-      arma::Col<TOUT> P = T.rows(0,M)*Q;
+      arma::Col<double> P = T.rows(0,M)*Q;
 
       /* Check if the denominator Q has any roots
          within the subinterval [-m_stepSize/2,m_stepSize/2).
@@ -111,13 +112,13 @@ public:
          We'll check for the existence of a root by building a bracket,
          using Q(0)=1 as our positive endpoint. Thus, we just need
          to find a point where Q is negative. TODO factor out this helper function */
-      auto Q_is_negative = [this, &Q, &ii](TIN x) -> bool {
+      auto Q_is_negative = [this, &Q, &ii](double x) -> bool {
         // Tell us if this point is within this subinterval's range
         if(((ii == 0 && x < 0.0) || (ii == m_numIntervals - 1 && x > 0.0)))
           return false;
 
         // compute Q(x) using horners, evaluating from the inside out
-        TOUT sum = x*Q[N];
+        double sum = x*Q[N];
         for (int k=N-1; k>0; k--)
           sum = x*(Q[k] + sum);
         sum += 1;
@@ -130,7 +131,7 @@ public:
         bool Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
 
         // Check Q for negativity at any of its vertexes
-        TOUT desc = 0.0;
+        double desc = 0.0;
         if(!Q_has_root)
           switch(k){
             case 1:
@@ -149,7 +150,7 @@ public:
         if(Q_has_root){
           if(k == 1){
             // just use a Taylor series
-            Q = arma::zeros<arma::Mat<TOUT>>(N+1);
+            Q = arma::zeros<arma::Mat<double>>(N+1);
             Q[0] = 1.0;
             P = T(arma::span(0,M),0);
           }else{
@@ -164,10 +165,10 @@ public:
 
       // move these coefs into m_table
       for (unsigned int k=0; k<M+1; k++)
-        m_table[ii].coefs[k] = P[k];
+        m_table[ii].coefs[k] = static_cast<TOUT>(P[k]);
 
       for (unsigned int k=0; k<N; k++)
-        m_table[ii].coefs[M+1+k] = Q[k+1]; // ignore the first coef of Q b/c it's always 1.
+        m_table[ii].coefs[M+1+k] = static_cast<TOUT>(Q[k+1]); // ignore the first coef of Q b/c it's always 1.
     }
 #endif
   }
@@ -205,8 +206,4 @@ const std::string PadeTable<TIN,TOUT,M,N,GT>::classname = grid_type_to_string<GT
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
 using UniformPadeTable = PadeTable<TIN,TOUT,M,N,UNIFORM>;
-//template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
-//using NonUniformPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM>;
-//template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
-//using NonUniformPseudoPadeTable = PadeTable<TIN,TOUT,M,N,NONUNIFORM_PSEUDO>;
 } // namespace func

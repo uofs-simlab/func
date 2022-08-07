@@ -75,6 +75,7 @@ public:
      *   arg of the table is set to the nearest value above such that it does. */
     m_stepSize     = par.stepSize;
     m_stepSize_inv = 1.0/m_stepSize;
+    // TODO I think this +1 leads to a waste of memeory
     m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)))+1;
     m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1); // >= m_maxArg
   }
