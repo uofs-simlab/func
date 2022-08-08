@@ -178,17 +178,15 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 
     /* get number of binary bits in mantissa */
     int bits = std::numeric_limits<TERR>::digits;
-    /*
-      for each interval in the table, compute the maximum error
-      - be careful about the top most interval. Casting back down to TIN
-      may cause it to reach beyond the table range
-    */
-    for(unsigned ii=0; ii<impl->num_intervals()-1; ii++){
+    /* For each interval in the table, compute the maximum error.
+     * Be careful about the top most interval b/c tableMaxArg can be greater than max */
+    for(unsigned ii=0; ii<impl->num_intervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
-      if( static_cast<TIN>(xtop) > m_parent.m_max ) // amazingly, this if statement is necessary
-        break;
+      if(static_cast<TIN>(xtop) > m_parent.m_max){
+        xtop = static_cast<TERR>(m_parent.m_max);
+      }
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
       err = r.second;
@@ -291,6 +289,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
       std::ofstream out_file(filename);
       impl->print_details_json(out_file);
     }
+    //std::cerr << "estimated max error of " << fmax_step << " with stepsize of " << m_max-m_min << std::endl;
     return impl;
   }
 
