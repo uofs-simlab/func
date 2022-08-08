@@ -74,8 +74,9 @@ public:
     mp_boost_func = func_container->template get_nth_func<M+N>();
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,M+N+1>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       // nonuniform grids are not supported for PadeTables
       TIN x = m_minArg + ii*m_stepSize;
       // grid points

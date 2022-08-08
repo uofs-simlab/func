@@ -41,6 +41,7 @@ public:
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
     for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
       // constant interpolation with the midpoint of this subinterval

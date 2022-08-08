@@ -68,6 +68,7 @@ public:
     mp_boost_func = func_container->template get_nth_func<N>();
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
       auto xgrid = m_minArg + ii*m_stepSize;

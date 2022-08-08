@@ -75,8 +75,9 @@ protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
 
-  std::unique_ptr<TIN[]> m_grid;  // pointers to grid and evaluation data
-  __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table;
+  // m_grid and m_table MUST have size m_numTableEntries!
+  std::unique_ptr<TIN[]> m_grid; // useful for nonuniform tables
+  __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; // holds polynomials coefficients
   TransferFunctionSinh<TIN> m_transferFunction; // used to make nonuniform grids (default constructable)
 
 public:
@@ -92,10 +93,6 @@ public:
     // initialize the transfer function to something useful
     if(GT != GridTypes::UNIFORM)
       m_transferFunction = TransferFunctionSinh<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
-
-    // TODO m_grid is only useful if the grid is nonuniform.
-    // Might be good to leave in as a debug array? However, it is still read/wrote in json stuff
-    m_grid.reset(new TIN[m_numIntervals]);
   }
 
   /* build this table from a json file */
@@ -206,18 +203,18 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
   jsonStats["order"] = lut.m_order;
   jsonStats["dataSize"] = lut.m_dataSize;
   jsonStats["stepSize"] = lut.m_stepSize;
-  jsonStats["numTableEntries"] = lut.num_table_entries();
-  jsonStats["numIntervals"] = lut.num_intervals();
+  jsonStats["numTableEntries"] = lut.m_numTableEntries;
+  jsonStats["numIntervals"] = lut.m_numIntervals;
   jsonStats["tableMaxArg"] = lut.m_tableMaxArg;
 
   // things that are important for nonuniform tables:
   jsonStats["transfer_function_coefs"] = lut.transfer_function_coefs();
-  for(unsigned int i=0; i<lut.num_intervals(); i++)
-    jsonStats["grid"][std::to_string(i)] = lut.grid_entry(i);
+  for(unsigned int i=0; i<lut.m_numTableEntries; i++)
+    jsonStats["grid"][std::to_string(i)] = lut.m_grid[i];
 
   // save the polynomial coefs of each lookup table
   // Note: m_order is used as the number of polynomial coefs
-  for(unsigned int i=0; i<lut.num_table_entries(); i++)
+  for(unsigned int i=0; i<lut.m_numTableEntries; i++)
     for(unsigned int j=0; j<lut.num_coefs(); j++)
       jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)] = lut.table_entry(i,j);
 }
@@ -243,14 +240,14 @@ void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut) {
   jsonStats.at("tableMaxArg").get_to(lut.m_tableMaxArg);
 
   // read array of points used
-  lut.m_grid.reset(new TIN[lut.m_numIntervals]);
-  for(unsigned int i=0; i<lut.m_numIntervals; i++)
+  lut.m_grid.reset(new TIN[lut.m_numTableEntries]);
+  for(unsigned int i=0; i<lut.m_numTableEntries; i++)
     jsonStats.at("grid").at(std::to_string(i)).get_to(lut.m_grid[i]);
 
   // Recompute m_table (the array of polynomials) and the transfer function
   lut.m_table.reset(new polynomial<TOUT,N>[lut.m_numTableEntries]);
   for(unsigned int i=0; i<lut.m_numTableEntries; i++)
-    for(unsigned int j=0; j<lut.m_table[i].num_coefs; j++)
+    for(unsigned int j=0; j<lut.num_coefs(); j++)
       jsonStats.at("table").at(std::to_string(i)).at("coefs").at(std::to_string(j)).get_to(lut.m_table[i].coefs[j]);
 
   // rebuild the transfer function

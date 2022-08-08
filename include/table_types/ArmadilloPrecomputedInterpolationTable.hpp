@@ -85,6 +85,7 @@ public:
 #endif
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       TIN x;

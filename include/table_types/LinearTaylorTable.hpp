@@ -52,6 +52,7 @@ public:
     mp_boost_func = func_container->autodiff1_func;
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,2>[m_numTableEntries]);
     for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
       // nonuniform grids are not supported for Taylor tables
