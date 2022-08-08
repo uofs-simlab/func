@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -38,16 +38,16 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = 3;
-    m_numTableEntries = m_numIntervals+1;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals;
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
+      if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
@@ -71,9 +71,9 @@ template <typename TIN, typename TOUT, GridTypes GT>
 const std::string QuadraticPrecomputedInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable";
 
 template <typename TIN, typename TOUT=TIN>
-using UniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,UNIFORM>;
+using UniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM>;
+using NonUniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

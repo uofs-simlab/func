@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class LinearInterpolationTable final : public MetaTable<TIN,TOUT,1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -40,14 +40,14 @@ public:
     m_name  = classname;
     m_order = 1;
     m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
-    for (unsigned int ii=0; ii<m_numIntervals; ++ii) {
+    for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
       TIN x;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
+      if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
@@ -65,11 +65,11 @@ public:
   // operator() is slightly different from MetaTable's provided Horner's method
   TOUT operator()(TIN x) override
   {
-    //enum GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
+    //enum class GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
     TOUT dx;
     unsigned int x0;
     switch(GT){
-    case UNIFORM:
+    case GridTypes::UNIFORM:
       {
       // nondimensionalized x position, scaled by step size
       dx = static_cast<TOUT>((x-m_minArg)/m_stepSize);
@@ -79,7 +79,7 @@ public:
       dx -= x0;
       break;
       }
-    case NONUNIFORM:
+    case GridTypes::NONUNIFORM:
       {
       // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
       // where each of the above member vars are encoded into g_inv
@@ -88,7 +88,7 @@ public:
       dx = (x - m_grid[x0])/h;
       break;
       }
-    case NONUNIFORM_PSEUDO:
+    case GridTypes::NONUNIFORM_PSEUDO:
       {
       // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
       // and dx = fractional((g_inv(x)-m_minArg)/m_stepSize)
@@ -112,9 +112,9 @@ template <typename TIN, typename TOUT, GridTypes GT>
 const std::string LinearInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "LinearInterpolationTable";
 
 template <typename TIN, typename TOUT=TIN>
-using UniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,UNIFORM>;
+using UniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,NONUNIFORM>;
+using NonUniformLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoLinearInterpolationTable = LinearInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

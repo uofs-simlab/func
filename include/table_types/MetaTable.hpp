@@ -53,24 +53,22 @@ struct alignas(sizeof(TOUT)*alignments[N]) polynomial {
   TOUT coefs[N];
 };
 
-
-// TODO do we actually need/want to assign numbers to this enum? Use an enum class instead?
-enum GridTypes {UNIFORM = 0, NONUNIFORM = 1, NONUNIFORM_PSEUDO = 2};
+enum class GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
 
 template <GridTypes GT>
 const std::string grid_type_to_string() {
   switch(GT){
-    case UNIFORM:
+    case GridTypes::UNIFORM:
       return "Uniform";
-    case NONUNIFORM:
+    case GridTypes::NONUNIFORM:
       return "NonUniform";
-    case NONUNIFORM_PSEUDO:
+    case GridTypes::NONUNIFORM_PSEUDO:
       return "NonUniformPseudo";
     default: { throw std::invalid_argument("Broken switch case in func::MetaTable"); }
   } 
 }
 
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
 class MetaTable : public LookupTable<TIN,TOUT>
 {
 protected:
@@ -92,8 +90,8 @@ public:
     LookupTable<TIN,TOUT>(func_container, par)
   {
     // initialize the transfer function to something useful
-    if(GT != UNIFORM)
-      m_transferFunction = TransferFunctionSinh<TIN>(func_container,m_minArg,m_minArg + m_numIntervals*m_stepSize,m_stepSize);
+    if(GT != GridTypes::UNIFORM)
+      m_transferFunction = TransferFunctionSinh<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
 
     // TODO m_grid is only useful if the grid is nonuniform.
     // Might be good to leave in as a debug array? However, it is still read/wrote in json stuff
@@ -143,10 +141,12 @@ public:
   {
     /* might be able to get some speedup by using c++14's constexpr for this switch?
      * But idk hopefully the compiler optimizes this out anyways */
+    /* TODO probably worth making the hash an inline templated function
+     * (because this switch case is repeated verbatim in LinearInterpolationTable) */
     TOUT dx;
     unsigned int x0;
     switch(GT){
-      case UNIFORM:
+      case GridTypes::UNIFORM:
         {
         // nondimensionalized x position, scaled by step size
         dx  = static_cast<TOUT>(m_stepSize_inv*(x-m_minArg));
@@ -156,7 +156,7 @@ public:
         dx -= x0;
         break;
         }
-      case NONUNIFORM:
+      case GridTypes::NONUNIFORM:
         {
         // find the subinterval x lives in
         x0 = static_cast<unsigned>(m_transferFunction.g_inv(x));
@@ -165,7 +165,7 @@ public:
         dx    = (x - m_grid[x0])/h;
         break;
         }
-      case NONUNIFORM_PSEUDO:
+      case GridTypes::NONUNIFORM_PSEUDO:
         {
         // find the subinterval x lives in
         dx  = m_transferFunction.g_inv(x);

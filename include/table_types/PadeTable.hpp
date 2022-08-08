@@ -35,7 +35,7 @@ namespace func {
 
 static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
 
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
 class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -66,8 +66,8 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = M+N+1;
-    m_numTableEntries = m_numIntervals+1;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals+1; // currently the only table with numTableEntries != numIntervals
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->template get_nth_func<M+N>() == nullptr)
       throw std::invalid_argument(m_name + " needs the "+std::to_string(N+M)+"th derivative but this is not defined");
@@ -94,13 +94,13 @@ public:
       // find the coefficients of Q.
       arma::Mat<double> Q = arma::null(T.rows(M+1, M+N));
       if(Q.n_elem != N+1) // TODO can we prove that this should never be called?
-        throw std::range_error(m_name + " is too poorly conditioned");
+        throw std::range_error(m_name + " is too poorly conditioned: matrix Q has nullspace with dimension > 1");
 
       // scale Q such that its first entry equals 1.
       Q=Q/Q[0];
       for(unsigned int i=1; i<M+N+1; i++)
         if(!std::isfinite(Q[i])) // check for any NaNs TODO will this ever be called?
-          throw std::range_error(m_name + " is too poorly conditioned");
+          throw std::range_error(m_name + " is too poorly conditioned: coef " + std::to_string(i) + " of Q is " + std::to_string(Q[i]));
 
       // find the coefficients of P
       arma::Col<double> P = T.rows(0,M)*Q;
@@ -114,7 +114,7 @@ public:
          to find a point where Q is negative. TODO factor out this helper function */
       auto Q_is_negative = [this, &Q, &ii](double x) -> bool {
         // Tell us if this point is within this subinterval's range
-        if(((ii == 0 && x < 0.0) || (ii == m_numIntervals - 1 && x > 0.0)))
+        if(((ii == 0 && x < 0.0) || (ii == m_numTableEntries - 1 && x > 0.0)))
           return false;
 
         // compute Q(x) using horners, evaluating from the inside out
@@ -184,6 +184,7 @@ public:
     dx -= x1*m_stepSize;
 
     // general degree horners method, evaluated from the inside out.
+    // TODO evaluate P and Q at the same time if possible
     TOUT P = dx*m_table[x1].coefs[M];
     for (int k=M-1; k>0; k--)
       P = dx*(m_table[x1].coefs[k] + P);
@@ -205,5 +206,5 @@ template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes
 const std::string PadeTable<TIN,TOUT,M,N,GT>::classname = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
-using UniformPadeTable = PadeTable<TIN,TOUT,M,N,UNIFORM>;
+using UniformPadeTable = PadeTable<TIN,TOUT,M,N,GridTypes::UNIFORM>;
 } // namespace func

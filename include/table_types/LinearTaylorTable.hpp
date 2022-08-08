@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class LinearTaylorTable final : public MetaTable<TIN,TOUT,2,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -44,7 +44,7 @@ public:
     m_name = classname;
     m_order = 2;
     m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->autodiff1_func == NULL)
       throw std::invalid_argument("LinearTaylorTable needs the 1st derivative but this is not defined");
@@ -53,7 +53,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,2>[m_numTableEntries]);
-    for (unsigned int ii=0; ii<m_numIntervals; ++ii) {
+    for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN xgrid = m_minArg + ii*m_stepSize;
       TIN xcenter = xgrid + 0.5*m_stepSize;
@@ -80,5 +80,5 @@ const std::string LinearTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_strin
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
-using UniformLinearTaylorTable = LinearTaylorTable<TIN,TOUT,UNIFORM>;
+using UniformLinearTaylorTable = LinearTaylorTable<TIN,TOUT,GridTypes::UNIFORM>;
 } // namespace func

@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class LinearPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,2,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -38,16 +38,16 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = 2;
-    m_numTableEntries = m_numIntervals+1;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals;
+    m_dataSize =static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,2>[m_numTableEntries]);
-    for (unsigned int ii=0; ii < m_numIntervals; ++ii) {
+    for (unsigned int ii=0; ii < m_numTableEntries; ++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
+      if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
@@ -72,9 +72,9 @@ const std::string LinearPrecomputedInterpolationTable<TIN,TOUT,GT>::classname = 
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
-using UniformLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,UNIFORM>;
+using UniformLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM>;
+using NonUniformLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoLinearPrecomputedInterpolationTable = LinearPrecomputedInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

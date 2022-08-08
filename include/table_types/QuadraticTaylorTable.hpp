@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class QuadraticTaylorTable final : public MetaTable<TIN,TOUT,3,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -46,7 +46,7 @@ public:
     m_name = classname;
     m_order = 3;
     m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->autodiff1_func == NULL)
       throw std::invalid_argument("QuadraticTaylorTable needs the 2nd derivative but this is not defined");
@@ -55,7 +55,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN xgrid = m_minArg + ii*m_stepSize;
       TIN xcenter = xgrid + 0.5*m_stepSize;
@@ -81,5 +81,5 @@ template <typename TIN, typename TOUT, GridTypes GT>
 const std::string QuadraticTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticTaylorTable";
 
 template <typename TIN, typename TOUT=TIN>
-using UniformQuadraticTaylorTable = QuadraticTaylorTable<TIN,TOUT,UNIFORM>;
+using UniformQuadraticTaylorTable = QuadraticTaylorTable<TIN,TOUT,GridTypes::UNIFORM>;
 } // namespace func

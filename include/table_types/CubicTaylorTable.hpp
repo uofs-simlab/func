@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class CubicTaylorTable final : public MetaTable<TIN,TOUT,4,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -47,7 +47,7 @@ public:
     m_name = classname;
     m_order = 4;
     m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->autodiff3_func == NULL)
       throw std::invalid_argument("CubicTaylorTable needs the 3rd derivative but this is not defined");
@@ -56,7 +56,7 @@ public:
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN xgrid = m_minArg + ii*m_stepSize;
       TIN xcenter = xgrid + 0.5*m_stepSize;
@@ -86,5 +86,5 @@ const std::string CubicTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_string
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
-using UniformCubicTaylorTable = CubicTaylorTable<TIN,TOUT,UNIFORM>;
+using UniformCubicTaylorTable = CubicTaylorTable<TIN,TOUT,GridTypes::UNIFORM>;
 } // namespace func
