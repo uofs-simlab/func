@@ -88,7 +88,7 @@ private:
   */
   std::unique_ptr<RngInterface<TIN>> mp_sampler;
   std::unique_ptr<TIN[]>             mp_randomEvaluations;
-  int                                    m_nEvals;
+  int                                m_nEvals;
 
   struct TimingStatistics
   {
@@ -186,20 +186,15 @@ inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
     m_implTimers.emplace_back(ImplTimer<TIN,TOUT>(itImpl.get()));
   }
 
-  /*
-    Ensure all implementations are using the same min/max range
-  */
-  auto itImpl = m_implementations.begin();
-  m_minArg = (*itImpl)->min_arg(); // set to vals in first impl
-  m_maxArg = (*itImpl)->max_arg();
+  /* Ensure all implementations are using the same min/max range */
+  // why do we need all the implementations to use the same min/max range?
+  m_minArg = m_implementations.front()->min_arg();
+  m_maxArg = m_implementations.front()->max_arg();
 
-  ++itImpl; // assert the rest of the impls are the same
-  for (; (itImpl != m_implementations.end()); ++itImpl) {
-    assert( abs( (**(itImpl)).min_arg() - m_minArg) <
-  	    (std::numeric_limits<TIN>::epsilon())   );
-    assert( abs( (*itImpl)->max_arg() - m_maxArg) <
-  	    (std::numeric_limits<TIN>::epsilon())   );
-  }
+  //for(auto & itImpl : m_implementations) {
+  //  assert(abs(itImpl->min_arg() - m_minArg) < std::numeric_limits<TIN>::epsilon());
+  //  assert(abs(itImpl->max_arg() - m_maxArg) < std::numeric_limits<TIN>::epsilon());
+  //}
 
   /*
     Prepare to generate random points in the table interval to evaluate.
@@ -263,11 +258,8 @@ inline void ImplementationComparator<TIN,TOUT>::print_details(std::ostream &out)
   TOUT temp_tout;
 
   out << "----------------------------------------------------------------------------\n";
-  out << "Table domain and range: "
-      << typeid(temp_tin).name()
-      << " -> "
-      << typeid(temp_tout).name()
-      << std::endl;
+  out << "Table input and output types: "
+      << typeid(temp_tin).name() << " -> " << typeid(temp_tout).name() << "\n";
   out << "Number of trials performed: "
 	    << m_implTimers[0].evaluationTimes.size()
 	    << "\n";
@@ -285,10 +277,10 @@ inline void ImplementationComparator<TIN,TOUT>::print_details(std::ostream &out)
     for ( auto itTimer : (itImplTimer.evaluationTimes) ) {
       out << "|    " << itTimer << "\n";
     }
-    out << std::endl;
+    out << "\n";
 
   }
-  out << "----------------------------------------------------------------------------\n";
+  out << "----------------------------------------------------------------------------" << std::endl;
 }
 
 template <typename TIN, typename TOUT>

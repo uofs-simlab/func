@@ -60,7 +60,7 @@ public:
     // m_func and m_name can't be set in the super class b/c the
     // base class constructor would be evaluated before mp_LUT is set
     m_func   = mp_LUT->function();
-    m_name   = mp_LUT->name();
+    m_name   = "FailureProof" + mp_LUT->name();
     m_minArg = mp_LUT->min_arg();
     m_maxArg = mp_LUT->max_arg();
     m_order  = mp_LUT->order();
@@ -119,7 +119,7 @@ public:
 
   void print_details(std::ostream &out) override 
   {
-    out << "FailureProof" << m_name << " " << m_minArg << " " << m_maxArg << " "
+    out << m_name << " " << m_minArg << " " << m_maxArg << " "
         << mp_LUT->step_size() << " " << mp_LUT->num_intervals() << " ";
   #ifdef FUNC_DEBUG
     out << std::endl;
