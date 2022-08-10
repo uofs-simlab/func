@@ -33,6 +33,7 @@
 #include <string>
 #include <memory>
 #include <limits>
+#include <cmath> // fabs, min
 
 #ifdef FUNC_USE_BOOST
 #include <boost/math/tools/minima.hpp>
@@ -117,14 +118,18 @@ public:
     return lut;
   }
 
-  /* Generate a table that is accurate to desiredTolerance */
-  std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN desiredTolerance, std::string filename = "");
+  /* Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
+  std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename = "");
+  std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN desiredErr, std::string filename = ""){
+    return generate_by_tol(tableKey,desiredErr,desiredErr,filename); // user is not concerned with approximating very small f(x)
+  }
 
   /* Generate a table takes up desiredSize bytes */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize, std::string filename = "");
 
-  /* Return the approx error in tableKey at stepSize */
-  long double error_at_step_size(std::string tableKey, TIN stepSize);
+  /* Return the approx error in tableKey at stepSize
+   * - relTol is a parameter which determines how much effect small f(x) values have on the error calculation */
+  long double error_at_step_size(std::string tableKey, TIN stepSize, TIN relTol = static_cast<TIN>(1.0));
 
   /* compare tableKey to the original function at stepSize */
   void plot_implementation_at_step_size(std::string tableKey, TIN stepSize);
@@ -133,34 +138,40 @@ public:
 /*----------------------------------------------------------------------------*/
 /* Non-trivial member definitions */
 /*----------------------------------------------------------------------------*/
-/*
-   Nested Functor used for computing error in a given lookup table
-*/
+
+/* lambda used for computing error in a given lookup table */
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::LookupTableErrorFunctor
 {
-  LookupTableErrorFunctor(LookupTable<TIN,TOUT>* impl) : m_impl(impl) {}
-  /* operator() always returns a negative value */
+  LookupTableErrorFunctor(LookupTable<TIN,TOUT>* impl, TERR relTol) :
+    m_impl(impl), m_relTol(relTol) {}
+
+  /* Compute -|f(x) - L(x)| / (1 + r_tol/a_tol*|f(x)|). Notes:
+   * - We're maximizing this function with brent_find_minima so operator() must always return a negative value
+   * - Only parameterized on the tolerance relative to a_tol (needed for error_at_step_size()) */
   TERR operator()(TERR const& x)
   {
     TERR f_value = static_cast<TERR>((m_impl->function())(static_cast<TIN>(x)));
     TERR lut_value = static_cast<TERR>((*m_impl)(static_cast<TIN>(x)));
-    return -static_cast<TERR>(2.0) * fabs( (f_value - lut_value) ) /
-      (fabs(f_value)+fabs(lut_value));
+    return -fabs(f_value - lut_value) / (static_cast<TERR>(1.0) + m_relTol*fabs(f_value));
   }
 
 private:
 
   LookupTable<TIN,TOUT> *m_impl;
+  TERR m_relTol;
 };
 
-/* Nested Functor used for finding optimal stepsize that satisfies TOL */
+/* lambda used for finding error over table bounds */
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 {
-  OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR tol) :
-    m_parent(parent), m_tableKey(tableKey), m_tol(tol) {}
+  // large relTol => don't worry about small f(x) in error metric. Small relTol => small |f(x)| must be approximated very well!
+  // Set relTol = r_tol/a_tol.
+  OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR relTol, TERR desiredErr) :
+    m_parent(parent), m_tableKey(tableKey), m_relTol(relTol), m_desiredErr(desiredErr) {}
 
+  // returns something close to 0 when err is close to the desiredErr
   TIN operator()(TIN const& stepSize)
   {
     using namespace boost::math::tools;
@@ -171,41 +182,46 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 		par.stepSize = stepSize;
     auto impl = m_parent.factory.create(m_tableKey, m_parent.mp_func_container, par);
 
+    /* get number of binary bits in mantissa */
+    int bits = std::numeric_limits<TERR>::digits/2; // effective maximum
     boost::uintmax_t max_it = 20;
 
     TERR max_err = 0;
     TERR err;
 
-    /* get number of binary bits in mantissa */
-    int bits = std::numeric_limits<TERR>::digits;
-    /* For each interval in the table, compute the maximum error.
-     * Be careful about the top most interval b/c tableMaxArg can be greater than max */
+    /* Want a small bracket for brent's method so for each interval in the table,
+     * compute the maximum error.
+     * - Be careful about the top most interval b/c tableMaxArg can be greater than max */
     for(unsigned ii=0; ii<impl->num_intervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
-      if(static_cast<TIN>(xtop) > m_parent.m_max){
-        xtop = static_cast<TERR>(m_parent.m_max);
-      }
 
-      std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
+      /* tableMaxArg >= max. We don't care about any error outside [min,max]
+       * so ignore any points between (max,tableMax] */
+      if(static_cast<TIN>(xtop) > m_parent.m_max)
+        xtop = static_cast<TERR>(m_parent.m_max);
+
+      std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get(),m_relTol),x,xtop,bits,max_it);
       err = r.second;
       if(err < max_err){
         max_err = err;
+        //std::cerr << -err << " error when x=" << r.first << "\n";
       }
     }
 
     /* want return to be 0 if the same, +/- on either side */
     max_err = -max_err;
     //std::cerr << m_tableKey << " with stepSize=" << stepSize << " has approx error=" << double(max_err) << "\n";
-    return static_cast<TIN>(max_err-m_tol);
+    return static_cast<TIN>(max_err-m_desiredErr);
   }
 
 private:
 
   LookupTableGenerator<TIN,TOUT,TERR> &m_parent;
   std::string m_tableKey;
-  TERR m_tol;
+  TERR m_relTol;
+  TERR m_desiredErr;
 
 };
 
@@ -263,7 +279,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
 }
 
 template <typename TIN, typename TOUT, typename TERR>
-std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::generate_by_tol(std::string tableKey, TIN desiredTolerance, std::string filename)
+std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename)
 {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate any table by tol without Boost");
@@ -278,13 +294,15 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
 
   /* generate a first approximation for the implementation */
   auto impl = factory.create(tableKey, mp_func_container, par);
-  /* And initialize the functor used for refinement */
-  OptimalStepSizeFunctor f(*this,tableKey,0);
+  /* And initialize the functor used for refinement:
+   * Note relTol is considered the "relative tolerance relative to the absolute tolerance" */
+  TERR relTol = r_tol/a_tol;
+  OptimalStepSizeFunctor f(*this,tableKey,relTol,0.0);
 
   /* quit now if this table is amazing already. Useful for high order tables on small intervals
    * where bracket_and_solve tries to use a stepsize larger than the table range */
   auto fmax_step = f(m_max-m_min);
-  if(fmax_step <= desiredTolerance){
+  if(fmax_step <= a_tol){
     if(filename != ""){
       std::ofstream out_file(filename);
       impl->print_details_json(out_file);
@@ -296,7 +314,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   TIN stepSize = (m_max-m_min)/1000.0; // initial guess stepsize. Probably too small for most high order tables
   const int order  = impl->order();
 
-  const TIN logTol = log(desiredTolerance);
+  const TIN logTol = log(a_tol);
 
   /*
     APPLY NEWTON'S METHOD IN log-log SPACE
@@ -308,6 +326,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
        of the table's convergence
      - even if not in asymptotic regime, this thing has some pretty
        robust convergence!
+     - Currently unused. TODO test with new error metric!
   */
   const int  N_NEWTON_MAX_IT  = 0;     // max log-Newton-iterations
   const double NEWTON_IT_RTOL = 1e-5;
@@ -317,7 +336,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   std::vector<std::pair<double,double>> iterates;
   for (int iNewton = 0; iNewton < N_NEWTON_MAX_IT; iNewton++) {
     double err = f(stepSize);
-    if ( fabs(err-desiredTolerance) <  fabs(desiredTolerance)*NEWTON_IT_RTOL+NEWTON_IT_ATOL ) {
+    if ( fabs(err-a_tol) <  fabs(a_tol)*NEWTON_IT_RTOL+NEWTON_IT_ATOL ) {
       std::cout << "Newton iter: " << iNewton << "\n";
       NEWTON_SUCCESS_FLAG = 1;
       break;
@@ -341,8 +360,8 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   /*
     APPLY A BRACKETING ALGORITHM IN log-log SPACE
 
-    If a suitable bracket is found, this guarantees a solution below
-    desiredTolerance. If not, bracket_and_solve throws.
+    If a suitable bracket is found, this guarantees a solution below a_tol.
+    Otherwise, bracket_and_solve throws an error.
   */
   const boost::uintmax_t BRACKET_MAX_IT = 50;  // Limit to maximum iterations.
   boost::uintmax_t it = BRACKET_MAX_IT;        // Initally our chosen max iterations, but updated with actual.
@@ -365,27 +384,25 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   int digits = std::numeric_limits<TIN>::digits;  // Maximum possible binary digits accuracy for type T.
   // Some fraction of digits is used to control how accurate to try to make the result.
   int get_digits = digits-30;  // We have to have a non-zero interval at each step, so
-                               // doesn't have to be so accurate
-                               // maximum accuracy is digits - 1.  But we also have to
-                               // allow for inaccuracy in f(x), otherwise the last few iterations
-                               // just thrash around.
+                               // doesn't have to be so accurate maximum accuracy is digits - 1.
+                               // But we also have to allow for inaccuracy in f(x), otherwise the last
+                               // few iterations just thrash around.
   eps_tolerance<TIN> tol(get_digits); // Set the tolerance.
-  OptimalStepSizeFunctor g(*this,tableKey,desiredTolerance); // functor for solving log(E(h)/TOL) = 0. g = f-desiredTolerance
+  OptimalStepSizeFunctor g(*this,tableKey,relTol,a_tol); // functor for solving log(E(h)/TOL) = 0. g = f-a_tol
 
   /*
-    Run the bracket and solve algorithm
+    Run bisection
     - answer is taken to be the lower point of the bracketing interval
     - this guarantees a tolerance lower than desired
-    - Unfortunately, still have to watch out for stepsizes larger than the table range
+    - we have to watch out for stepsizes larger than the table range
     so we can't just use bracket_and_solve_root
   */
   //TIN factor = 2; // Mult/divide factor for bracket expansion when searching.
   //bool is_rising = 1; // The error curve should always be rising
   //std::pair<TIN, TIN> r = bracket_and_solve_root(g, stepSize, factor, is_rising, tol, it);
 
-  /* f(m_max-m_min) - desiredTolerance > 0 otherwise we would've quit at the start of this function 
-   * TODO do we want to ensure that (max-min)/stepSize is an integer? */
-  std::pair<TIN, TIN> r = toms748_solve(g, (TIN)0.0, (TIN)(m_max-m_min), (TIN)(-desiredTolerance), (TIN)(fmax_step-desiredTolerance), tol, it);
+  /* f(m_max-m_min) - a_tol > 0 (otherwise we would've quit already) */
+  std::pair<TIN, TIN> r = toms748_solve(g, static_cast<TIN>(0.0), m_max-m_min, -static_cast<TIN>(a_tol), static_cast<TIN>(fmax_step-a_tol), tol, it);
 
   /* Save and return the implementation with the desired stepSize */
   par.stepSize = r.first;
@@ -400,19 +417,16 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
 
 template <typename TIN, typename TOUT, typename TERR>
 long double LookupTableGenerator<TIN,TOUT,TERR>::error_at_step_size(
-    std::string tableKey, TIN stepSize)
+    std::string tableKey, TIN stepSize, TIN relTol)
 {
 #ifndef FUNC_USE_BOOST
     static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot compute error at step without Boost");
     return 0; // just so the compiler doesn't complain
 #else
-  /*
-    Can be implemented in terms of the Functor used in solving for a specific
-    tolerance, so that is reused.
-  */
-  OptimalStepSizeFunctor f(*this,tableKey,0);
+  /* Use brent_find_minima to compute the max error over [min,max] */
+  OptimalStepSizeFunctor f(*this,tableKey,static_cast<TERR>(relTol),0.0);
   TERR err = f(stepSize);
-  return (long double) err;
+  return static_cast<long double>(err);
 #endif
 }
 
