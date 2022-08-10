@@ -60,7 +60,7 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = N+1;
-    m_numTableEntries = m_numIntervals;
+    m_numTableEntries = m_numIntervals+1;
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->template get_nth_func<N>() == nullptr)

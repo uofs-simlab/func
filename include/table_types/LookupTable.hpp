@@ -11,6 +11,7 @@
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
 
+#include <cmath> // std::nextafter
 #include <memory>
 #include <functional>
 #include <stdexcept>
@@ -73,16 +74,19 @@ public:
      * - corresponds to the grid
      * - If the step size does not exactly divide the arg domain, the max
      *   arg of the table is set to the nearest value above such that it does. */
-    m_stepSize     = par.stepSize;
+    m_stepSize = par.stepSize;
+    if(m_stepSize <= static_cast<TIN>(0.0))
+      throw std::invalid_argument("func::LookupTable was given a nonpositive stepSize. stepSize must be positive.");
+
     m_stepSize_inv = 1.0/m_stepSize;
     m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
-    m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // >= m_maxArg
+    m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // >= m_maxArg    
   }
 
   /* TODO
-     1. virtual + and * methods for curried LUTs. Will have to make sure min, max,
-     tablemax, and stepsize are all within a very small tolerance.
-     2. return an approximation to f^(N)(x) with */
+   * 1. virtual + and * methods will be needed for curried LUTs to work. Will have to make sure
+   * min, max, tablemax, and stepsize of both tables are all within a very small tolerance.
+   * 2. return an approximation to f^(N)(x) */
   //template <unsigned int N>
   //virtual TOUT diff(TIN x) = 0;
 

@@ -4,6 +4,11 @@
    (eg method of generating a nonuniform grid type, setup/reading polynomial coefficients)
    which can be pieced together based on template parameters.
 
+   NOTE: f stepSize divides max-min exactly then operator(max) will be out of array bounds!
+   - Every table has an extra (unnecessary in most cases) table entry to avoid this
+   problem. TODO make this less kludgy. Users should be able to build a LUT from a function
+   that is not defined beyond the given maxArg!
+
    N = number of coefficients used in underlying piecewise polynomials
    Provided Horner's method which is the most common table evaluation method in FunC
 

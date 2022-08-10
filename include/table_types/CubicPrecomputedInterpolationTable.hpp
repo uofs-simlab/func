@@ -40,7 +40,7 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = 4;
-    m_numTableEntries = m_numIntervals;
+    m_numTableEntries = m_numIntervals+1;
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */

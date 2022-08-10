@@ -38,8 +38,8 @@ public:
 
     /* Base class variables */
     m_name  = classname;
-    m_order = 1;
-    m_numTableEntries = m_numIntervals;
+    m_order = 2;
+    m_numTableEntries = m_numIntervals+1; // needs to know f(max)
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
@@ -67,13 +67,14 @@ public:
   TOUT operator()(TIN x) override
   {
     //enum class GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
+    // hash is copied from MetaTable
     TOUT dx;
     unsigned int x0;
     switch(GT){
     case GridTypes::UNIFORM:
       {
       // nondimensionalized x position, scaled by step size
-      dx = static_cast<TOUT>((x-m_minArg)/m_stepSize);
+      dx = static_cast<TOUT>(m_stepSize_inv*(x-m_minArg));
       // index of previous table entry
       x0 = static_cast<unsigned>(dx);
       // value of table entries around x position
@@ -82,8 +83,6 @@ public:
       }
     case GridTypes::NONUNIFORM:
       {
-      // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
-      // where each of the above member vars are encoded into g_inv
       x0 = static_cast<unsigned>(m_transferFunction.g_inv(x));
       TIN h   = m_grid[x0+1] - m_grid[x0];
       dx = (x - m_grid[x0])/h;
@@ -91,10 +90,6 @@ public:
       }
     case GridTypes::NONUNIFORM_PSEUDO:
       {
-      // set x0 = floor((g_inv(x)-m_minArg)/m_stepSize)
-      // and dx = fractional((g_inv(x)-m_minArg)/m_stepSize)
-      // where each of the above member vars are encoded into g_inv
-      // The source of the pseudolinearity is from the way we compute dx
       dx = m_transferFunction.g_inv(x);
       x0 = static_cast<unsigned>(dx);
       dx -= x0;
@@ -102,9 +97,9 @@ public:
       }
     }
 
+    // linear interpolation
     TOUT y1  = m_table[x0].coefs[0];
     TOUT y2  = m_table[x0+1].coefs[0];
-    // linear interpolation
     return y1+dx*(y2-y1);
   }
 };

@@ -68,20 +68,20 @@ public:
 
     /* Base class default variables */
     m_name = classname;
-    m_numTableEntries = m_numIntervals;
+    m_numTableEntries = m_numIntervals+1;
     m_order = N+1; // N is the degree of the polynomial interpolant so the order is N+1
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* build the vandermonde system for finding the interpolating polynomial's coefficients */
-    arma::Mat<double> Van = arma::ones<arma::Mat<double>>(N+1, N+1);
-    Van.col(1) = arma::linspace<arma::Col<double>>(0,1,N+1);
+    arma::mat Van = arma::ones(N+1, N+1);
+    Van.col(1) = arma::linspace(0,1,N+1);
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
 
 #ifdef FUNC_ARMA_LU_SOLVE
     // LU factor the matrix we just built
-    arma::Mat<double> L, U, P;
-    arma::lu<arma::Mat<double>>(L,U,P,Van);
+    arma::mat L, U, P;
+    arma::lu(L,U,P,Van);
 #endif
 
     /* Allocate and set table */
@@ -100,8 +100,8 @@ public:
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
-      arma::Col<double> xvec = arma::linspace<arma::Col<double>>(x,x+h,N+1);
-      arma::Col<double> y(N+1);
+      arma::vec xvec = arma::linspace(x,x+h,N+1);
+      arma::vec y(N+1);
       // TODO is this performed in simd: y.for_each([this](Mat<double>::elem_type& xk) { xk = static_cast<double>(m_func(static_cast<TIN>(xk))); });
       for (unsigned int k=0; k<N+1; k++)
         y[k] = static_cast<double>(m_func(static_cast<TIN>(xvec[k])));
