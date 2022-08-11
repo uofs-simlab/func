@@ -54,6 +54,9 @@ endif()
 # TODO FunC LookupTableGenerator is header only so it will only be built in user code.
 # It's nice to give people our FindQuadmath.cmake, but it'd probably be better to
 # just use a template for the error-precision
+#
+# Boost provides the macro BOOST_HAVE_QUADMATH which is only defined if the user has quadmath.
+# We should just use that in the future
 option(FUNC_USE_QUADMATH "Use quadmath library" ON)
 find_package(Quadmath)
 

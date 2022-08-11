@@ -2,6 +2,9 @@
   This class is an interface for any piecewise evaluation
   implementation which we can use with LookupTableFactory.
 
+  Actual data (reading, writing, hashing, etc) is handled
+  by any implementation of this class.
+
   Notes:
   - In the case where (max-min)/stepsize is not an integer then
   the real table max is greater than the user supplied max
@@ -46,8 +49,6 @@ class LookupTable : public EvaluationImplementation<TIN,TOUT>
 {
 protected:
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
-
-  // a polynomial (defn above) array must be provided by each implementation. 
 
   unsigned int m_numIntervals;   // sizes of grid and evaluation data
   unsigned int m_numTableEntries;
