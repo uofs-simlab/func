@@ -180,17 +180,14 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     int bits = std::numeric_limits<TERR>::digits;
     /*
       for each interval in the table, compute the maximum error
-      - be careful about the top most interval, it may reach beyond the
-      table range due to rounding errors
-      TODO is that true? If we have to be careful about that here then I think
-      arg_bounds_of_interval is broken. I also think the rightmost interval
-      may not be initialized properly
+      - be careful about the top most interval. Casting back down to TIN
+      may cause it to reach beyond the table range
     */
     for(unsigned ii=0; ii<impl->num_intervals()-1; ii++){
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
-      if( static_cast<TIN>(xtop) > m_parent.m_max ) // TODO is this ever true?
+      if( static_cast<TIN>(xtop) > m_parent.m_max ) // amazingly, this if statement is necessary
         break;
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get()),x,xtop,bits,max_it);
@@ -396,7 +393,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   auto lut = factory.create(tableKey,mp_func_container,par);
   if(filename != ""){
     std::ofstream out_file(filename);
-    lut->print_details_json(out_file);
+    lut->print_details_json(out_file); // TODO include comment about the tolerance used?
   }
   return lut;
 #endif

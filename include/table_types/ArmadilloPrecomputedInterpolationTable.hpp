@@ -3,20 +3,22 @@
   coefficients solved using Armadillo matrices)
 
   Usage example for a 4th degree interpolant:
-    ArmadilloPrecomputedInterpolationTable<4> look(&function,0,10,0.0001);
+    ArmadilloPrecomputedInterpolationTable<double,double,4> look(&function,LookupTableParameters<double>{0,10,0.0001});
     double val = look(0.87354);
 
   Notes:
-  - This class only works if TOUT is a standard numeric type. I don't think there's a way
-    to around this because armadillo's `is_supported_elem_type` is strict, and currently
-    arma::field is pretty much useless atm
-    TODO disable constructor if template type is not supported
+  - This class only works if TOUT can be cast to double. 
+    Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
+    with float or double (not even long double!) and arma::field is useless.
+    TODO disable constructor if TOUT cannot be cast to double
+
   - table precomputes and stores the linear coefficient so it doesn't have to
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
   - the template implementation is only registered for N=4,5,6,7
   (ie, available polynomial interpolation is of degrees 4 up to degree 7)
+  but users can manually construct this class with larger N
 */
 #pragma once
 #include "MetaTable.hpp"
@@ -24,14 +26,10 @@
 #include <stdexcept>
 
 #ifdef FUNC_USE_ARMADILLO
-#define ARMA_USE_CXX11 // TODO does this affect libraries that use FunC?
 #include <armadillo>
 #endif
 
-// TODO there is some error introduced by factoring the
-// vandermonde matrix before doing an LU solve.
-// Is this added error worth the increase in speed?
-// Should we do iterative refinement?
+// TODO what default lets us higher precision types to their full extent?????
 #define FUNC_ARMA_LU_SOLVE
 #ifdef FUNC_ARMA_LU_SOLVE
 #define FUNC_ARMA_SOLVE_OPTS arma::solve_opts::none
@@ -72,18 +70,18 @@ public:
     m_name = classname;
     m_numTableEntries = m_numIntervals+1;
     m_order = N+1; // N is the degree of the polynomial interpolant so the order is N+1
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* build the vandermonde system for finding the interpolating polynomial's coefficients */
-    arma::Mat<TOUT> Van = arma::ones<arma::Mat<TOUT>>(N+1, N+1);
-    Van.col(1) = arma::linspace<arma::Col<TOUT>>(0,1,N+1);
+    arma::Mat<double> Van = arma::ones<arma::Mat<double>>(N+1, N+1);
+    Van.col(1) = arma::linspace<arma::Col<double>>(0,1,N+1);
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
 
 #ifdef FUNC_ARMA_LU_SOLVE
     // LU factor the matrix we just built
-    arma::Mat<TOUT> L, U, P;
-    arma::lu<arma::Mat<TOUT>>(L,U,P,Van);
+    arma::Mat<double> L, U, P;
+    arma::lu<arma::Mat<double>>(L,U,P,Van);
 #endif
 
     /* Allocate and set table */
@@ -101,10 +99,11 @@ public:
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
-      arma::Col<TIN> xvec = arma::linspace<arma::Col<TIN>>(x,x+h,N+1);
-      arma::Col<TOUT> y(N+1);
+      arma::Col<double> xvec = arma::linspace<arma::Col<double>>(x,x+h,N+1);
+      arma::Col<double> y(N+1);
+      // TODO is this performed in simd: y.for_each([this](Mat<double>::elem_type& xk) { xk = static_cast<double>(m_func(static_cast<TIN>(xk))); });
       for (unsigned int k=0; k<N+1; k++)
-        y[k] = m_func(xvec[k]); // TODO profile y.for_each([this](Mat<TIN>::elem_type& xk) { xk = m_func(xk); });
+        y[k] = static_cast<double>(m_func(static_cast<TIN>(xvec[k])));
 
       // make y the coefficients of the polynomial interpolant
 #ifdef FUNC_ARMA_LU_SOLVE
@@ -115,7 +114,7 @@ public:
 
       // move this back into the m_table array
       for (unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = y[k];
+        m_table[ii].coefs[k] = static_cast<TOUT>(y[k]);
     }
 #endif
   }
