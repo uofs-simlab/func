@@ -39,13 +39,13 @@ public:
     /* Base class variables */
     m_name  = classname;
     m_order = 2;
-    m_numTableEntries = m_numIntervals+1; // needs to know f(max)
+    m_numTableEntries = m_numIntervals+2; // +2 because hash uses two array entries
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
-    for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
+    for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       TIN x;
       // (possibly) transform the uniform grid into a nonuniform grid
       if (GT == GridTypes::UNIFORM)
@@ -53,9 +53,11 @@ public:
       else
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
 
-      m_grid[ii]  = x;
+      m_grid[ii] = x;
       m_table[ii].coefs[0] = m_func(x);
     }
+    // special case to make lut(tableMaxArg) work
+    m_table[m_numTableEntries-1].coefs[0] = m_table[m_numTableEntries-2].coefs[0];
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */

@@ -44,7 +44,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
+    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
@@ -65,6 +65,11 @@ public:
       m_table[ii].coefs[1] = -3*y0+4*y1-y2;
       m_table[ii].coefs[2] = 2*y0+-4*y1+2*y2;
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<3; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
   }
 };
 

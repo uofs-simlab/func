@@ -95,7 +95,11 @@ public:
   MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
     LookupTable<TIN,TOUT>(func_container, par)
   {
-    // initialize the transfer function to something useful
+    // We need a valid FunctionContainer to generate any LUT
+    if(m_func == nullptr)
+      throw std::invalid_argument("Error in func::MetaTable. Function not defined in given FunctionContainer");
+
+    // initialize the transfer function to something useful if the grid is nonuniform
     if(GT != GridTypes::UNIFORM)
       m_transferFunction = TransferFunctionSinh<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
   }
@@ -113,7 +117,7 @@ public:
           " contains data for building a " + m_name + " which is not compatible");
 
     // user might want to still have info about the original function attached to this LUT
-    m_func = (func_container == nullptr) ? nullptr : func_container->standard_func;
+    m_func = (func_container != nullptr) ? func_container->standard_func : nullptr;
 
     from_json(jsonStats, *this);
   }
