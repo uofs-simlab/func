@@ -102,9 +102,7 @@ public:
     if(filename != "" && file_exists(filename))
       return generate_by_file(filename, tableKey);
 
-    if(stepSize <= 0)
-      throw std::invalid_argument("LUT stepSize must be positive!");
-
+    // LookupTable will make sure the stepsize is positive
     LookupTableParameters<TIN> par;
     par.minArg = m_min;
     par.maxArg = m_max;
