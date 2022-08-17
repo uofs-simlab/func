@@ -7,7 +7,7 @@
     double val = look(0.87354);
 
   Notes:
-  - This class only works if TOUT can be cast to double. 
+  - This class only works if TOUT and TIN can both be cast to double. 
     Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
     with float or double (not even long double!) and arma::field is useless.
     TODO disable constructor if TOUT cannot be cast to double
@@ -100,7 +100,7 @@ public:
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
-      arma::vec xvec = arma::linspace(x,x+h,N+1);
+      arma::vec xvec = arma::linspace(static_cast<double>(x),static_cast<double>(x+h),N+1);
       arma::vec y(N+1);
       // TODO is this performed in simd: y.for_each([this](Mat<double>::elem_type& xk) { xk = static_cast<double>(m_func(static_cast<TIN>(xk))); });
       for (unsigned int k=0; k<N+1; k++)
