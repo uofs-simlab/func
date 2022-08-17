@@ -126,9 +126,14 @@ public:
   }
 
   // give the nlohmann json functions access to every member variable (note the silly template names)
-  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1>
+  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void to_json(nlohmann::json& jsonStats, const MetaTable<TIN1,TOUT1,N1,GT1>& lut);
-  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1>
+
+  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void from_json(const nlohmann::json& jsonStats, MetaTable<TIN1,TOUT1,N1,GT1>& lut);
 
   /* public access to protected member vars */
@@ -194,13 +199,12 @@ public:
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<func::UniformLinearPrecomputedInterpolationTable<TIN,TOUT>>();
   ```
-  TODO disable these if TIN/TOUT do not support to/from_json?
- * */
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
+ * Uses SFINAE to automatically disable these functions if TIN or TOUT do not support nlohmann's json */
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT>::value, bool>::type = true>
 void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
 {
-  //(void) jsonStats;
-  //(void) lut;
   jsonStats["_comment"] = "FunC lookup table data";
   jsonStats["name"] = lut.m_name;
   jsonStats["minArg"] = lut.m_minArg;
@@ -224,12 +228,21 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
       jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)] = lut.table_entry(i,j);
 }
 
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<!(std::is_constructible<nlohmann::json,TIN >::value && 
+                                   std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
+void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
+{
+  throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
+}
+
 /* this variant of from_json will be called for any specific implementation of a LUT
  * inhereting from MetaTable */
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
-void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut) {
-  //(void) jsonStats;
-  //(void) lut;
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT>::value, bool>::type = true>
+void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut)
+{
   // name checking happens in MetaTable's constructor
   jsonStats.at("name").get_to(lut.m_name);
   jsonStats.at("minArg").get_to(lut.m_minArg);
@@ -258,6 +271,14 @@ void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut) {
   // rebuild the transfer function
   lut.m_transferFunction = TransferFunctionSinh<TIN>(lut.m_minArg,lut.m_tableMaxArg,lut.m_stepSize,
       jsonStats["transfer_function_coefs"].get<std::array<TIN,4>>());
+}
+
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<!(std::is_constructible<nlohmann::json,TIN >::value && 
+                                   std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
+void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut)
+{
+  throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
 }
 
 } // namespace func
