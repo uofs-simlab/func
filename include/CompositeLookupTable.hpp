@@ -17,7 +17,11 @@
   - throws an exception if args are outside table ranges
   - operator() is much faster when repeatedly evaluating
   from the same table's range
-*/
+
+
+  TODO this class should support to/from_json. Could perhaps use the
+  unique_ptr<LookupTable> version of from_json in LookupTableFactory
+  */
 #pragma once
 #include "EvaluationImplementation.hpp"
 #include "LookupTable.hpp"
@@ -35,7 +39,9 @@
 
 namespace func {
 
-/* A subclass used to define function behaviour at table endpoints and breakpoints */
+/* A subclass used to define function behaviour at table endpoints and breakpoints
+ * TODO We should make the pade tables handle +/- infty special values with a special ctor
+ * */
 template <typename TIN, typename TOUT = TIN>
 class SpecialPoint
 {
@@ -131,7 +137,7 @@ public:
       lut->print_details(out);
   }
 
-  // TODO
+  // TODO just use to_json from each lut
   void print_details_json(std::ostream & /* out */) override
   {}
 

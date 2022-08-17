@@ -24,6 +24,9 @@
   - specify the FUNC_DEBUG flag to turn on argument recording for args outside
   the table's range.
   - optional ArgumentRecord args available if you want nicer looking output
+
+  TODO this class should support to_json but not from_json! Add another constructor
+  to build this class from a FunctionContainer and a filename
 */
 #pragma once
 #include "EvaluationImplementation.hpp"

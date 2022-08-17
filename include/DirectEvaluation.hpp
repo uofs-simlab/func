@@ -20,6 +20,9 @@
   - Record where the function is being evaluated by specifying the -DFUNC_DEBUG
   flag at compile time. ArgumentRecorder is an extension of this class which does
   all the work recording function arguments.
+
+  TODO this class should support to_json but not from_json! Add another constructor
+  to build this class from a FunctionContainer and a filename
 */
 #pragma once
 

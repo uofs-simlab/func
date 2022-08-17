@@ -10,6 +10,8 @@
   - Argument recording is threadsafe
   - See DirectEvaluation.hpp and FailureProofTable.hpp for example usage.
   - This is designed to be a private member variable of some class
+
+  TODO this class should support to_json & from_json
 */
 #pragma once
 #include <string> // to_string()

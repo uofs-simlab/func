@@ -43,12 +43,15 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
-    for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
+    for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       // constant interpolation with the midpoint of this subinterval
       auto xgrid = m_minArg + ii*m_stepSize;
       m_grid[ii] = xgrid;
       m_table[ii].coefs[0] = m_func(xgrid + 0.5*m_stepSize);
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
   }
 
   /* Constant interpolation from table point immediately below x */

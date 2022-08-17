@@ -44,7 +44,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,2>[m_numTableEntries]);
-    for (unsigned int ii=0; ii < m_numTableEntries; ++ii) {
+    for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
@@ -59,6 +59,10 @@ public:
       m_table[ii].coefs[0] = m_func(x);
       m_table[ii].coefs[1] = m_func(x+h) - m_table[ii].coefs[0];
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    m_table[m_numTableEntries-1].coefs[1] = 0;
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */

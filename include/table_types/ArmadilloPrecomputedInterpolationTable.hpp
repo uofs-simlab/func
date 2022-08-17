@@ -50,7 +50,6 @@ class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N
   static const std::string classname;
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  // TODO disable table construction if armadillo does not support TOUT???
   ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
@@ -87,7 +86,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
+    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
@@ -117,6 +116,11 @@ public:
       for (unsigned int k=0; k<N+1; k++)
         m_table[ii].coefs[k] = static_cast<TOUT>(y[k]);
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<N+1; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
 

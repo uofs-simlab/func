@@ -70,7 +70,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
-    for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
+    for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       auto xgrid = m_minArg + ii*m_stepSize;
       auto h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
@@ -114,6 +114,11 @@ public:
         default: { throw std::invalid_argument("Broken switch case in func::TaylorTable"); }
       }
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<N+1; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
 

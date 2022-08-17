@@ -77,6 +77,8 @@ else()
   option(FUNC_USE_OPENMP OFF)
 endif()
 
+# Any conversions from json type should be done explicitly
+set(JSON_ImplicitConversions OFF)
 
 # ==== Generate Source Code ====
 # TYPE_PAIRS contains every type we want to use out LUTs with.

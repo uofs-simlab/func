@@ -58,15 +58,10 @@ protected:
   TIN  m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
 public:
-  /* Generate a LUT from func_container.
-   * TODO How helpful is the error message if func_container == nullptr? */
-  LookupTable(FunctionContainer<TIN,TOUT> *func_container,
-      LookupTableParameters<TIN> par) :
-    EvaluationImplementation<TIN,TOUT>(func_container->standard_func)
+  /* Initialize useful member variables so every LUT follows a predictable interface */
+  LookupTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
+    EvaluationImplementation<TIN,TOUT>((func_container != nullptr) ? func_container->standard_func : nullptr)
   {
-    if(func_container->standard_func == nullptr)
-      throw std::invalid_argument("function not defined in given FunctionContainer");
-
     /* Base class variables */
     m_minArg = par.minArg; m_maxArg = par.maxArg;
 
@@ -80,7 +75,7 @@ public:
 
     m_stepSize_inv = 1.0/m_stepSize;
     m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
-    m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // >= m_maxArg    
+    m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // always >= m_maxArg    
   }
 
   /* TODO

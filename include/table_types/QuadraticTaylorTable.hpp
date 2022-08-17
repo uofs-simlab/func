@@ -56,7 +56,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
+    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN xgrid = m_minArg + ii*m_stepSize;
       TIN xcenter = xgrid + 0.5*m_stepSize;
@@ -70,6 +70,11 @@ public:
       m_table[ii].coefs[1] = h*(d1 - 0.5*h*d2);
       m_table[ii].coefs[0] = d0 - 0.5*h*d1 + 0.125*h*h*d2;
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<3; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
 

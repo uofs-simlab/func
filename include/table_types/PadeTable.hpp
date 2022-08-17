@@ -171,6 +171,7 @@ public:
       for (unsigned int k=0; k<N; k++)
         m_table[ii].coefs[M+1+k] = static_cast<TOUT>(Q[k+1]); // ignore the first coef of Q b/c it's always 1.
     }
+    // does not need special case grid entry!
 #endif
   }
 
