@@ -2,7 +2,7 @@
   Quadratic Interpolation LUT with precomputed coefficients
 
   Usage example:
-    QuadraticPrecomputedInterpolationTable look(&function,0,10,0.0001);
+    QuadraticInterpolationTable look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -17,7 +17,7 @@
 namespace func {
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
-class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3,GT>
+class QuadraticInterpolationTable final : public MetaTable<TIN,TOUT,3,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
@@ -26,7 +26,7 @@ class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3
   static const std::string classname;
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  QuadraticInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<TIN,TOUT,3,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
       std::move(MetaTable<TIN,TOUT,3,GT>(func_container, par)) :
@@ -74,12 +74,12 @@ public:
 };
 
 template <typename TIN, typename TOUT, GridTypes GT>
-const std::string QuadraticPrecomputedInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable";
+const std::string QuadraticInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticInterpolationTable";
 
 template <typename TIN, typename TOUT=TIN>
-using UniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,GridTypes::UNIFORM>;
+using UniformQuadraticInterpolationTable = QuadraticInterpolationTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM>;
+using NonUniformQuadraticInterpolationTable = QuadraticInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
+using NonUniformPseudoQuadraticInterpolationTable = QuadraticInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

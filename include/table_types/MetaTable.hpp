@@ -69,7 +69,7 @@ const std::string grid_type_to_string() {
       return "NonUniform";
     case GridTypes::NONUNIFORM_PSEUDO:
       return "NonUniformPseudo";
-    default: { throw std::invalid_argument("Broken switch case in func::MetaTable"); }
+    default: { throw std::logic_error("Broken switch case in func::MetaTable"); }
   } 
 }
 
@@ -179,7 +179,7 @@ public:
       case GridTypes::NONUNIFORM_PSEUDO:
         {
         // find the subinterval x lives in
-        dx  = m_transferFunction.g_inv(x);
+        dx  = static_cast<TOUT>(m_transferFunction.g_inv(x));
         // just take the fractional part of dx as x's location in this interval
         x0  = static_cast<unsigned>(dx);
         dx -= x0;

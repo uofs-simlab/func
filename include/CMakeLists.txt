@@ -32,17 +32,17 @@ LookupTableGenerator.hpp;\
 table_types/TableIncludes.hpp;\
 table_types/LookupTable.hpp;\
 table_types/MetaTable.hpp;\
-table_types/ArmadilloPrecomputedInterpolationTable.hpp;\
+table_types/ArmadilloInterpolationTable.hpp;\
 table_types/ConstantTaylorTable.hpp;\
 table_types/CubicHermiteTable.hpp;\
-table_types/CubicPrecomputedInterpolationTable.hpp;\
+table_types/CubicInterpolationTable.hpp;\
 table_types/LinearTaylorTable.hpp;\
 table_types/QuadraticTaylorTable.hpp;\
 table_types/CubicTaylorTable.hpp;\
 table_types/LinearInterpolationTable.hpp;\
-table_types/LinearPrecomputedInterpolationTable.hpp;\
+table_types/LinearRawInterpolationTable.hpp;\
 table_types/PadeTable.hpp;\
-table_types/QuadraticPrecomputedInterpolationTable.hpp;\
+table_types/QuadraticInterpolationTable.hpp;\
 ")
 
 target_include_directories(func ${FUNC_PUBLIC}
