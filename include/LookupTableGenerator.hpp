@@ -84,7 +84,7 @@ public:
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_file(std::string filename, std::string tableKey = "")
   {
     if(filename.find(".json") == std::string::npos) // TODO are there any other json filename extensions?
-      throw std::invalid_argument("FunC can only read LUTs from json files");
+      throw std::invalid_argument("Error in func::LookupTableGenerator: FunC can only read LUTs from json files");
 
     nlohmann::json jsonStats;
     std::ifstream(filename) >> jsonStats;
@@ -237,9 +237,9 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
     return generate_by_file(filename, tableKey);
 
   /* Use 2 query points to get relationship */
-  const unsigned long N1  = 2;
+  const unsigned long N1 = 2;
   const TIN step1 = (m_max-m_min)/N1;
-  const unsigned long N2  = 10;
+  const unsigned long N2 = 10;
   const TIN step2 = (m_max-m_min)/N2;
 
   LookupTableParameters<TIN> par1;
@@ -260,19 +260,25 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   unsigned long size1 = impl1->size();
   unsigned long size2 = impl2->size();
 
-  if (size2 == size1) {
-    throw "Query tables have same size.";
-  }
+  // TODO can this ever actually be a problem?
+  if (size2 == size1)
+    throw std::logic_error("Error in func::LookupTableGenerator.generate_by_impl_size: Query tables have same size");
 
   /* approximate step size for for desired impl size
-     (assuming linear relationship of num_intervals to size */
-  par1.stepSize = 1.0/static_cast<TIN>((N2-N1)*(desiredSize-size1)/(size2-size1) + N1);
+   * (assuming linear relationship of num_intervals to size */
+  const unsigned long N3 = (N2-N1)*(desiredSize-size1)/(size2-size1) + N1;
+  par1.stepSize = (m_max-m_min)/static_cast<TIN>(N3);
+
+  if (par1.stepSize <= 0)
+    throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_impl_size: Requested memory size is too small");
 
   auto lut = factory.create(tableKey, mp_func_container, par1);
   if(filename != ""){
     std::ofstream out_file(filename);
     lut->print_details_json(out_file);
   }
+  //std::cerr << "desiredSize = " << desiredSize << "\n";
+  //std::cerr << "actual size is " << lut->size() << "\n";
   return lut;
 }
 
