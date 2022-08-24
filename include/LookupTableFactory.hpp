@@ -3,7 +3,7 @@
   - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
   - Note: New implementations must be added to the registry by adding to the ::initialize() member function
 
-  - TODO would it make sense to just hardcode OTHER to LookupTableParameters<TIN>
+  - TODO I think we might as well just hardcode OTHER to LookupTableParameters<TIN>
 */
 #pragma once
 #include "TableIncludes.hpp"
@@ -194,7 +194,7 @@ LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<std::unique_ptr<func::LookupTable<TIN,TOUT>>>(); // call the constructor (or the from_json) referred to by "name"
 ```
-Main drawback of this function is we lose access to the function that generated that LUT
+Only drawback of this function is we lose access to the function that generated that LUT
 this works because std::unique_ptr<T> is default constructable
 */
 template <typename TIN, typename TOUT>

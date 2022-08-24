@@ -164,7 +164,7 @@ private:
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 {
-  // large relTol => don't worry about small f(x) in error metric. Small relTol => small |f(x)| must be approximated very well!
+  // small relTol => don't worry about small f(x) in error metric. large relTol => small |f(x)| must be approximated very well!
   // Set relTol = r_tol/a_tol.
   OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR relTol, TERR desiredErr) :
     m_parent(parent), m_tableKey(tableKey), m_relTol(relTol), m_desiredErr(desiredErr) {}
@@ -185,11 +185,14 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     boost::uintmax_t max_it = 20;
 
     TERR max_err = 0;
-    TERR err;
 
     /* Want a small bracket for brent's method so for each interval in the table,
      * compute the maximum error.
-     * - Be careful about the top most interval b/c tableMaxArg can be greater than max */
+     * - Be careful about the top most interval b/c tableMaxArg can be greater than max
+     *   (and we don't care about error outside of table bounds)
+     * - TODO It's likely worth parallelizing this for loop because software implementations of
+     *   high precision floats are quite slow */
+    #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_intervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
@@ -201,10 +204,14 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
         xtop = static_cast<TERR>(m_parent.m_max);
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get(),m_relTol),x,xtop,bits,max_it);
-      err = r.second;
+      TERR err = r.second;
+
+      #pragma omp critical
+      {
       if(err < max_err){
         max_err = err;
-        //std::cerr << -err << " error when x=" << r.first << "\n";
+        //std::cerr << -err << " error at x=" << r.first << "\n";
+      }
       }
     }
 
