@@ -6,7 +6,9 @@
   certain parameters, where n is the number of FunC LUTs.
 
   Usage example:
-    CompositeLookupTable<double> comp_table(fc, 1e-2, {-1,2},{4,5});
+    CompositeLookupTable<double> comp_table(&fc, 1e-2, {-1,2},{4,5});
+    // or
+    // CompositeLookupTable<double> comp_table(&fc, "UniformLinearInterpolationTable", {{-1,2},{4,5}});
     double val = comp_table(0.87354);
 
   Notes:
@@ -21,6 +23,13 @@
 
   TODO this class should support to/from_json. Could perhaps use the
   unique_ptr<LookupTable> version of from_json in LookupTableFactory
+
+  TODO I think we should use the standard library's map where each LUT is hashed
+  based exclusively on its left endpoint. That would be much more maintainable &
+  we can still do the "most recently used LUT" thing
+
+  TODO I vote that the special points are only used for table generation. I think it's
+  likely too slow & inelegant to have the points do anything nontrivial in operator()
   */
 #pragma once
 #include "EvaluationImplementation.hpp"
@@ -32,15 +41,15 @@
 #include <stdexcept> // domain_error, invalid_argument
 #include <string> // to_string
 
-// TODO don't do this
-// LENIENCE_FACTOR is at most how many comparisons are we'll do with
-// a linear search before switching to a binary search
-#define LENIENCE_FACTOR 4
+// FUNC_LENIENCE_FACTOR is number of times we try linear search before switching to a binary search
+// TODO I doubt we ever need this to not be 0 ...
+#define FUNC_LENIENCE_FACTOR 0
 
 namespace func {
 
 /* A subclass used to define function behaviour at table endpoints and breakpoints
  * TODO We should make the pade tables handle +/- infty special values with a special ctor
+ * I think "approaches" is a bit pointless because users can just put an if statement in the function's definition
  * */
 template <typename TIN, typename TOUT = TIN>
 class SpecialPoint
@@ -50,7 +59,7 @@ protected:
   std::pair<TIN,TOUT> m_point;
 
 public:
-  // explain why this point is special
+  // use these enums to explain why this point is special
   enum DiscontType { Discont=0, FirstDiscont=1, SecondDiscont=2, ThirdDiscont=3, None=8 };
   enum LimitType { Equals=2, Approaches=0, Inf = 1, NegInf = -1 };
 protected:
@@ -58,12 +67,13 @@ protected:
   LimitType m_limType;
 
 public:
-  // TODO add support for initializer lists
-  SpecialPoint(TIN x, TOUT y, DiscontType dt = None, LimitType lt = Equals) :
-    m_point(std::make_pair(x,y)), m_discType(dt), m_limType(lt) {}
-
   SpecialPoint(std::pair<TIN,TOUT> pt, DiscontType dt = None, LimitType lt = Equals) :
     m_point(pt), m_discType(dt), m_limType(lt) {}
+
+  // TODO add support for initializer lists
+  SpecialPoint(TIN x, TOUT y, DiscontType dt = None, LimitType lt = Equals) :
+    SpecialPoint(std::make_pair(x,y), dt, lt) {}
+
 
   // public getters
   TIN get_x(){ return m_point.first; }
@@ -141,6 +151,10 @@ public:
   void print_details_json(std::ostream & /* out */) override
   {}
 
+  /* TODO this function is the only advantage we get from using shared_ptr. I don't think this
+   * function should be used in 99% of use cases (just use a LUTGenerator instead). 
+   *
+   * Is this worth keeping? switching to unique_ptr might make life easier */
   std::shared_ptr<LookupTable<TIN,TOUT>> get_table(unsigned int table_idx)
   {
     return mv_LUT[table_idx];
@@ -148,34 +162,32 @@ public:
 };
 
 /* ---- Class implementation ---- */
-
-// TODO template or enum specifying pure linear search
-
 template <typename TIN, typename TOUT>
-inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
+CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
     FunctionContainer<TIN,TOUT> *func_container,
     std::vector<std::string> names,
     std::vector<TIN> stepSizes,
     std::vector<SpecialPoint<TIN,TOUT>> special_points) :
-  EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "CompositeLookupTable"),
+  EvaluationImplementation<TIN,TOUT>((func_container != nullptr) ? func_container->standard_func : nullptr, "CompositeLookupTable"),
   mv_LUT_names(names), mv_special_points(special_points)
 {
+  if(m_func == nullptr)
+    throw std::invalid_argument("Error in func::CompositeLUT: requires a FunctionContainer.");
+
   // check if names, stepSizes, and special_points are the right sizes
   if(names.size() != stepSizes.size())
-    throw std::invalid_argument("The " + std::to_string(names.size()) + " given table(s) need(s) "
+    throw std::invalid_argument("Error in func::CompositeLUT: The " + std::to_string(names.size()) + " given table(s) need(s) "
         "a corresponding stepsize but " + std::to_string(stepSizes.size()) + " stepsizes were given");
 
   if(names.size() != special_points.size() - 1)
-    throw std::invalid_argument("Function behaviour for the " + std::to_string(names.size() + 1) +
-        " breakpoints and endpoints need to be defined with SpecialPoints but "
-        "only " + std::to_string(special_points.size()) + " SpecialPoints were given");
+    throw std::invalid_argument("Error in func::CompositeLUT: Need exactly " + std::to_string(names.size() + 1) +
+        " SpecialPoints but only " + std::to_string(special_points.size()) + " were given");
 
   // make sure special_points is ordered (the parameters don't make sense otherwise)
   for(unsigned int i=0; i<special_points.size()-1; i++)
     if(mv_special_points[i].get_x() > mv_special_points[i+1].get_x())
-      throw std::invalid_argument("The x values in the given vector of special points must be ordered "
-          "but special_points[" + std::to_string(i) + "].get_x() > special_points["
-          + std::to_string(i+1) + "].get_x()");
+      throw std::invalid_argument("Error in func::CompositeLUT: The x values in the given vector of special points must be ordered "
+          "but special_points[" + std::to_string(i) + "].get_x() > special_points[" + std::to_string(i+1) + "].get_x()");
 
   // naive initial smallest interval
   m_len_smallest_interval = std::numeric_limits<TIN>::max();
@@ -183,32 +195,30 @@ inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
   this->m_dataSize = 0;
   this->m_order = 0;
 
-  const TIN closeness = 0.001; // TODO something more robust and related to each intervals stepsizes
+  const TIN closeness = std::numeric_limits<TIN>::epsilon();
 
   /* -- actually build the given tables and update cumulative member vars -- */
   for(unsigned int i=0; i<names.size(); i++){
     // build a table from
     LookupTableParameters<TIN> par;
 
-    // if the discType is "+/- Inf" or "approaches" then we want to be careful w/ table bounds
+    // if the discType is "+/- Inf" or "approaches" then we will let m_func take care of that point
     par.minArg = mv_special_points[i].get_x();
-    if(mv_special_points[i].limType() == SpecialPoint<TIN,TOUT>::Inf ||
-        mv_special_points[i].limType() == SpecialPoint<TIN,TOUT>::NegInf ||
-        mv_special_points[i].limType() == SpecialPoint<TIN,TOUT>::Approaches)
+    if(mv_special_points[i].limType() != SpecialPoint<TIN,TOUT>::Equals)
       par.minArg += closeness;
 
     par.maxArg = mv_special_points[i+1].get_x();
-    if(mv_special_points[i+1].limType() == SpecialPoint<TIN,TOUT>::Inf ||
-        mv_special_points[i+1].limType() == SpecialPoint<TIN,TOUT>::NegInf ||
-        mv_special_points[i+1].limType() == SpecialPoint<TIN,TOUT>::Approaches)
+    if(mv_special_points[i+1].limType() != SpecialPoint<TIN,TOUT>::Equals)
       par.maxArg -= closeness;
 
-    par.stepSize = stepSizes[i];
+    auto width = par.maxArg - par.minArg;
+
+    par.stepSize = width/ceil(width/stepSizes[i]);
     mv_LUT.push_back(factory.create(mv_LUT_names[i], func_container, par));
 
     // update the smallest interval and data size
-    if(par.maxArg - par.minArg < m_len_smallest_interval)
-      m_len_smallest_interval = par.maxArg - par.minArg;
+    if(width < m_len_smallest_interval)
+      m_len_smallest_interval = width;
     this->m_dataSize += mv_LUT[i]->size();
   }
 
@@ -219,16 +229,16 @@ inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
 
 
 template <typename TIN, typename TOUT>
-inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
+CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
     FunctionContainer<TIN,TOUT> *func_container,
     double global_tol,
     std::initializer_list<SpecialPoint<TIN,TOUT>> special_points) :
   EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "CompositeLookupTable"),
   mv_special_points(special_points)
 {
-  /* TODO decide how the special points affect table generation
-     Will want to preserve any discontinuity present in the given function
-     Pade tables for explosions? Also have to be conscious of how we approach points
+  /* TODO decide how the special points affect table generation.
+     We want to preserve any discontinuity present in the given function.
+     Pade tables for poles? Also have to be conscious of how we approach points
      equality is easy, but the other two will require care */
   // make sure special_points is ordered
   if(special_points.size() < 2)
@@ -242,26 +252,23 @@ inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
 
   this->m_minArg = mv_special_points.front().get_x();
   this->m_maxArg = mv_special_points.back().get_x();
+
   // We have everything but the names of tables needed to use our LookupTableGenerator
-  // TODO could this be parallelized?
   for(unsigned int i=0; i < mv_special_points.size()-1; i++){
     TIN ith_min_arg = mv_special_points[i];
     TIN ith_max_arg = mv_special_points[i+1];
-
-    // divvy up the tolerance based on how large this interval is
-    double ith_tol = global_tol*(ith_max_arg - ith_min_arg)/(m_maxArg-m_minArg);
     LookupTableGenerator<TIN,TOUT> gen(func_container, ith_min_arg, ith_max_arg);
 
     // now we just need to decide which of our tables to use
     std::string ith_table_name = chooseName(mv_special_points[i], mv_special_points[i+1]);
-    mv_LUT.push_back(gen.generate_by_tol(ith_table_name, ith_tol));
+    mv_LUT.push_back(gen.generate_by_tol(ith_table_name, global_tol));
   }
 }
 
 // Call the above constructor with an initializer list of special points
 template <typename TIN, typename TOUT>
 template <typename ... SPECIAL_POINTS>
-inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
+CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
     FunctionContainer<TIN,TOUT> *func_container,
     double global_tol,
     SPECIAL_POINTS ... points) :
@@ -269,7 +276,7 @@ inline CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(
 {}
 
 template <typename TIN, typename TOUT>
-inline std::string CompositeLookupTable<TIN,TOUT>::chooseName(SpecialPoint<TIN,TOUT> /* p1 */, SpecialPoint<TIN,TOUT> /* p2 */)
+std::string CompositeLookupTable<TIN,TOUT>::chooseName(SpecialPoint<TIN,TOUT> /* p1 */, SpecialPoint<TIN,TOUT> /* p2 */)
 {
   /* Decide what table to use on this interval
      TODO because this table's operator() uses so many conditional statements
@@ -298,35 +305,33 @@ inline std::string CompositeLookupTable<TIN,TOUT>::chooseName(SpecialPoint<TIN,T
 
 // TODO reference special points for interval bounds
 template <typename TIN, typename TOUT>
-inline TOUT CompositeLookupTable<TIN,TOUT>::binarySearch(TIN x, int i, int min_idx, int max_idx)
+TOUT CompositeLookupTable<TIN,TOUT>::binarySearch(TIN x, int i, int min_idx, int max_idx)
 {
   // Binary search for the correct interval starting with i (most
   // recently used table index). Best for seemly random table evaluations.
   if(x < mv_LUT[i]->min_arg()){
     if(i == min_idx)
-      throw std::domain_error(std::string("Composite table undefined for x=") +
-          std::to_string(x));
+      return m_func(x); // none of our LUTs have x in their domain.
     return binarySearch(x, (int)(i+min_idx)/2, min_idx, i);
   }
   else if(x > mv_LUT[i]->max_arg()){
     if(i == max_idx)
-      throw std::domain_error(std::string("Composite table undefined for x=") +
-          std::to_string(x));
+      return m_func(x); // none of our LUTs have x in their domain.
     return binarySearch(x, (int)(i+max_idx)/2, i, max_idx);
   }
 
   // we're in the right interval. Check the special points
-  if(abs(x - mv_LUT[i]->min_arg()) < std::numeric_limits<TIN>::epsilon())
-    return mv_special_points[i].get_y(); // use the left special point's value
-  if(abs(x - mv_LUT[i]->max_arg()) < std::numeric_limits<TIN>::epsilon())
-    return mv_special_points[i+1].get_y(); // use the right special point's value
+  //if(abs(x - mv_LUT[i]->min_arg()) < std::numeric_limits<TIN>::epsilon())
+  //  return mv_special_points[i].get_y(); // use the left special point's value
+  //if(abs(x - mv_LUT[i]->max_arg()) < std::numeric_limits<TIN>::epsilon())
+  //  return mv_special_points[i+1].get_y(); // use the right special point's value
 
   // return the LUT value
   return (*mv_LUT[i])(x);
 }
 
 template <typename TIN, typename TOUT>
-inline TOUT CompositeLookupTable<TIN,TOUT>::linearSearchLeft(TIN x, int i)
+TOUT CompositeLookupTable<TIN,TOUT>::linearSearchLeft(TIN x, int i)
 {
   // Assuming this function is called with all the correct parameters and
   // mv_LUT[i] is defined
@@ -338,7 +343,7 @@ inline TOUT CompositeLookupTable<TIN,TOUT>::linearSearchLeft(TIN x, int i)
 }
 
 template <typename TIN, typename TOUT>
-inline TOUT CompositeLookupTable<TIN,TOUT>::linearSearchRight(TIN x, int i)
+TOUT CompositeLookupTable<TIN,TOUT>::linearSearchRight(TIN x, int i)
 {
   // Assuming this function is called with all the correct parameters and
   // mv_LUT[i] is defined
@@ -350,12 +355,12 @@ inline TOUT CompositeLookupTable<TIN,TOUT>::linearSearchRight(TIN x, int i)
 }
 
 template <typename TIN, typename TOUT>
-inline TOUT CompositeLookupTable<TIN,TOUT>::operator()(TIN x)
+TOUT CompositeLookupTable<TIN,TOUT>::operator()(TIN x)
 {
   // If x is close, use a linear search. Otherwise, use a binary search
   std::shared_ptr<LookupTable<TIN,TOUT>> recentTable = mv_LUT[mostRecentlyUsed_idx];
 
-  if(x < recentTable->min_arg() - LENIENCE_FACTOR*m_len_smallest_interval){
+  if(x < recentTable->min_arg() - FUNC_LENIENCE_FACTOR*m_len_smallest_interval){
     // x is far away, do binary search on the left
     return binarySearch(x, (int) mostRecentlyUsed_idx/2, 0, mostRecentlyUsed_idx);
   }
@@ -367,7 +372,7 @@ inline TOUT CompositeLookupTable<TIN,TOUT>::operator()(TIN x)
     // x is here
     return (*recentTable)(x);
   }
-  else if(x > recentTable->max_arg() + LENIENCE_FACTOR*m_len_smallest_interval){
+  else if(x > recentTable->max_arg() + FUNC_LENIENCE_FACTOR*m_len_smallest_interval){
     // x is near, do a linear search on the right
     return linearSearchRight(x, mostRecentlyUsed_idx);
   }
