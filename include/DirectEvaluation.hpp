@@ -20,17 +20,16 @@
   - Record where the function is being evaluated by specifying the -DFUNC_DEBUG
   flag at compile time. ArgumentRecorder is an extension of this class which does
   all the work recording function arguments.
-
-  TODO this class should support to_json but not from_json! Add another constructor
-  to build this class from a FunctionContainer and a filename
 */
 #pragma once
 
 #include "EvaluationImplementation.hpp"
 #include "FunctionContainer.hpp"
+#include "config.hpp" // FUNC_USE_BOOST
 #include "json.hpp"
-#include <fstream> //ifstream
 #include "StdRng.hpp"
+
+#include <fstream> //ifstream
 
 #ifdef FUNC_DEBUG
   #include "ArgumentRecord.hpp"
@@ -122,5 +121,5 @@ inline void DirectEvaluation<TIN,TOUT>::print_details_json(std::ostream& out)
 
   out << jsonStats.dump(2) << std::endl;
 }
-// TODO make to/from_json()
+// TODO make to_json()
 } // namespace func

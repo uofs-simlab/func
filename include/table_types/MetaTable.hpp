@@ -6,9 +6,8 @@
 
    NOTE: f stepSize divides max-min exactly then operator(max) will be out of array bounds!
    - Every table has an extra (unnecessary in most cases) table entry to avoid this
-   problem. TODO make this less kludgy. Users should be able to build a LUT from a function
-   that is not defined beyond the given maxArg!
-
+   problem.
+   
    N = number of coefficients used in underlying piecewise polynomials
    Provided Horner's method which is the most common table evaluation method in FunC
 
@@ -152,8 +151,6 @@ public:
   {
     /* might be able to get some speedup by using c++14's constexpr for this switch?
      * But idk hopefully the compiler optimizes this out anyways */
-    /* TODO probably worth making the hash an inline templated function
-     * (because this switch case is repeated verbatim in LinearInterpolationTable) */
     TOUT dx;
     unsigned int x0;
     switch(GT){
@@ -193,6 +190,11 @@ public:
       sum = dx*(m_table[x0].coefs[k] + sum);
     return m_table[x0].coefs[0]+sum;
   }
+
+  /* TODO it's worth making the hash an inline templated function
+   * (because the switch case in operator() is repeated verbatim in LinearInterpolationTable)
+   * and it will be repeated verbatim for diff */
+  //virtual TOUT diff(unsigned int N, TIN x) = 0;
 };
 
 /* Reading & writing functions for any LUT derived from MetaTable.
