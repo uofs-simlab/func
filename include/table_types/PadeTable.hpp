@@ -94,7 +94,7 @@ public:
 
       // find the coefficients of Q.
       arma::Mat<double> Q = arma::null(T.rows(M+1, M+N));
-      bool Q_has_root = false;
+      bool Q_has_root = false; // TODO it'll probably be significantly easier to use brent_find_minima from Boost to check for any zeros of Q
 
       /* TODO This can happen! Which is particularly confounding because Pade approximants are supposed to be unique...?? */
       if(Q.n_elem != N+1){
@@ -181,7 +181,7 @@ public:
         sum = x*(Q[k] + sum);
       sum += 1;
       // was Q(x) negative?
-      return sum < 0.0;
+      return sum <= 0.0;
     };
 #endif
 

@@ -8,7 +8,11 @@
   Usage example:
     CompositeLookupTable<double> comp_table(&fc, 1e-2, {-1,2},{4,5});
     // or
-    // CompositeLookupTable<double> comp_table(&fc, "UniformLinearInterpolationTable", {{-1,2},{4,5}});
+    // std::vector<std::string> names {"UniformLinearInterpolationTable", "UniformCubicInterpolationTable"};
+    // std::vector<double> steps {0.15,0.3};
+    // std::vector<func::SpecialPoint<double>> points {{-1.0,f(-1.0)}, {0.0,f(0.0)}, {1.0,f(1.0)}};
+    // func::CompositeLookupTable<double> comp_table(&fc, names, steps, points);
+
     double val = comp_table(0.87354);
 
   Notes:
@@ -20,16 +24,19 @@
   - operator() is much faster when repeatedly evaluating
   from the same table's range
 
+  TODO this classes is pretty messy. I vote that all it should have is a single
+  argument constructor (std::vector<std::unique_ptr<LookupTable>>) and then do a
+  binary search on each table's left endpoint (checking the most recently used table first too)
 
-  TODO this class should support to/from_json. Could perhaps use the
+  TODO this class should support to/from_json. We can use the
   unique_ptr<LookupTable> version of from_json in LookupTableFactory
 
-  TODO I think we should use the standard library's map where each LUT is hashed
-  based exclusively on its left endpoint. That would be much more maintainable &
-  we can still do the "most recently used LUT" thing
+  TODO Using the standard library's hashmap would probably be much faster. Each LUT
+  is easily hashed based exclusively on its left endpoint. That would also be more
+  maintainable. We can still easy check the most recently used LUT too
 
-  TODO I vote that the special points are only used for table generation. I think it's
-  likely too slow & inelegant to have the points do anything nontrivial in operator()
+  TODO Any code related to generating tables that are ideal for poles or discontinuities
+  should be moved to the LookupTableGenerator
   */
 #pragma once
 #include "EvaluationImplementation.hpp"
@@ -60,18 +67,18 @@ protected:
 
 public:
   // use these enums to explain why this point is special
+  enum LimitType { Equals=2, Approaches=0, Inf=1, NegInf=-1 };
   enum DiscontType { Discont=0, FirstDiscont=1, SecondDiscont=2, ThirdDiscont=3, None=8 };
-  enum LimitType { Equals=2, Approaches=0, Inf = 1, NegInf = -1 };
 protected:
   DiscontType m_discType;
   LimitType m_limType;
 
 public:
-  SpecialPoint(std::pair<TIN,TOUT> pt, DiscontType dt = None, LimitType lt = Equals) :
+  SpecialPoint(std::pair<TIN,TOUT> pt, LimitType lt = Equals, DiscontType dt = None) :
     m_point(pt), m_discType(dt), m_limType(lt) {}
 
   // TODO add support for initializer lists
-  SpecialPoint(TIN x, TOUT y, DiscontType dt = None, LimitType lt = Equals) :
+  SpecialPoint(TIN x, TOUT y, LimitType lt = Equals, DiscontType dt = None) :
     SpecialPoint(std::make_pair(x,y), dt, lt) {}
 
 
@@ -147,9 +154,13 @@ public:
       lut->print_details(out);
   }
 
-  // TODO just use to_json from each lut
-  void print_details_json(std::ostream & /* out */) override
-  {}
+  /* TODO this does not make it easy to reconstruct a CompositeLUT from a file!
+   * Needs to make an nlohmann::json and use it with each LUT's to_json */
+  void print_details_json(std::ostream &out) override
+  {
+    for(auto lut : mv_LUT)
+      lut->print_details_json(out);
+  }
 
   /* TODO this function is the only advantage we get from using shared_ptr. I don't think this
    * function should be used in 99% of use cases (just use a LUTGenerator instead). 

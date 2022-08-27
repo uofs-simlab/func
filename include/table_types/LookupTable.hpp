@@ -25,7 +25,6 @@ struct LookupTableParameters
   TIN maxArg;
   TIN stepSize;
 
-  // support initializer lists
   LookupTableParameters(TIN min, TIN max, TIN step) :
     minArg(min), maxArg(max), stepSize(step) {}
   LookupTableParameters(){}
