@@ -1,28 +1,29 @@
 /*
-  Generate a FunC LookupTable when given that table's name
-  and one of the following:
+  Generate a FunC LookupTable when given that table's name and one of the following:
   - stepsize
   - tolerance
   - memory size limit
   - filename
-  If gen_by_XXX is given a filename then on the first run, a table will be
-  generated from scratch and saved to filename. Subsequent runs will use the table
-  in filename instead of generating a table again.
-  TODO where does that file appear and do we like that?
+  If gen_by_XXX is given a filename then it will generate a table and save that output to
+  to filename. Future runs will use the table in filename instead of generating that table
+  from scratch again. filename will be with respect to the cwd unless users provide an
+  absolute path.
 
   If Boost is not available then users can only build tables by file.
 
-  MUST be able to cast TERR to TIN and vice versa.
-  TOUT
+  Provided as a header only class because it is templated on the error precision TERR.
+  We MUST be able to cast TERR to TIN and vice versa.
+  Ideally TERR satisfies: sqrt(epsilon_TERR) <= epsilon_TOUT.
 
-  Ideally TERR satisfies
-  sqrt(epsilon_TERR) <= epsilon_TOUT.
-  We'll make the default TERR the best available precision.
-
-
-  Also equipped to
+  This class is also equipped to
   - compute table error estimates at a given stepsize
   - plot a table implementation against the exact function
+
+  TODO:
+  - only include iostream when FUNC_DEBUG is defined because it makes this class take longer
+  to compile into user code
+  - Newton's iterate is currently unused because it was far too conservative in the past.
+  Might behave better with the new error estimate?
 */
 #pragma once
 #include "LookupTable.hpp"
@@ -33,6 +34,7 @@
 #include <string>
 #include <memory>
 #include <limits>
+#include <stdexcept>
 #include <cmath> // fabs, min
 
 #ifdef FUNC_USE_BOOST
@@ -84,7 +86,7 @@ public:
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_file(std::string filename, std::string tableKey = "")
   {
     if(filename.find(".json") == std::string::npos) // TODO are there any other json filename extensions?
-      throw std::invalid_argument("FunC can only read LUTs from json files");
+      throw std::invalid_argument("Error in func::LookupTableGenerator: not given a valid json file.");
 
     nlohmann::json jsonStats;
     std::ifstream(filename) >> jsonStats;
@@ -119,7 +121,7 @@ public:
   /* Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename = "");
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN desiredErr, std::string filename = ""){
-    return generate_by_tol(tableKey,desiredErr,desiredErr,filename); // user is not concerned with approximating very small f(x)
+    return generate_by_tol(tableKey,desiredErr,desiredErr,filename); // for users that aren't super concerned with approximating _very_ small f(x)
   }
 
   /* Generate a table takes up desiredSize bytes */
@@ -261,7 +263,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   unsigned long size2 = impl2->size();
 
   if (size2 == size1) {
-    throw "Query tables have same size.";
+    throw std::logic_error("Error in func::LookupTableGenerator: Query tables have same size.");
   }
 
   /* approximate step size for for desired impl size
@@ -280,7 +282,7 @@ template <typename TIN, typename TOUT, typename TERR>
 std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename)
 {
 #ifndef FUNC_USE_BOOST
-    static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate any table by tol without Boost");
+    static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate any LUT by tol without Boost");
 #else
   if(filename != "" && file_exists(filename))
     return generate_by_file(filename, tableKey);
@@ -368,12 +370,9 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
     Throw when the log-Newton method did not converge AND there are no
     bracketing iterations performed.
    */
-  if ( !NEWTON_SUCCESS_FLAG && !BRACKET_MAX_IT) {
-    std::cerr << "WARNING: No bracketing iterations specified." << std::endl;
-    std::stringstream throwMessage;
-    throwMessage << "log-Newton method did not converge in " << N_NEWTON_MAX_IT << " steps.";
-    throw throwMessage;
-  }
+  if(!NEWTON_SUCCESS_FLAG && !BRACKET_MAX_IT)
+    throw std::logic_error("Error in func::LookupTableGenerator: No bracketing iterations specified. log-Newton method did not converge in " + std::to_string(N_NEWTON_MAX_IT) + " steps.");
+  
   /*
     Use the guess step size as an initialization to bracket_and_solve
   */
