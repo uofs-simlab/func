@@ -3,11 +3,11 @@
   coefficients solved using Armadillo matrices)
 
   Usage example for a 4th degree interpolant:
-    ArmadilloPrecomputedInterpolationTable<double,double,4> look(&function,LookupTableParameters<double>{0,10,0.0001});
+    ArmadilloInterpolationTable<double,double,4> look(&function,LookupTableParameters<double>{0,10,0.0001});
     double val = look(0.87354);
 
   Notes:
-  - This class only works if TOUT can be cast to double. 
+  - This class only works if TOUT and TIN can both be cast to double. 
     Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
     with float or double (not even long double!) and arma::field is useless.
     TODO disable constructor if TOUT cannot be cast to double
@@ -41,7 +41,7 @@
 namespace func {
 
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
-class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N+1,GT>
+class ArmadilloInterpolationTable final : public MetaTable<TIN,TOUT,N+1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
@@ -50,7 +50,7 @@ class ArmadilloPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,N
   static const std::string classname;
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  ArmadilloPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  ArmadilloInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
       std::move(MetaTable<TIN,TOUT,N+1,GT>(func_container, par)) :
@@ -99,7 +99,7 @@ public:
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
-      arma::vec xvec = arma::linspace(x,x+h,N+1);
+      arma::vec xvec = arma::linspace(static_cast<double>(x),static_cast<double>(x+h),N+1);
       arma::vec y(N+1);
       // TODO is this performed in simd: y.for_each([this](Mat<double>::elem_type& xk) { xk = static_cast<double>(m_func(static_cast<TIN>(xk))); });
       for (unsigned int k=0; k<N+1; k++)
@@ -128,14 +128,14 @@ public:
 };
 
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
-const std::string ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>() + "ArmadilloPrecomputedInterpolationTable<" + std::to_string(N) + ">";
+const std::string ArmadilloInterpolationTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>() + "ArmadilloInterpolationTable<" + std::to_string(N) + ">";
 
 // define friendlier names
 template <typename TIN, typename TOUT, unsigned int N>
-using UniformArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,GridTypes::UNIFORM>;
+using UniformArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT, unsigned int N>
-using NonUniformArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM>;
+using NonUniformArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT, unsigned int N>
-using NonUniformPseudoArmadilloPrecomputedInterpolationTable = ArmadilloPrecomputedInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM_PSEUDO>;
+using NonUniformPseudoArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM_PSEUDO>;
 
 } // namespace func

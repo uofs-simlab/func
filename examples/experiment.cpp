@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
   cout << "# Range:      (" << tableMin << "," << tableMax << ")" << endl;
 
   implCompare.compute_timing_statistics();
-  implCompare.sort_timings("max");
+  implCompare.sort_timings(SortType::max);
   implCompare.print_summary(std::cout);
 
   return 0;

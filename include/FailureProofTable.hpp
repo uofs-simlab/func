@@ -111,13 +111,15 @@ public:
   TOUT operator()(TIN x) override
   {
     // check if x is in the range of the table
-    if(x < m_minArg || m_maxArg < x){
+    //if((x - m_minArg)*(m_maxArg - x) > 0){ // possible micro-optimization?
+    if((m_minArg < x) && (x < m_maxArg)){
+      return (*mp_LUT)(x);
+    }else{
       #ifdef FUNC_DEBUG
         mp_recorder->record_arg(x);
       #endif
       return m_func(x);
     }
-    return (*mp_LUT)(x);
   }
 
   void print_details(std::ostream &out) override 

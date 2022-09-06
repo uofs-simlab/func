@@ -30,6 +30,8 @@ using ImplType = EvaluationImplementation<TIN,TOUT>;
 template <typename TIN, typename TOUT>
 using ImplContainer = std::vector<std::unique_ptr<ImplType<TIN,TOUT>>>;
 
+enum class SortType {min, mean, max};
+
 /*
   ImplTimer struct attaches additional data for timing an implementation
   to the implementation
@@ -73,11 +75,11 @@ private:
 
   ImplContainer<TIN,TOUT>          m_implementations;
   std::vector<ImplTimer<TIN,TOUT>> m_implTimers;
-  unsigned                                 m_numberOfImplementations;
+  unsigned int                     m_numberOfImplementations;
 
-  std::vector<TimeContainer>  m_evaluationTimers;
+  std::vector<TimeContainer> m_evaluationTimers;
 
-  TIN                     m_minArg,m_maxArg;
+  TIN m_minArg,m_maxArg;
 
   std::unique_ptr<TOUT[]> m_evalHolder;
 
@@ -90,10 +92,10 @@ private:
   std::unique_ptr<TIN[]>             mp_randomEvaluations;
   int                                m_nEvals;
 
-  struct TimingStatistics
-  {
-    double minTime, maxTime, meanTime;
-  } m_timingStatistics;
+  //struct TimingStatistics
+  //{
+  //  double minTime, maxTime, meanTime;
+  //} m_timingStatistics;
 
   /* Fill mp_randomEvaluations with random points to be evaluated */
   void draw_new_sample_points()
@@ -140,12 +142,17 @@ public:
       itImplTimer.compute_timing_stats();
   }
 
-  void sort_timings(std::string type = "mean");
-  void print_statistics_json(std::ostream&);
+  /* Sort the vector of implementations (m_implTimers) based on their max, mean, or min times */
+  void sort_timings(SortType type = SortType::mean);
+
+  /* Print out the computed statistics for each EvaluationImplementation (no raw timings are displayed) */
+  void print_summary(std::ostream&);
+
+  /* Print out the raw timings for each EvaluationImplementation */
   void print_details(std::ostream&);
+  void print_details_json(std::ostream&);
   void print_csv_header(std::ostream&);
   void print_details_csv(std::ostream&);
-  void print_summary(std::ostream&);
 
   std::vector<double> fastest_times()
   {
@@ -187,7 +194,7 @@ inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
   }
 
   /* Ensure all implementations are using the same min/max range */
-  // why do we need all the implementations to use the same min/max range?
+  // TODO I don't think we need all the implementations to use the same min/max range
   m_minArg = m_implementations.front()->min_arg();
   m_maxArg = m_implementations.front()->max_arg();
 
@@ -208,28 +215,36 @@ inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
 }
 
 /* sort the vector of timings based on the min, max, or mean times */
+
 template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::sort_timings(std::string type)
+inline void ImplementationComparator<TIN,TOUT>::sort_timings(SortType type)
 {
-  // default sort by mean time
-  if (!type.compare("mean")) {
-    sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
-	       { return (a.meanTime < b.meanTime); } );
-  } else if (!type.compare("min")) {   // or sort by minimum (ie. best cases)
-    sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
-	       { return (a.minTime < b.minTime); } );
-  } else if (!type.compare("max")) {   // or sort by maximum time (ie. worst cases)
-    sort( m_implTimers.begin(), m_implTimers.end(),
-	       [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
-	       { return (a.maxTime < b.maxTime); } );
+  switch(type){
+  case SortType::mean: // default sort by mean time
+  {
+    sort(m_implTimers.begin(), m_implTimers.end(),
+        [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
+        { return (a.meanTime < b.meanTime); } );
+  }
+  case SortType::min: // or sort by minimum (ie. best case performance)
+  {
+    sort(m_implTimers.begin(), m_implTimers.end(),
+        [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
+        { return (a.minTime < b.minTime); } );
+  }
+  case SortType::max: // or sort by maximum time (ie. worst case performance)
+  {
+    sort(m_implTimers.begin(), m_implTimers.end(),
+        [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
+        { return (a.maxTime < b.maxTime); } );
+  }
+  default: { throw std::logic_error("Broken switch case in func::ImplementationComparator"); }
   }
 }
 
 /* Implementation of functions that print to an ostream */
 template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::print_statistics_json(std::ostream &out)
+inline void ImplementationComparator<TIN,TOUT>::print_details_json(std::ostream &out)
 {
   /* add implementations to vector */
   nlohmann::json jsonStats;
@@ -250,10 +265,9 @@ inline void ImplementationComparator<TIN,TOUT>::print_statistics_json(std::ostre
 template <typename TIN, typename TOUT>
 inline void ImplementationComparator<TIN,TOUT>::print_details(std::ostream &out)
 {
-  /*
-     Print details of all timings
+  /* Print details of all timings
      temp_tin and temp_tout are needed to print template values (but the string is probably mangled).
-     A solution involving decltype is probably more legible */
+     There are significantly more legible solutions but this is good enough until someone complains */
   TIN temp_tin;
   TOUT temp_tout;
 

@@ -25,7 +25,6 @@ struct LookupTableParameters
   TIN maxArg;
   TIN stepSize;
 
-  // support initializer lists
   LookupTableParameters(TIN min, TIN max, TIN step) :
     minArg(min), maxArg(max), stepSize(step) {}
   LookupTableParameters(){}
@@ -82,8 +81,7 @@ public:
    * 1. virtual + and * methods will be needed for curried LUTs to work. Will have to make sure
    * min, max, tablemax, and stepsize of both tables are all within a very small tolerance.
    * 2. return an approximation to f^(N)(x) */
-  //template <unsigned int N>
-  //virtual TOUT diff(TIN x) = 0;
+  //virtual TOUT diff(unsigned int N, TIN x) = 0;
 
   LookupTable() = default;
   virtual ~LookupTable(){};

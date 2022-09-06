@@ -4,14 +4,14 @@
 #include "MetaTable.hpp"
 
 /* LUT implementations */
-#include "ArmadilloPrecomputedInterpolationTable.hpp"
+#include "ArmadilloInterpolationTable.hpp"
 #include "ConstantTaylorTable.hpp"
 #include "CubicHermiteTable.hpp"
-#include "CubicPrecomputedInterpolationTable.hpp"
+#include "CubicInterpolationTable.hpp"
 #include "LinearInterpolationTable.hpp"
-#include "LinearPrecomputedInterpolationTable.hpp"
+#include "LinearRawInterpolationTable.hpp"
 #include "PadeTable.hpp"
-#include "QuadraticPrecomputedInterpolationTable.hpp"
+#include "QuadraticInterpolationTable.hpp"
 #include "LinearTaylorTable.hpp"
 #include "QuadraticTaylorTable.hpp"
 #include "CubicTaylorTable.hpp"

@@ -249,7 +249,8 @@ class ArgumentRecord
       out << "Recorded args were sampled the most often from the subinterval "
           << ith_interval(m_peak_index) << " with " << mv_histogram[m_peak_index] << " evaluations ("
           << mv_histogram[m_peak_index]/((double) complete_total) << "\% of the total evaluations).\n";
-      // iostream will automatically "round to prec digits" but the rounding can make the min/max args too large/small respectively by default
+      /* iostream rounds to like 6 digits by default but the rounding can make the min/max args too large/small 
+       * which is annoying so we'll just print every digit of the output and let users round on their own */
       out << "The largest argument seen was x=" << to_string_with_precision(m_max_recorded) << "\n";
       out << "The lowest argument seen was x=" << to_string_with_precision(m_min_recorded) << std::endl;
     }

@@ -86,7 +86,7 @@ public:
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_file(std::string filename, std::string tableKey = "")
   {
     if(filename.find(".json") == std::string::npos) // TODO are there any other json filename extensions?
-      throw std::invalid_argument("Error in func::LookupTableGenerator: not given a valid json file.");
+      throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_file: filename is not a valid json file.");
 
     nlohmann::json jsonStats;
     std::ifstream(filename) >> jsonStats;
@@ -166,7 +166,7 @@ private:
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 {
-  // large relTol => don't worry about small f(x) in error metric. Small relTol => small |f(x)| must be approximated very well!
+  // small relTol => don't worry about small f(x) in error metric. large relTol => small |f(x)| must be approximated very well!
   // Set relTol = r_tol/a_tol.
   OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR relTol, TERR desiredErr) :
     m_parent(parent), m_tableKey(tableKey), m_relTol(relTol), m_desiredErr(desiredErr) {}
@@ -187,11 +187,14 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     boost::uintmax_t max_it = 20;
 
     TERR max_err = 0;
-    TERR err;
 
     /* Want a small bracket for brent's method so for each interval in the table,
      * compute the maximum error.
-     * - Be careful about the top most interval b/c tableMaxArg can be greater than max */
+     * - Be careful about the top most interval b/c tableMaxArg can be greater than max
+     *   (and we don't care about error outside of table bounds)
+     * - TODO It's likely worth parallelizing this for loop because software implementations of
+     *   high precision floats are quite slow */
+    #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_intervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
@@ -203,10 +206,14 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
         xtop = static_cast<TERR>(m_parent.m_max);
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get(),m_relTol),x,xtop,bits,max_it);
-      err = r.second;
+      TERR err = r.second;
+
+      #pragma omp critical
+      {
       if(err < max_err){
         max_err = err;
-        //std::cerr << -err << " error when x=" << r.first << "\n";
+        //std::cerr << -err << " error at x=" << r.first << "\n";
+      }
       }
     }
 
@@ -239,9 +246,9 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
     return generate_by_file(filename, tableKey);
 
   /* Use 2 query points to get relationship */
-  const unsigned long N1  = 2;
+  const unsigned long N1 = 2;
   const TIN step1 = (m_max-m_min)/N1;
-  const unsigned long N2  = 10;
+  const unsigned long N2 = 10;
   const TIN step2 = (m_max-m_min)/N2;
 
   LookupTableParameters<TIN> par1;
@@ -262,19 +269,25 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   unsigned long size1 = impl1->size();
   unsigned long size2 = impl2->size();
 
-  if (size2 == size1) {
-    throw std::logic_error("Error in func::LookupTableGenerator: Query tables have same size.");
-  }
+  // TODO this shouldn't ever be a problem, but I suppose the check is nice
+  if (size2 == size1)
+    throw std::logic_error("Error in func::LookupTableGenerator.generate_by_impl_size: Query tables have same size");
 
   /* approximate step size for for desired impl size
-     (assuming linear relationship of num_intervals to size */
-  par1.stepSize = 1.0/static_cast<TIN>((N2-N1)*(desiredSize-size1)/(size2-size1) + N1);
+   * (assuming linear relationship of num_intervals to size */
+  const unsigned long N3 = (N2-N1)*(desiredSize-size1)/(size2-size1) + N1;
+  par1.stepSize = (m_max-m_min)/static_cast<TIN>(N3);
+
+  if (par1.stepSize <= 0)
+    throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_impl_size: Requested memory size is too small");
 
   auto lut = factory.create(tableKey, mp_func_container, par1);
   if(filename != ""){
     std::ofstream out_file(filename);
     lut->print_details_json(out_file);
   }
+  //std::cerr << "desiredSize = " << desiredSize << "\n";
+  //std::cerr << "actual size is " << lut->size() << "\n";
   return lut;
 }
 

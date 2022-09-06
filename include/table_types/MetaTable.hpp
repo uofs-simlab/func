@@ -6,9 +6,8 @@
 
    NOTE: f stepSize divides max-min exactly then operator(max) will be out of array bounds!
    - Every table has an extra (unnecessary in most cases) table entry to avoid this
-   problem. TODO make this less kludgy. Users should be able to build a LUT from a function
-   that is not defined beyond the given maxArg!
-
+   problem.
+   
    N = number of coefficients used in underlying piecewise polynomials
    Provided Horner's method which is the most common table evaluation method in FunC
 
@@ -69,7 +68,7 @@ const std::string grid_type_to_string() {
       return "NonUniform";
     case GridTypes::NONUNIFORM_PSEUDO:
       return "NonUniformPseudo";
-    default: { throw std::invalid_argument("Broken switch case in func::MetaTable"); }
+    default: { throw std::logic_error("Broken switch case in func::MetaTable"); }
   } 
 }
 
@@ -130,9 +129,14 @@ public:
   }
 
   // give the nlohmann json functions access to every member variable (note the silly template names)
-  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1>
+  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void to_json(nlohmann::json& jsonStats, const MetaTable<TIN1,TOUT1,N1,GT1>& lut);
-  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1>
+
+  template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void from_json(const nlohmann::json& jsonStats, MetaTable<TIN1,TOUT1,N1,GT1>& lut);
 
   /* public access to protected member vars */
@@ -147,8 +151,6 @@ public:
   {
     /* might be able to get some speedup by using c++14's constexpr for this switch?
      * But idk hopefully the compiler optimizes this out anyways */
-    /* TODO probably worth making the hash an inline templated function
-     * (because this switch case is repeated verbatim in LinearInterpolationTable) */
     TOUT dx;
     unsigned int x0;
     switch(GT){
@@ -174,7 +176,7 @@ public:
       case GridTypes::NONUNIFORM_PSEUDO:
         {
         // find the subinterval x lives in
-        dx  = m_transferFunction.g_inv(x);
+        dx  = static_cast<TOUT>(m_transferFunction.g_inv(x));
         // just take the fractional part of dx as x's location in this interval
         x0  = static_cast<unsigned>(dx);
         dx -= x0;
@@ -188,6 +190,11 @@ public:
       sum = dx*(m_table[x0].coefs[k] + sum);
     return m_table[x0].coefs[0]+sum;
   }
+
+  /* TODO it's worth making the hash an inline templated function
+   * (because the switch case in operator() is repeated verbatim in LinearInterpolationTable)
+   * and it will be repeated verbatim for diff */
+  //virtual TOUT diff(unsigned int N, TIN x) = 0;
 };
 
 /* Reading & writing functions for any LUT derived from MetaTable.
@@ -198,13 +205,12 @@ public:
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<func::UniformLinearPrecomputedInterpolationTable<TIN,TOUT>>();
   ```
-  TODO disable these if TIN/TOUT do not support to/from_json?
- * */
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
+ * Uses SFINAE to automatically disable these functions if TIN or TOUT do not support nlohmann's json */
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT>::value, bool>::type = true>
 void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
 {
-  //(void) jsonStats;
-  //(void) lut;
   jsonStats["_comment"] = "FunC lookup table data";
   jsonStats["name"] = lut.m_name;
   jsonStats["minArg"] = lut.m_minArg;
@@ -228,12 +234,21 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
       jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)] = lut.table_entry(i,j);
 }
 
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<!(std::is_constructible<nlohmann::json,TIN >::value && 
+                                   std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
+void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
+{
+  throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
+}
+
 /* this variant of from_json will be called for any specific implementation of a LUT
  * inhereting from MetaTable */
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
-void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut) {
-  //(void) jsonStats;
-  //(void) lut;
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 
+                                 std::is_constructible<nlohmann::json,TOUT>::value, bool>::type = true>
+void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut)
+{
   // name checking happens in MetaTable's constructor
   jsonStats.at("name").get_to(lut.m_name);
   jsonStats.at("minArg").get_to(lut.m_minArg);
@@ -262,6 +277,14 @@ void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut) {
   // rebuild the transfer function
   lut.m_transferFunction = TransferFunctionSinh<TIN>(lut.m_minArg,lut.m_tableMaxArg,lut.m_stepSize,
       jsonStats["transfer_function_coefs"].get<std::array<TIN,4>>());
+}
+
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
+         typename std::enable_if<!(std::is_constructible<nlohmann::json,TIN >::value && 
+                                   std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
+void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut)
+{
+  throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
 }
 
 } // namespace func

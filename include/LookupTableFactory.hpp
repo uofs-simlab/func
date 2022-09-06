@@ -3,7 +3,7 @@
   - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
   - Note: New implementations must be added to the registry by adding to the ::initialize() member function
 
-  - TODO would it make sense to just hardcode OTHER to LookupTableParameters<TIN>
+  - TODO I think we might as well just hardcode OTHER to LookupTableParameters<TIN>
 */
 #pragma once
 #include "TableIncludes.hpp"
@@ -121,37 +121,37 @@ void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
 
   FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticInterpolationTable);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearRawInterpolationTable);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,7);
 
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformQuadraticInterpolationTable);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearRawInterpolationTable);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,7);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,7);
 
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoQuadraticInterpolationTable);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearRawInterpolationTable);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,7);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,7);
 }
 
 /*
@@ -194,7 +194,7 @@ LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<std::unique_ptr<func::LookupTable<TIN,TOUT>>>(); // call the constructor (or the from_json) referred to by "name"
 ```
-Main drawback of this function is we lose access to the function that generated that LUT
+Only drawback of this function is we lose access to the function that generated that LUT
 this works because std::unique_ptr<T> is default constructable
 */
 template <typename TIN, typename TOUT>
