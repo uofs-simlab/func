@@ -31,6 +31,7 @@ Notes:
 #include <limits> // std::numeric_limits<T>::digits
 #include <array> // std::array
 #include <utility> // std::pair
+#include <type_traits>
 
 #include "FunctionContainer.hpp"
 
@@ -64,10 +65,18 @@ public:
   //TransferFunctionSinh(TIN minArg, TIN tableMaxArg, TIN stepSize) :
   //  TransferFunctionSinh<TIN>(minArg, tableMaxArg, stepSize, {-minArg/stepSize,1/stepSize,0,0}) {}
 
+  //template <typename TOUT,
+  //         typename std::enable_if<!std::is_arithmetic<TOUT>::value, bool>::type = true>
+  //TransferFunctionSinh(FunctionContainer<TIN,TOUT> *fc, TIN minArg, TIN tableMaxArg, TIN stepSize) :
+  //  m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize)
+  //{
+  //}
+
   /* Build the coefficients in g_inv 
-   * TODO TOUT has to be numeric (ie cannot be LookupTable<...>).
-   * We should specialize this constructor for wacky TOUT (or at least disable it) */
+   * TODO TOUT only needs to be defined for sqrt() (ie cannot be LookupTable<...>).
+   * So, it doesn't necessarily need to be accepted by std::is_arithmetic */
   template<typename TOUT>
+           //typename std::enable_if<std::is_arithmetic<TOUT>::value, bool>::type = true>
   TransferFunctionSinh(FunctionContainer<TIN,TOUT> *fc,
       TIN minArg, TIN tableMaxArg, TIN stepSize) :
     m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize)
