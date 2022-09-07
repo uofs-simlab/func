@@ -77,6 +77,10 @@ public:
     m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // always >= m_maxArg    
   }
 
+  // TODO build a constant LUT from TIN to make casting from TIN -> LUT<TIN,TOUT> hopefully convenient?
+  //LookupTable(TIN x) : LookupTable<TIN,TOUT>(FunctionContainer<TIN,TOUT> {[x](TIN y){return static_cast<TOUT>(x);} },
+  //    LookupTableParameters<double> {-std::numeric_limits<TIN>::infinity(),std::numeric_limits<T>::infinity(),std::numeric_limits<T>::infinity()}) {}
+
   /* TODO
    * 1. virtual + and * methods will be needed for curried LUTs to work. Will have to make sure
    * min, max, tablemax, and stepsize of both tables are all within a very small tolerance.
