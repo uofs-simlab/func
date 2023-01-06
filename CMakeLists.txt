@@ -11,7 +11,7 @@ project(
   DESCRIPTION "Build better lookup tables"
   LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 # cmake will look in our cmake directory for FindXXX.cmake files
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
@@ -19,6 +19,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 # ==== Search for dependencies ====
 option(FUNC_USE_BOOST "Use Boost library" ON)
 set(MIN_BOOST_VERSION 1.71.0)
+# TODO this line may cause the build to fail if Boost doesn't exist on the user's computer.
+# CMake's provided FindBoost might be the problem?
 find_package(Boost ${MIN_BOOST_VERSION})
 
 if(FUNC_USE_BOOST)
@@ -51,9 +53,8 @@ endif()
 
 # use FindQuadmath.cmake so we can write find_package(Quadmath)
 # This will mostly just test whether we're compiling with gcc/icpc
-# TODO FunC LookupTableGenerator is header only so it will only be built in user code.
-# It's nice to give people our FindQuadmath.cmake, but it'd probably be better to
-# just use a template for the error-precision
+# TODO Our LookupTableGenerator is header only so it will only be built in user code.
+# It might be nice to give people our FindQuadmath.cmake, but this should be removed
 option(FUNC_USE_QUADMATH "Use quadmath library" ON)
 find_package(Quadmath)
 
@@ -63,6 +64,7 @@ if(FUNC_USE_QUADMATH AND NOT QUADMATH_FOUND)
   message(WARNING "Could not find quadmath. If you wish to use higher accuracy error estimates with the LookupTableGenerator then reconfigure to use the gnu or intel c++ compilers: ie set -DCMAKE_CXX_COMPILER=(g++-XX|icpc) (g++ on MacOS might be an alias for clang++). Silence this warning by setting -DUSE_QUADMATH=OFF")
 endif()
 
+# every class using openmp is header only so this optional dependency can be removed 
 option(FUNC_USE_OPENMP "Use OpenMP" ON)
 find_package(OpenMP)
 if(OpenMP_FOUND)
@@ -73,7 +75,7 @@ if(OpenMP_FOUND)
     message(STATUS "Using OpenMP for threadsafety")
   endif()
 else()
-  # TODO use std::lib instead
+  # TODO maybe use std::lib instead?
   option(FUNC_USE_OPENMP OFF)
 endif()
 
