@@ -36,6 +36,7 @@
  * Play around with this to see which OpenMP option for parallelizing LUT construction for loop is best.
  * We know the alignment of m_table so that might give some speedup. */
 //_Pragma("omp simd aligned(m_table:sizeof(TOUT))")
+#define FUNC_BUILDPAR _Pragma("omp parallel for")
 //#pragma omp simd aligned(m_table:sizeof(TOUT)) // needs the constructor to be declared simd
 // assuming each iteration will take about the same amount of time
 //#pragma omp parallel for schedule(static)
@@ -46,11 +47,11 @@ static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
 
 /* Our convention for writing polynomials is:
  *  p(x) = m_table[x0].coefs[0] + m_table[x0].coefs[1]*x + ... + m_table[x0].coefs[N-1]x^(N-1)
- * but using a Horner's style eval (see operator() below)
+ * operator() does a Horner's style evaluation>
  *
- * LUTs can have other things in their polynomial struct
- * (2D arrays will have coefs for x & y dimensions of each subsquare,
- * LUTs could have their derivative's coefs in polynomial x0, etc). */
+ * Note: LUTs can have other things in their polynomial struct
+ * (2D LUTs may have coefs for x & y dimensions of each subsquare,
+ * and LUTs could have that polynomial's derivative's coefs, etc). */
 template <typename TOUT, unsigned int N>
 struct alignas(sizeof(TOUT)*alignments[N]) polynomial {
   static const unsigned int num_coefs = N;
@@ -145,14 +146,11 @@ public:
   TIN grid_entry(unsigned int i) const { return m_grid[i]; }
   std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
 
-
   /* Provide the most common hash. The compiler should simplify this method when templates are instantiated */
-  TOUT operator()(TIN x) override
-  {
+  inline std::pair<unsigned int, TOUT> hash(TIN x){
     /* might be able to get some speedup by using c++14's constexpr for this switch?
      * But idk hopefully the compiler optimizes this out anyways */
-    TOUT dx;
-    unsigned int x0;
+    unsigned int x0; TOUT dx;
     switch(GT){
       case GridTypes::UNIFORM:
         {
@@ -183,6 +181,13 @@ public:
         break;
         }
     }
+    return std::make_pair(x0, dx);
+  }
+
+  TOUT operator()(TIN x) override
+  {
+    unsigned int x0; TOUT dx;
+    std::tie(x0,dx) = hash(x);
     
     // general degree horners method, evaluated from the inside out.
     TOUT sum = 0;
@@ -191,9 +196,6 @@ public:
     return m_table[x0].coefs[0]+sum;
   }
 
-  /* TODO it's worth making the hash an inline templated function
-   * (because the switch case in operator() is repeated verbatim in LinearInterpolationTable)
-   * and it will be repeated verbatim for diff */
   //virtual TOUT diff(unsigned int N, TIN x) = 0;
 };
 
@@ -239,6 +241,8 @@ template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
                                    std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
 void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
 {
+  (void) jsonStats;
+  (void) lut;
   throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
 }
 
@@ -284,6 +288,8 @@ template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
                                    std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
 void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut)
 {
+  (void) jsonStats;
+  (void) lut;
   throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
 }
 

@@ -45,6 +45,8 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
+
+    FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       TIN x;
       // (possibly) transform the uniform grid into a nonuniform grid
@@ -65,43 +67,15 @@ public:
     MetaTable<TIN,TOUT,1,GT>(func_container, filename,
         grid_type_to_string<GT>() + "LinearRawInterpolationTable") {}
 
-  // operator() is slightly different from MetaTable's provided Horner's method
+  // this operator() is slightly different from MetaTable's provided Horner's method
   TOUT operator()(TIN x) override
   {
-    //enum class GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
-    // hash is copied from MetaTable
-    TOUT dx;
-    unsigned int x0;
-    switch(GT){
-    case GridTypes::UNIFORM:
-      {
-      // nondimensionalized x position, scaled by step size
-      dx = static_cast<TOUT>(m_stepSize_inv*(x-m_minArg));
-      // index of previous table entry
-      x0 = static_cast<unsigned>(dx);
-      // value of table entries around x position
-      dx -= x0;
-      break;
-      }
-    case GridTypes::NONUNIFORM:
-      {
-      x0 = static_cast<unsigned>(m_transferFunction.g_inv(x));
-      TIN h   = m_grid[x0+1] - m_grid[x0];
-      dx = (x - m_grid[x0])/h;
-      break;
-      }
-    case GridTypes::NONUNIFORM_PSEUDO:
-      {
-      dx = m_transferFunction.g_inv(x);
-      x0 = static_cast<unsigned>(dx);
-      dx -= x0;
-      break;
-      }
-    }
+    unsigned int x0; TOUT dx;
+    std::tie(x0,dx) = MetaTable<TIN,TOUT,1,GT>::hash(x);
 
     // linear interpolation
-    TOUT y1  = m_table[x0].coefs[0];
-    TOUT y2  = m_table[x0+1].coefs[0];
+    TOUT y1 = m_table[x0].coefs[0];
+    TOUT y2 = m_table[x0+1].coefs[0];
     return y1+dx*(y2-y1);
   }
 };
