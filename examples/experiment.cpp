@@ -62,18 +62,18 @@ int main(int argc, char* argv[])
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-    //"UniformArmadilloPrecomputedInterpolationTable<4>",
-    //"UniformArmadilloPrecomputedInterpolationTable<5>",
-    //"UniformArmadilloPrecomputedInterpolationTable<6>",
-    //"UniformArmadilloPrecomputedInterpolationTable<7>",
+    //"UniformArmadilloInterpolationTable<4>",
+    //"UniformArmadilloInterpolationTable<5>",
+    //"UniformArmadilloInterpolationTable<6>",
+    //"UniformArmadilloInterpolationTable<7>",
     //"UniformConstantTaylorTable",
     //"UniformCubicHermiteTable",
-    //"UniformCubicPrecomputedInterpolationTable",
+    //"UniformCubicInterpolationTable",
     //"UniformCubicTaylorTable",
+    "UniformLinearRawInterpolationTable",
     "UniformLinearInterpolationTable",
-    "UniformLinearPrecomputedInterpolationTable",
     "UniformLinearTaylorTable",
-    "UniformQuadraticPrecomputedInterpolationTable",
+    "UniformQuadraticInterpolationTable",
     "UniformQuadraticTaylorTable",
   };
 
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
   cout << "# Range:      (" << tableMin << "," << tableMax << ")" << endl;
 
   implCompare.compute_timing_statistics();
-  implCompare.sort_timings(SortType::max);
+  implCompare.sort_timings(SortType::worst);
   implCompare.print_summary(std::cout);
 
   return 0;

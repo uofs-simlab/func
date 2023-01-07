@@ -30,7 +30,7 @@ using ImplType = EvaluationImplementation<TIN,TOUT>;
 template <typename TIN, typename TOUT>
 using ImplContainer = std::vector<std::unique_ptr<ImplType<TIN,TOUT>>>;
 
-enum class SortType {min, mean, max};
+enum class SortType {best, mean, worst};
 
 /*
   ImplTimer struct attaches additional data for timing an implementation
@@ -215,28 +215,30 @@ inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
 }
 
 /* sort the vector of timings based on the min, max, or mean times */
-
 template <typename TIN, typename TOUT>
 inline void ImplementationComparator<TIN,TOUT>::sort_timings(SortType type)
 {
   switch(type){
+  case SortType::best: // sort by minimum (ie. best case performance)
+  {
+    sort(m_implTimers.begin(), m_implTimers.end(),
+        [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
+        { return (a.minTime < b.minTime); } );
+    break;
+  }
   case SortType::mean: // default sort by mean time
   {
     sort(m_implTimers.begin(), m_implTimers.end(),
         [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
         { return (a.meanTime < b.meanTime); } );
+    break;
   }
-  case SortType::min: // or sort by minimum (ie. best case performance)
-  {
-    sort(m_implTimers.begin(), m_implTimers.end(),
-        [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
-        { return (a.minTime < b.minTime); } );
-  }
-  case SortType::max: // or sort by maximum time (ie. worst case performance)
+  case SortType::worst: // sort by maximum time (ie. worst case performance)
   {
     sort(m_implTimers.begin(), m_implTimers.end(),
         [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
         { return (a.maxTime < b.maxTime); } );
+    break;
   }
   default: { throw std::logic_error("Broken switch case in func::ImplementationComparator"); }
   }
