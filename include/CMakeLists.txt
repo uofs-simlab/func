@@ -50,7 +50,8 @@ target_include_directories(func ${FUNC_PUBLIC}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/table_types>
   )
 
-target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
+#target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
+target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost ${OpenMP_CXX_LIBRARIES})
 
 # TODO add more required compile features (it's nice to have cmake determine the required standard on its own)
 target_compile_features(func ${FUNC_PRIVATE} cxx_range_for)
