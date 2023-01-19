@@ -1,6 +1,6 @@
 # ==== Define Target func ====
 # Assumes these variables are defined:
-# TODO
+# ARMADILLO_LIBRARIES QUADMATH_LIBRARIES Boost_LIBRARIES OpenMP_CXX_LIBRARIES
 
 # We shouldn't have written any cpp files by hand so globbing here is fine
 file(GLOB func_src ${func_src_dir}/*.cpp)
@@ -50,10 +50,10 @@ target_include_directories(func ${FUNC_PUBLIC}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/table_types>
   )
 
-#target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
-target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost ${OpenMP_CXX_LIBRARIES})
+target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
+#target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} ${Boost_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
 
-# TODO add more required compile features (it's nice to have cmake determine the required standard on its own)
+# TODO add more required compile features (it's nice to have cmake determine the minimal standard on its own)
 target_compile_features(func ${FUNC_PRIVATE} cxx_range_for)
 
 # Enable compiler warnings, error on warnings
@@ -61,7 +61,7 @@ if (MSVC) # Microsoft
     # warning level 4 and all warnings as errors
     target_compile_options(func ${FUNC_PRIVATE} /W4 /WX)
 else() # GCC and Clang
-    target_compile_options(func ${FUNC_PRIVATE} -Wall -Wextra -pedantic -Werror)
+    target_compile_options(func ${FUNC_PRIVATE} -Wall -Wextra -pedantic) #-Werror)
     # Disable variadic macros warnings (Needed in FUNC_STR_EXPAND)
     target_compile_options(func ${FUNC_PRIVATE} -Wno-variadic-macros)
 endif()
@@ -107,15 +107,15 @@ configure_package_config_file(${CMAKE_SOURCE_DIR}/cmake/func-config.cmake.in
 )
 
 install(FILES
-  ${CMAKE_SOURCE_DIR}/cmake/FindQuadmath.cmake
+  #${CMAKE_SOURCE_DIR}/cmake/FindQuadmath.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/func-config.cmake
   DESTINATION ${INSTALL_CONFIGDIR}
 )
 
 # Exporting from the build tree
-configure_file(${CMAKE_SOURCE_DIR}/cmake/FindQuadmath.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/FindQuadmath.cmake
-  COPYONLY)
+#configure_file(${CMAKE_SOURCE_DIR}/cmake/FindQuadmath.cmake
+#  ${CMAKE_CURRENT_BINARY_DIR}/FindQuadmath.cmake
+#  COPYONLY)
 
 export(EXPORT func-targets
   FILE ${CMAKE_CURRENT_BINARY_DIR}/FunCTargets.cmake
