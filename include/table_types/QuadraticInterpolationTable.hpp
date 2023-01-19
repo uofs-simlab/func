@@ -44,6 +44,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
+    FUNC_BUILDPAR
     for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       TIN x;
       TIN h = m_stepSize;

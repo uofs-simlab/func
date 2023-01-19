@@ -76,6 +76,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,M+N+1>[m_numTableEntries]);
+    FUNC_BUILDPAR
     for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       // nonuniform grids are not supported for PadeTables
       TIN x = m_minArg + ii*m_stepSize;

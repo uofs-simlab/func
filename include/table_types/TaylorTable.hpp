@@ -70,6 +70,7 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
+    FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       auto xgrid = m_minArg + ii*m_stepSize;
       auto h = m_stepSize;

@@ -86,7 +86,8 @@ public:
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
+    FUNC_BUILDPAR
+    for(unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
@@ -102,6 +103,7 @@ public:
       arma::vec xvec = arma::linspace(static_cast<double>(x),static_cast<double>(x+h),N+1);
       arma::vec y(N+1);
       // TODO is this performed in simd: y.for_each([this](Mat<double>::elem_type& xk) { xk = static_cast<double>(m_func(static_cast<TIN>(xk))); });
+      //#pragma omp simd
       for (unsigned int k=0; k<N+1; k++)
         y[k] = static_cast<double>(m_func(static_cast<TIN>(xvec[k])));
 

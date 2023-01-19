@@ -36,6 +36,7 @@
 #include <limits>
 #include <stdexcept>
 #include <cmath> // fabs, min
+//#include <algorithm> // std::min
 
 #ifdef FUNC_USE_BOOST
 #include <boost/math/tools/minima.hpp>
@@ -192,8 +193,9 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
      * compute the maximum error.
      * - Be careful about the top most interval b/c tableMaxArg can be greater than max
      *   (and we don't care about error outside of table bounds)
-     * - TODO It's likely worth parallelizing this for loop because software implementations of
-     *   high precision floats are quite slow */
+     * - TODO Parallelizing this for loop is worthwhile because software implementations of
+     *   high precision floats are quite slow. Is this the best pragma possible?
+     *   */
     #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_intervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
@@ -206,15 +208,12 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
         xtop = static_cast<TERR>(m_parent.m_max);
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get(),m_relTol),x,xtop,bits,max_it);
-      TERR err = r.second;
 
       #pragma omp critical
       {
-      if(err < max_err){
-        max_err = err;
-        //std::cerr << -err << " error at x=" << r.first << "\n";
+        max_err = std::min(max_err, r.second);
       }
-      }
+      //std::cerr << -err << " error at x=" << r.first << "\n";
     }
 
     /* want return to be 0 if the same, +/- on either side */

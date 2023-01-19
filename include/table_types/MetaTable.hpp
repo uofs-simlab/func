@@ -4,7 +4,7 @@
    (eg method of generating a nonuniform grid type, setup/reading polynomial coefficients)
    which can be pieced together based on template parameters.
 
-   NOTE: f stepSize divides max-min exactly then operator(max) will be out of array bounds!
+   NOTE: if stepSize divides max-min exactly then operator(max) will be out of array bounds!
    - Every table has an extra (unnecessary in most cases) table entry to avoid this
    problem.
    
@@ -32,21 +32,19 @@
   using MetaTable<TIN,TOUT,N,GT>::m_grid; \
   using MetaTable<TIN,TOUT,N,GT>::m_transferFunction
 
-/* Parallelization macro.
- * Play around with this to see which OpenMP option for parallelizing LUT construction for loop is best.
- * We know the alignment of m_table so that might give some speedup. */
-//_Pragma("omp simd aligned(m_table:sizeof(TOUT))")
-#define FUNC_BUILDPAR _Pragma("omp parallel for")
-//#pragma omp simd aligned(m_table:sizeof(TOUT)) // needs the constructor to be declared simd
-// assuming each iteration will take about the same amount of time
-//#pragma omp parallel for schedule(static)
+/* Parallelization macro. Notes:
+ * - m_table is aligned to sizeof(TOUT) so that might give some speedup.
+ * */
+#define FUNC_BUILDPAR _Pragma("omp parallel for schedule(dynamic)")
+//#define FUNC_BUILDPAR
+
 
 namespace func {
 
-static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8};
+static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,16,16,16};
 
 /* Our convention for writing polynomials is:
- *  p(x) = m_table[x0].coefs[0] + m_table[x0].coefs[1]*x + ... + m_table[x0].coefs[N-1]x^(N-1)
+ *  p(x) = m_table[x0].coefs[0] + m_table[x0].coefs[1]*x + ... + m_table[x0].coefs[N-1]*x^(N-1)
  * operator() does a Horner's style evaluation>
  *
  * Note: LUTs can have other things in their polynomial struct
@@ -146,10 +144,11 @@ public:
   TIN grid_entry(unsigned int i) const { return m_grid[i]; }
   std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
 
-  /* Provide the most common hash. The compiler should simplify this method when templates are instantiated */
+  /* Provide the most common hash. The compiler should simplify this method when templates are instantiated 
+   * TODO profile to verify that this is actually inlined and doesn't have to be a macro */
   inline std::pair<unsigned int, TOUT> hash(TIN x){
-    /* might be able to get some speedup by using c++14's constexpr for this switch?
-     * But idk hopefully the compiler optimizes this out anyways */
+    /* TODO might be able to get some speedup by using c++14's constexpr for this switch?
+     * But idk hopefully the compiler optimizes out the unnecessary cases anyways */
     unsigned int x0; TOUT dx;
     switch(GT){
       case GridTypes::UNIFORM:
@@ -205,7 +204,7 @@ public:
   ```c++
   nlohmann::json jsonStats;
   std::ifstream(filename) >> jsonStats;
-  auto lut = jsonStats.get<func::UniformLinearPrecomputedInterpolationTable<TIN,TOUT>>();
+  auto lut = jsonStats.get<func::UniformLinearInterpolationTable<TIN,TOUT>>();
   ```
  * Uses SFINAE to automatically disable these functions if TIN or TOUT do not support nlohmann's json */
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
