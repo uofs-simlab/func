@@ -195,6 +195,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
      *   (and we don't care about error outside of table bounds)
      * - TODO Parallelizing this for loop is worthwhile because software implementations of
      *   high precision floats are quite slow. Is this the best pragma possible?
+     * - TODO can be too slow for high order tables with very few subintervals
      *   */
     #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_intervals(); ii++){

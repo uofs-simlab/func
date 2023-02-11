@@ -183,6 +183,9 @@ public:
     return std::make_pair(x0, dx);
   }
 
+  /* TODO this currently cannot be final because the Pade tables must override it; however,
+   * there might be a performance benefit to making this final. Profile to check the pros & cons */
+  #pragma omp declare simd
   TOUT operator()(TIN x) override
   {
     unsigned int x0; TOUT dx;
@@ -194,6 +197,15 @@ public:
       sum = dx*(m_table[x0].coefs[k] + sum);
     return m_table[x0].coefs[0]+sum;
   }
+
+  //template <unsigned K>
+  //std::array<TOUT,K> transform(std::array<TIN,K>& v) {
+  //  std::array<TOUT,K> w;
+  //  #pragma omp simd
+  //  for(int k=0; k<K; k++){
+  //    w[k] = operator()(v[k]);
+  //  }
+  //}
 
   //virtual TOUT diff(unsigned int N, TIN x) = 0;
 };
