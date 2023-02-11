@@ -1,5 +1,8 @@
 /*
-  Abstract base class for implementations.
+  Abstract base class for any FunC object approximating a
+  user provided function. This lets us make a vector with
+  both a DirectEvaluation and various other LookupTables
+  in ImplementationComparator.hpp.
 
   Derived classes generally do the following:
   - set up anything needed for 'evaluation'
