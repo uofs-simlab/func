@@ -7,7 +7,7 @@
     double val = look(0.87354);
 
   Notes:
-  - This class only works if TOUT can be cast to double. 
+  - This class only works if TOUT and TIN can both be cast to double. 
     Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
     with float or double (not even long double) and arma::field is useless.
     TODO disable constructor if TOUT cannot be cast to double
@@ -35,7 +35,7 @@ namespace func {
 
 static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
 
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
 class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -66,16 +66,18 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = M+N+1;
-    m_numTableEntries = m_numIntervals+1;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals+1; // needs to know f(max)
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->template get_nth_func<M+N>() == nullptr)
       throw std::invalid_argument(m_name + " needs the "+std::to_string(N+M)+"th derivative but this is not defined");
     mp_boost_func = func_container->template get_nth_func<M+N>();
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,M+N+1>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    FUNC_BUILDPAR
+    for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       // nonuniform grids are not supported for PadeTables
       TIN x = m_minArg + ii*m_stepSize;
       // grid points
@@ -93,42 +95,30 @@ public:
 
       // find the coefficients of Q.
       arma::Mat<double> Q = arma::null(T.rows(M+1, M+N));
-      if(Q.n_elem != N+1) // TODO can we prove that this should never be called?
-        throw std::range_error(m_name + " is too poorly conditioned");
+      bool Q_has_root = false; // TODO it'll probably be significantly easier to use brent_find_minima from Boost to check for any zeros of Q
+
+      /* TODO This can happen! Which is particularly confounding because Pade approximants are supposed to be unique...?? */
+      if(Q.n_elem != N+1){
+        Q = Q.col(0);
+        Q_has_root = true;
+        //throw std::runtime_error("Error in func::PadeTable:" + m_name + " is too poorly conditioned because the matrix Q has nullspace with dimension > 1");
+      }
 
       // scale Q such that its first entry equals 1.
+      Q_has_root = !(Q[0]); // first entry cannot be 0
       Q=Q/Q[0];
-      for(unsigned int i=1; i<M+N+1; i++)
-        if(!std::isfinite(Q[i])) // check for any NaNs TODO will this ever be called?
-          throw std::range_error(m_name + " is too poorly conditioned");
+
+      //std::cout << Q << "\n";
 
       // find the coefficients of P
       arma::Col<double> P = T.rows(0,M)*Q;
 
-      /* Check if the denominator Q has any roots
-         within the subinterval [-m_stepSize/2,m_stepSize/2).
-         If any roots exist, then lower the degree of the denominator.
-
-         We'll check for the existence of a root by building a bracket,
-         using Q(0)=1 as our positive endpoint. Thus, we just need
-         to find a point where Q is negative. TODO factor out this helper function */
-      auto Q_is_negative = [this, &Q, &ii](double x) -> bool {
-        // Tell us if this point is within this subinterval's range
-        if(((ii == 0 && x < 0.0) || (ii == m_numIntervals - 1 && x > 0.0)))
-          return false;
-
-        // compute Q(x) using horners, evaluating from the inside out
-        double sum = x*Q[N];
-        for (int k=N-1; k>0; k--)
-          sum = x*(Q[k] + sum);
-        sum += 1;
-        // Tell us if this point is negative
-        return sum < 0.0;
-      };
-
+      /* Check if the Q has any roots within the subinterval [-m_stepSize/2,m_stepSize/2]
+       * by building a bracket (Q(0)=1 is the positive endpoint so we just need a negative endpoint).
+       * If any roots exist, then lower the degree of Q. */
       for(unsigned int k=N; k>0; k--){
         // check Q at the subinterval endpoints
-        bool Q_has_root = Q_is_negative(-m_stepSize/2.0) || Q_is_negative(m_stepSize/2.0);
+        Q_has_root = Q_has_root || Q_is_negative(static_cast<double>(-m_stepSize/2.0),Q,ii) || Q_is_negative(static_cast<double>(m_stepSize/2.0),Q,ii);
 
         // Check Q for negativity at any of its vertexes
         double desc = 0.0;
@@ -137,12 +127,12 @@ public:
             case 1:
               break;
             case 2:
-              Q_has_root = Q_is_negative(-Q[1]/(2.0*Q[2]));
+              Q_has_root = Q_is_negative(-Q[1]/(2.0*Q[2]),Q,ii);
               break;
             case 3:
               desc = Q[2]*Q[2]-3*Q[1]*Q[3];
               Q_has_root = desc > 0.0 &&
-                (Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3])) || Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3])));
+                (Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3]),Q,ii) || Q_is_negative(-Q[2]+sqrt(desc)/(3*Q[3]),Q,ii));
               break;
           }
 
@@ -156,12 +146,18 @@ public:
           }else{
             Q[k] = 0.0;
             Q.rows(0,k-1) = arma::null(T(arma::span(M+1, M+k-1), arma::span(0,k-1)));
+            Q_has_root = !(Q[0]);
             Q = Q/Q[0];
             P = T.rows(0,M)*Q;
           }
         }else // Q is free to go if it has no roots here
           break;
       }
+
+      /* TODO is this exception ever thrown? */
+      for(unsigned int i=1; i<M+N+1; i++)
+        if(!std::isfinite(Q[i])) // check for NaN or +/-inf
+          throw std::runtime_error(m_name + " is too poorly conditioned: coef " + std::to_string(i) + " of Q is " + std::to_string(Q[i]));
 
       // move these coefs into m_table
       for (unsigned int k=0; k<M+1; k++)
@@ -170,8 +166,25 @@ public:
       for (unsigned int k=0; k<N; k++)
         m_table[ii].coefs[M+1+k] = static_cast<TOUT>(Q[k+1]); // ignore the first coef of Q b/c it's always 1.
     }
+    // does not need special case grid entry!
 #endif
   }
+
+#if defined(FUNC_USE_BOOST) && defined(FUNC_USE_ARMADILLO)
+    bool Q_is_negative(double x, arma::mat Q, unsigned int ii) {
+      // Check if x is within this subinterval's range
+      if(((ii == 0 && x < 0.0) || (ii == m_numTableEntries - 1 && x > 0.0)))
+        return false;
+
+      // compute Q(x) using horners method evaluating from the inside out
+      double sum = 0;
+      for(int k=N; k>0; k--)
+        sum = x*(Q[k] + sum);
+      sum += 1;
+      // was Q(x) negative?
+      return sum <= 0.0;
+    };
+#endif
 
   // override operator() from MetaTable so we work with rational functions instead
   TOUT operator()(TIN x) override
@@ -184,6 +197,7 @@ public:
     dx -= x1*m_stepSize;
 
     // general degree horners method, evaluated from the inside out.
+    // TODO evaluate P and Q at the same time if possible
     TOUT P = dx*m_table[x1].coefs[M];
     for (int k=M-1; k>0; k--)
       P = dx*(m_table[x1].coefs[k] + P);
@@ -205,5 +219,5 @@ template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes
 const std::string PadeTable<TIN,TOUT,M,N,GT>::classname = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
 
 template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
-using UniformPadeTable = PadeTable<TIN,TOUT,M,N,UNIFORM>;
+using UniformPadeTable = PadeTable<TIN,TOUT,M,N,GridTypes::UNIFORM>;
 } // namespace func

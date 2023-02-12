@@ -25,9 +25,11 @@
 
 #include "EvaluationImplementation.hpp"
 #include "FunctionContainer.hpp"
+#include "config.hpp" // FUNC_USE_BOOST
 #include "json.hpp"
-#include <fstream> //ifstream
 #include "StdRng.hpp"
+
+#include <fstream> //ifstream
 
 #ifdef FUNC_DEBUG
   #include "ArgumentRecord.hpp"
@@ -119,5 +121,5 @@ inline void DirectEvaluation<TIN,TOUT>::print_details_json(std::ostream& out)
 
   out << jsonStats.dump(2) << std::endl;
 }
-// TODO make to/from_json()
+// TODO make to_json()
 } // namespace func

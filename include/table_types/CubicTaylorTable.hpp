@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class CubicTaylorTable final : public MetaTable<TIN,TOUT,4,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -46,8 +46,8 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = 4;
-    m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals+1;
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->autodiff3_func == NULL)
       throw std::invalid_argument("CubicTaylorTable needs the 3rd derivative but this is not defined");
@@ -55,8 +55,10 @@ public:
     mp_boost_func = func_container->autodiff3_func;
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    FUNC_BUILDPAR
+    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN xgrid = m_minArg + ii*m_stepSize;
       TIN xcenter = xgrid + 0.5*m_stepSize;
@@ -72,6 +74,11 @@ public:
       m_table[ii].coefs[1] = h*(d1 - 0.5*h*d2 + 0.125*h*h*d3);
       m_table[ii].coefs[0] = d0 - 0.5*h*d1 + 0.125*h*h*d2 - h*h*h*d3/48;
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<4; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
   // operator() comes from MetaTable
@@ -86,5 +93,5 @@ const std::string CubicTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_string
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
-using UniformCubicTaylorTable = CubicTaylorTable<TIN,TOUT,UNIFORM>;
+using UniformCubicTaylorTable = CubicTaylorTable<TIN,TOUT,GridTypes::UNIFORM>;
 } // namespace func

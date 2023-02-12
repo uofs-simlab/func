@@ -14,6 +14,7 @@
 #include "FunctionContainer.hpp"
 #include "EvaluationImplementation.hpp"
 
+#include <cmath> // std::nextafter
 #include <memory>
 #include <functional>
 #include <stdexcept>
@@ -27,7 +28,6 @@ struct LookupTableParameters
   TIN maxArg;
   TIN stepSize;
 
-  // support initializer lists
   LookupTableParameters(TIN min, TIN max, TIN step) :
     minArg(min), maxArg(max), stepSize(step) {}
   LookupTableParameters(){}
@@ -58,15 +58,10 @@ protected:
   TIN  m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
 public:
-  /* Generate a LUT from func_container.
-   * TODO How helpful is the error message if func_container == nullptr? */
-  LookupTable(FunctionContainer<TIN,TOUT> *func_container,
-      LookupTableParameters<TIN> par) :
-    EvaluationImplementation<TIN,TOUT>(func_container->standard_func)
+  /* Initialize useful member variables so every LUT follows a predictable interface */
+  LookupTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
+    EvaluationImplementation<TIN,TOUT>((func_container != nullptr) ? func_container->standard_func : nullptr)
   {
-    if(func_container->standard_func == nullptr)
-      throw std::invalid_argument("function not defined in given FunctionContainer");
-
     /* Base class variables */
     m_minArg = par.minArg; m_maxArg = par.maxArg;
 
@@ -74,19 +69,24 @@ public:
      * - corresponds to the grid
      * - If the step size does not exactly divide the arg domain, the max
      *   arg of the table is set to the nearest value above such that it does. */
-    m_stepSize     = par.stepSize;
+    m_stepSize = par.stepSize;
+    if(m_stepSize <= static_cast<TIN>(0.0))
+      throw std::invalid_argument("func::LookupTable was given a nonpositive stepSize. stepSize must be positive.");
+
     m_stepSize_inv = 1.0/m_stepSize;
-    // TODO I think this +1 leads to a waste of memeory
-    m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)))+1;
-    m_tableMaxArg = m_minArg+m_stepSize*(m_numIntervals-1); // >= m_maxArg
+    m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
+    m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // always >= m_maxArg    
   }
 
+  // TODO build a constant LUT from TIN to make casting from TIN -> LUT<TIN,TOUT> hopefully convenient?
+  //LookupTable(TIN x) : LookupTable<TIN,TOUT>(FunctionContainer<TIN,TOUT> {[x](TIN y){return static_cast<TOUT>(x);} },
+  //    LookupTableParameters<double> {-std::numeric_limits<TIN>::infinity(),std::numeric_limits<T>::infinity(),std::numeric_limits<T>::infinity()}) {}
+
   /* TODO
-     1. virtual + and * methods for curried LUTs. Will have to make sure min, max,
-     tablemax, and stepsize are all within a very small tolerance.
-     2. return an approximation to f^(N)(x) with */
-  //template <unsigned int N>
-  //virtual TOUT diff(TIN x) = 0;
+   * 1. virtual + and * methods will be needed for curried LUTs to work. Will have to make sure
+   * min, max, tablemax, and stepsize of both tables are all within a very small tolerance.
+   * 2. return an approximation to f^(N)(x) */
+  //virtual TOUT diff(unsigned int N, TIN x) = 0;
 
   LookupTable() = default;
   virtual ~LookupTable(){};

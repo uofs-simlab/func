@@ -85,10 +85,10 @@ int main(int argc, char* argv[])
   implCompare_best.compute_timing_statistics();
   std::ofstream jsonfs;
   jsonfs.open("best_case.json");
-  implCompare_best.print_statistics_json(jsonfs);
+  implCompare_best.print_details_json(jsonfs);
   jsonfs.close();
 
-  implCompare_best.sort_timings("min");
+  implCompare_best.sort_timings(SortType::best);
   implCompare_best.print_summary(std::cout);
 
 
@@ -110,10 +110,10 @@ int main(int argc, char* argv[])
   /* Summarize the results */
   implCompare_worst.compute_timing_statistics();
   jsonfs.open("worst_case.json");
-  implCompare_worst.print_statistics_json(jsonfs);
+  implCompare_worst.print_details_json(jsonfs);
   jsonfs.close();
 
-  implCompare_worst.sort_timings("min");
+  implCompare_worst.sort_timings(SortType::best);
   implCompare_worst.print_summary(std::cout);
 
   return 0;

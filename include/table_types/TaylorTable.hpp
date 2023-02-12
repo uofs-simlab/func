@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
 class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -60,20 +60,22 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = N+1;
-    m_numTableEntries = m_numIntervals + 1;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals+1;
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->template get_nth_func<N>() == nullptr)
       throw std::invalid_argument(m_name+" needs the "+std::to_string(N)+"th derivative but this is not defined");
     mp_boost_func = func_container->template get_nth_func<N>();
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
-    for (unsigned int ii=0; ii<m_numIntervals; ++ii) {
+    FUNC_BUILDPAR
+    for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       auto xgrid = m_minArg + ii*m_stepSize;
       auto h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT != UNIFORM){
+      if (GT != GridTypes::UNIFORM){
         xgrid = m_transferFunction.g(xgrid);
         h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - xgrid;
       }
@@ -113,6 +115,11 @@ public:
         default: { throw std::invalid_argument("Broken switch case in func::TaylorTable"); }
       }
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<N+1; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
 
@@ -126,23 +133,23 @@ const std::string TaylorTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT
 
 /* define friendlier names */
 template <typename TIN, typename TOUT=TIN>
-using UniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,UNIFORM>;
+using UniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,NONUNIFORM>;
+using NonUniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoLinearTaylorTable = TaylorTable<TIN,TOUT,1,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoLinearTaylorTable = TaylorTable<TIN,TOUT,1,GridTypes::NONUNIFORM_PSEUDO>;
 
 template <typename TIN, typename TOUT=TIN>
-using UniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,UNIFORM>;
+using UniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,NONUNIFORM>;
+using NonUniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,GridTypes::NONUNIFORM_PSEUDO>;
 
 template <typename TIN, typename TOUT=TIN>
-using UniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,UNIFORM>;
+using UniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,NONUNIFORM>;
+using NonUniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoCubicTaylorTable = TaylorTable<TIN,TOUT,3,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoCubicTaylorTable = TaylorTable<TIN,TOUT,3,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

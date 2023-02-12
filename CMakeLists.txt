@@ -11,7 +11,12 @@ project(
   DESCRIPTION "Build better lookup tables"
   LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
+
+macro(print_variable var)
+  message(STATUS "${var}: ${${var}}")
+endmacro()
+
 
 # cmake will look in our cmake directory for FindXXX.cmake files
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
@@ -19,6 +24,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 # ==== Search for dependencies ====
 option(FUNC_USE_BOOST "Use Boost library" ON)
 set(MIN_BOOST_VERSION 1.71.0)
+# TODO the following line may cause the build to fail if Boost doesn't exist on the user's computer.
+# CMake's provided FindBoost might be the problem?
 find_package(Boost ${MIN_BOOST_VERSION})
 
 if(FUNC_USE_BOOST)
@@ -49,37 +56,25 @@ else()
   message(STATUS "Not using Armadillo")
 endif()
 
-# use FindQuadmath.cmake so we can write find_package(Quadmath)
-# This will mostly just test whether we're compiling with gcc/icpc
-# TODO FunC LookupTableGenerator is header only so it will only be built in user code.
-# It's nice to give people our FindQuadmath.cmake, but it'd probably be better to
-# just use a template for the error-precision
-#
-# Boost provides the macro BOOST_HAVE_QUADMATH which is only defined if the user has quadmath.
-# We should just use that in the future
-option(FUNC_USE_QUADMATH "Use quadmath library" ON)
-find_package(Quadmath)
-
-if(FUNC_USE_QUADMATH AND NOT QUADMATH_FOUND)
-  # we'll use long double instead
-  set(FUNC_USE_QUADMATH OFF)
-  message(WARNING "Could not find quadmath. If you wish to use higher accuracy error estimates with the LookupTableGenerator then reconfigure to use the gnu or intel c++ compilers: ie set -DCMAKE_CXX_COMPILER=(g++-XX|icpc) (g++ on MacOS might be an alias for clang++). Silence this warning by setting -DUSE_QUADMATH=OFF")
-endif()
-
 option(FUNC_USE_OPENMP "Use OpenMP" ON)
 find_package(OpenMP)
+
+#message(STATUS "${OpenMP::OpenMP_CXX}")
+
 if(OpenMP_FOUND)
+  message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
+  # TODO this doesn't work anymore
   if(APPLE AND ${CMAKE_VERSION} VERSION_LESS 3.12.0)
     message(WARNING "Must have at least CMake version 3.12 to add openmp to FunC on MacOS")
     set(FUNC_USE_OPENMP OFF)
-  else()
-    message(STATUS "Using OpenMP for threadsafety")
   endif()
 else()
-  # TODO use std::lib instead
+  # TODO maybe use std::lib instead?
   option(FUNC_USE_OPENMP OFF)
 endif()
 
+# Any conversions from json type should be done explicitly
+set(JSON_ImplicitConversions OFF)
 
 # ==== Generate Source Code ====
 # TYPE_PAIRS contains every type we want to use out LUTs with.
@@ -120,12 +115,12 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/config.hpp.cmake ${PROJECT_SOURCE_DIR
 add_subdirectory("include")
 
 # Examples subdirectory
-#add_subdirectory("examples")
+add_subdirectory("examples")
 
 # Summarize compilation flags for quick review on configuration
-macro(print_variable var)
-  message(STATUS "${var}: ${${var}}")
-endmacro()
+#macro(print_variable var)
+#  message(STATUS "${var}: ${${var}}")
+#endmacro()
 
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message(STATUS "--- Compile and link flags ------------------")

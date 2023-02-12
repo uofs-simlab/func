@@ -16,7 +16,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class QuadraticTaylorTable final : public MetaTable<TIN,TOUT,3,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -45,8 +45,8 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = 3;
-    m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals+1;
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     if(func_container->autodiff1_func == NULL)
       throw std::invalid_argument("QuadraticTaylorTable needs the 2nd derivative but this is not defined");
@@ -54,8 +54,10 @@ public:
     mp_boost_func = func_container->autodiff2_func;
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    FUNC_BUILDPAR
+    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       // nonuniform grids are not supported for Taylor tables
       TIN xgrid = m_minArg + ii*m_stepSize;
       TIN xcenter = xgrid + 0.5*m_stepSize;
@@ -69,6 +71,11 @@ public:
       m_table[ii].coefs[1] = h*(d1 - 0.5*h*d2);
       m_table[ii].coefs[0] = d0 - 0.5*h*d1 + 0.125*h*h*d2;
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<3; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
 
@@ -81,5 +88,5 @@ template <typename TIN, typename TOUT, GridTypes GT>
 const std::string QuadraticTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticTaylorTable";
 
 template <typename TIN, typename TOUT=TIN>
-using UniformQuadraticTaylorTable = QuadraticTaylorTable<TIN,TOUT,UNIFORM>;
+using UniformQuadraticTaylorTable = QuadraticTaylorTable<TIN,TOUT,GridTypes::UNIFORM>;
 } // namespace func

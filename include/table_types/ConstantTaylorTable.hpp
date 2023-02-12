@@ -1,5 +1,6 @@
 /*
-  Constant Taylor LUT with uniform sampling
+  Constant Taylor LUT over a uniform grid.
+  Exact on each subinterval's midpoint
 
   Usage example:
     ConstantTaylorTable look(&function,0,10,0.0001);
@@ -14,7 +15,7 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class ConstantTaylorTable final : public MetaTable<TIN,TOUT,1,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
@@ -36,28 +37,28 @@ public:
     /* Base class default variables */
     m_name = classname;
     m_order = 1;
-    m_numTableEntries = m_numIntervals;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_numTableEntries = m_numIntervals+1;
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
-    for (unsigned int ii=0; ii<m_numTableEntries; ++ii) {
-      TIN x;
-      // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
-        x = m_minArg + ii*m_stepSize;
-      else
-        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
-
-      m_grid[ii] = x;
-      m_table[ii].coefs[0] = m_func(x);
+    FUNC_BUILDPAR
+    for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
+      // constant interpolation with the midpoint of this subinterval
+      auto xgrid = m_minArg + ii*m_stepSize;
+      m_grid[ii] = xgrid;
+      m_table[ii].coefs[0] = m_func(xgrid + 0.5*m_stepSize);
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
   }
 
   /* Constant interpolation from table point immediately below x */
   TOUT operator()(TIN x) override
   {
-    return m_table[(unsigned)((x-m_minArg)/m_stepSize+0.5)].coefs[0];
+    return m_table[static_cast<unsigned>((x-m_minArg)*m_stepSize_inv)].coefs[0];
   }
 };
 
@@ -66,5 +67,5 @@ const std::string ConstantTaylorTable<TIN,TOUT,GT>::classname = grid_type_to_str
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
-using UniformConstantTaylorTable = ConstantTaylorTable<TIN,TOUT,UNIFORM>;
+using UniformConstantTaylorTable = ConstantTaylorTable<TIN,TOUT,GridTypes::UNIFORM>;
 } // namespace func

@@ -2,7 +2,7 @@
   Quadratic Interpolation LUT with precomputed coefficients
 
   Usage example:
-    QuadraticPrecomputedInterpolationTable look(&function,0,10,0.0001);
+    QuadraticInterpolationTable look(&function,0,10,0.0001);
     double val = look(0.87354);
 
   Notes:
@@ -16,8 +16,8 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
-class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3,GT>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
+class QuadraticInterpolationTable final : public MetaTable<TIN,TOUT,3,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
@@ -26,7 +26,7 @@ class QuadraticPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,3
   static const std::string classname;
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  QuadraticPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  QuadraticInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<TIN,TOUT,3,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
       std::move(MetaTable<TIN,TOUT,3,GT>(func_container, par)) :
@@ -39,15 +39,17 @@ public:
     m_name = classname;
     m_order = 3;
     m_numTableEntries = m_numIntervals+1;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,3>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    FUNC_BUILDPAR
+    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
+      if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
@@ -64,16 +66,21 @@ public:
       m_table[ii].coefs[1] = -3*y0+4*y1-y2;
       m_table[ii].coefs[2] = 2*y0+-4*y1+2*y2;
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<3; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
   }
 };
 
 template <typename TIN, typename TOUT, GridTypes GT>
-const std::string QuadraticPrecomputedInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticPrecomputedInterpolationTable";
+const std::string QuadraticInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "QuadraticInterpolationTable";
 
 template <typename TIN, typename TOUT=TIN>
-using UniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,UNIFORM>;
+using UniformQuadraticInterpolationTable = QuadraticInterpolationTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM>;
+using NonUniformQuadraticInterpolationTable = QuadraticInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoQuadraticPrecomputedInterpolationTable = QuadraticPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoQuadraticInterpolationTable = QuadraticInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

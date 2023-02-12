@@ -2,7 +2,7 @@
   Cubic Interpolation LUT with precomputed coefficients
 
   Usage example:
-    CubicPrecomputedInterpolationTable look(&function,{0,10,0.0001});
+    CubicInterpolationTable look(&function,{0,10,0.0001});
     double val = look(0.87354);
 
   Notes:
@@ -18,8 +18,8 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT=TIN, GridTypes GT=UNIFORM>
-class CubicPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,4,GT>
+template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
+class CubicInterpolationTable final : public MetaTable<TIN,TOUT,4,GT>
 {
   INHERIT_EVALUATION_IMPL(TIN,TOUT);
   INHERIT_LUT(TIN,TOUT);
@@ -28,7 +28,7 @@ class CubicPrecomputedInterpolationTable final : public MetaTable<TIN,TOUT,4,GT>
   static const std::string classname;
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  CubicPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  CubicInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<TIN,TOUT,4,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
       std::move(MetaTable<TIN,TOUT,4,GT>(func_container, par)) :
@@ -41,15 +41,17 @@ public:
     m_name = classname;
     m_order = 4;
     m_numTableEntries = m_numIntervals+1;
-    m_dataSize = (unsigned) sizeof(m_table[0]) * (m_numTableEntries);
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
     /* Allocate and set table */
+    m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
-    for (unsigned int ii=0;ii<m_numIntervals;++ii) {
+    FUNC_BUILDPAR
+    for (unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == UNIFORM)
+      if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
         x = m_transferFunction.g(m_minArg + ii*m_stepSize);
@@ -68,23 +70,28 @@ public:
       m_table[ii].coefs[2] = 9*y0-45*y1/2+18*y2-9*y3/2;
       m_table[ii].coefs[3] = -9*y0/2+27*y1/2-27*y2/2+9*y3/2;
     }
+    // special case to make lut(tableMaxArg) work
+    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    for (unsigned int k=1; k<4; k++)
+      m_table[m_numTableEntries-1].coefs[k] = 0;
   }
 
   /* build this table from a file. Everything other than m_table is built by MetaTable */
-  CubicPrecomputedInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
+  CubicInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, std::string filename) :
     MetaTable<TIN,TOUT,4,GT>(func_container, filename,
-        grid_type_to_string<GT>() + "CubicPrecomputedInterpolationTable") {}
+        grid_type_to_string<GT>() + "CubicInterpolationTable") {}
   // operator() comes straight from the MetaTable
 };
 
 template <typename TIN, typename TOUT, GridTypes GT>
-const std::string CubicPrecomputedInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "CubicPrecomputedInterpolationTable";
+const std::string CubicInterpolationTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "CubicInterpolationTable";
 
 // define friendlier names
 template <typename TIN, typename TOUT=TIN>
-using UniformCubicPrecomputedInterpolationTable = CubicPrecomputedInterpolationTable<TIN,TOUT,UNIFORM>;
+using UniformCubicInterpolationTable = CubicInterpolationTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformCubicPrecomputedInterpolationTable = CubicPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM>;
+using NonUniformCubicInterpolationTable = CubicInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM>;
 template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoCubicPrecomputedInterpolationTable = CubicPrecomputedInterpolationTable<TIN,TOUT,NONUNIFORM_PSEUDO>;
+using NonUniformPseudoCubicInterpolationTable = CubicInterpolationTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

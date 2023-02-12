@@ -24,6 +24,9 @@
   - specify the FUNC_DEBUG flag to turn on argument recording for args outside
   the table's range.
   - optional ArgumentRecord args available if you want nicer looking output
+
+  TODO this class should support to_json but not from_json! Add another constructor
+  to build this class from a FunctionContainer and a filename
 */
 #pragma once
 #include "EvaluationImplementation.hpp"
@@ -60,7 +63,7 @@ public:
     // m_func and m_name can't be set in the super class b/c the
     // base class constructor would be evaluated before mp_LUT is set
     m_func   = mp_LUT->function();
-    m_name   = mp_LUT->name();
+    m_name   = "FailureProof" + mp_LUT->name();
     m_minArg = mp_LUT->min_arg();
     m_maxArg = mp_LUT->max_arg();
     m_order  = mp_LUT->order();
@@ -108,18 +111,20 @@ public:
   TOUT operator()(TIN x) override
   {
     // check if x is in the range of the table
-    if(x < m_minArg || m_maxArg < x){
+    //if((x - m_minArg)*(m_maxArg - x) > 0){ // possible micro-optimization?
+    if((m_minArg < x) && (x < m_maxArg)){
+      return (*mp_LUT)(x);
+    }else{
       #ifdef FUNC_DEBUG
         mp_recorder->record_arg(x);
       #endif
       return m_func(x);
     }
-    return (*mp_LUT)(x);
   }
 
   void print_details(std::ostream &out) override 
   {
-    out << "FailureProof" << m_name << " " << m_minArg << " " << m_maxArg << " "
+    out << m_name << " " << m_minArg << " " << m_maxArg << " "
         << mp_LUT->step_size() << " " << mp_LUT->num_intervals() << " ";
   #ifdef FUNC_DEBUG
     out << std::endl;

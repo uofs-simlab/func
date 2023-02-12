@@ -3,7 +3,7 @@
   - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
   - Note: New implementations must be added to the registry by adding to the ::initialize() member function
 
-  - TODO would it make sense to just hardcode OTHER to LookupTableParameters<TIN>
+  - TODO I think we might as well just hardcode OTHER to LookupTableParameters<TIN>
 */
 #pragma once
 #include "TableIncludes.hpp"
@@ -25,13 +25,13 @@
  * - Call this inside ::initialize_registry() for all desired table types
  */
 #define FUNC_REGISTER_ONE(classname)                                                                                                                    \
-  registry.insert({FUNC_STR(classname), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
+  registry.insert({FUNC_STR(classname), [](FunctionContainer<TIN, TOUT> *fc, LookupTableParameters<TIN> args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
                      return new classname<TIN, TOUT>(fc, args, jsonStats);                                                                              \
                    }})
 
 #define FUNC_REGISTER_TEMPLATE(classname, templates...)                                                                                                 \
   registry.insert(                                                                                                                                      \
-       {FUNC_STR(classname<templates>), [](FunctionContainer<TIN, TOUT> *fc, OTHER args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
+       {FUNC_STR(classname<templates>), [](FunctionContainer<TIN, TOUT> *fc, LookupTableParameters<TIN> args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
          return new classname<TIN, TOUT, templates>(fc, args, jsonStats);                                                                               \
        }})
 
@@ -46,14 +46,14 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT = TIN, class OTHER = LookupTableParameters<TIN>> class LookupTableFactory {
+template <typename TIN, typename TOUT = TIN> class LookupTableFactory {
 public:
 
   /*
    * The map type that holds the registry
    */
   using registry_t =
-      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, OTHER, const nlohmann::json& jsonStats)>>;
+      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(FunctionContainer<TIN, TOUT> *, LookupTableParameters<TIN>, const nlohmann::json& jsonStats)>>;
 
   /*
    * Constructor initializes registry, default destructor.
@@ -67,7 +67,7 @@ public:
    * - fc          - FunctionContainer holding the function that the table evaluates
    * - args        - Additional arguments needed for construcing the table
    */
-  std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, OTHER args,
+  std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, FunctionContainer<TIN, TOUT> *fc, LookupTableParameters<TIN> args,
       const nlohmann::json& jsonStats=nlohmann::json());
 
   /*
@@ -99,8 +99,8 @@ private:
  *  Initialize the registry
  *  - New implementations of table types must be added to the registry here
  */
-template <typename TIN, typename TOUT, class OTHER>
-void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry() {
+template <typename TIN, typename TOUT>
+void LookupTableFactory<TIN, TOUT>::initialize_registry() {
   // TODO our Taylor/Pade tables don't have nonuniform variants yet
   FUNC_ADD_TABLE_TO_REGISTRY(UniformConstantTaylorTable);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearTaylorTable);
@@ -121,44 +121,44 @@ void LookupTableFactory<TIN, TOUT, OTHER>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
 
   FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformCubicInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformQuadraticInterpolationTable);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearRawInterpolationTable);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloPrecomputedInterpolationTable,7);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,7);
 
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformQuadraticInterpolationTable);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearRawInterpolationTable);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloPrecomputedInterpolationTable,7);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformArmadilloInterpolationTable,7);
 
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicHermiteTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoQuadraticPrecomputedInterpolationTable);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearPrecomputedInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoCubicInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoQuadraticInterpolationTable);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearInterpolationTable);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoLinearRawInterpolationTable);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,4);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,5);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,6);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloPrecomputedInterpolationTable,7);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPseudoArmadilloInterpolationTable,7);
 }
 
 /*
  *  Return a vector of the keys that have been registered
  */
-template <typename TIN, typename TOUT, class OTHER>
-std::vector<std::string> LookupTableFactory<TIN, TOUT, OTHER>::get_registered_keys() {
+template <typename TIN, typename TOUT>
+std::vector<std::string> LookupTableFactory<TIN, TOUT>::get_registered_keys() {
   // copy all keys from the registry map into a vector
   std::vector<std::string> keys;
   for (auto const &elem : registry)
@@ -169,9 +169,9 @@ std::vector<std::string> LookupTableFactory<TIN, TOUT, OTHER>::get_registered_ke
 /*
  *  Create a new lookup table. Throw exception asking for an unregistered table.
  */
-template <typename TIN, typename TOUT, class OTHER>
+template <typename TIN, typename TOUT>
 std::unique_ptr<LookupTable<TIN, TOUT>>
-LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer<TIN, TOUT> *fc, OTHER args, const nlohmann::json& jsonStats) {
+LookupTableFactory<TIN, TOUT>::create(std::string name, FunctionContainer<TIN, TOUT> *fc, LookupTableParameters<TIN> args, const nlohmann::json& jsonStats) {
   // Create a LookupTable
   LookupTable<TIN, TOUT> *instance = nullptr;
 
@@ -188,21 +188,20 @@ LookupTableFactory<TIN, TOUT, OTHER>::create(std::string name, FunctionContainer
 }
 
 
-/* from_json for unique_ptr<LookupTable> which unlocks this fancy syntax:
+/* from_json for unique_ptr<LookupTable> unlocks this fancy syntax:
 ```c++
   nlohmann::json jsonStats;
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<std::unique_ptr<func::LookupTable<TIN,TOUT>>>(); // call the constructor (or the from_json) referred to by "name"
 ```
+Only drawback of this function is we lose access to the function that generated that LUT
+this works because std::unique_ptr<T> is default constructable
 */
-
-// std::unique_ptr<T> is default constructable. TODO does this actually work though? Might need to be in namespace std
 template <typename TIN, typename TOUT>
 void from_json(const nlohmann::json& jsonStats, std::unique_ptr<LookupTable<TIN,TOUT>>& lut) {
   std::string name = jsonStats.at("name");
-  LookupTableFactory<TIN,TOUT> factory; // TODO this might possibly be woefully slow
+  LookupTableFactory<TIN,TOUT> factory;
 
-  //lut.reset(); // TODO double check this isn't actually necessary
   lut = factory.create(name, nullptr, LookupTableParameters<TIN>{0,0,0}, jsonStats);
 }
 
