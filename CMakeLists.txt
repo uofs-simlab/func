@@ -25,7 +25,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 option(FUNC_USE_BOOST "Use Boost library" ON)
 set(MIN_BOOST_VERSION 1.71.0)
 # TODO the following line may cause the build to fail if Boost doesn't exist on the user's computer.
-# CMake's provided FindBoost might be the problem?
+# CMake's provided FindBoost should be the problem?
 find_package(Boost ${MIN_BOOST_VERSION})
 
 if(FUNC_USE_BOOST)
@@ -46,7 +46,6 @@ find_package(Armadillo)
 
 if(FUNC_USE_ARMADILLO)
   if(ARMADILLO_FOUND)
-    message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
     message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
   else()
     set(FUNC_USE_ARMADILLO OFF)
@@ -58,8 +57,6 @@ endif()
 
 option(FUNC_USE_OPENMP "Use OpenMP" ON)
 find_package(OpenMP)
-
-#message(STATUS "${OpenMP::OpenMP_CXX}")
 
 if(OpenMP_FOUND)
   message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
