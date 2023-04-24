@@ -33,6 +33,7 @@ table_types/TableIncludes.hpp;\
 table_types/LookupTable.hpp;\
 table_types/MetaTable.hpp;\
 table_types/ArmadilloInterpolationTable.hpp;\
+table_types/ChebyInterpolationTable.hpp;\
 table_types/ConstantTaylorTable.hpp;\
 table_types/CubicHermiteTable.hpp;\
 table_types/CubicInterpolationTable.hpp;\

@@ -5,6 +5,7 @@
 
 /* LUT implementations */
 #include "ArmadilloInterpolationTable.hpp"
+#include "ChebyInterpolationTable.hpp"
 #include "ConstantTaylorTable.hpp"
 #include "CubicHermiteTable.hpp"
 #include "CubicInterpolationTable.hpp"

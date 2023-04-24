@@ -131,6 +131,15 @@ void LookupTableFactory<TIN, TOUT>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,6);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformArmadilloInterpolationTable,7);
 
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpolationTable,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpolationTable,2);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpolationTable,3);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpolationTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpolationTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpolationTable,6);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpolationTable,7);
+
+
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicHermiteTable);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformCubicInterpolationTable);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformQuadraticInterpolationTable);
