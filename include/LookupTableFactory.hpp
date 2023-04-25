@@ -2,8 +2,6 @@
   Factory for Lookup Tables
   - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
   - Note: New implementations must be added to the registry by adding to the ::initialize() member function
-
-  - TODO I think we might as well just hardcode OTHER to LookupTableParameters<TIN>
 */
 #pragma once
 #include "TableIncludes.hpp"
