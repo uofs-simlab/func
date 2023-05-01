@@ -1,7 +1,7 @@
 FunC
 ====
 
-`FunC` (Function Comparator) is a C++ tool for approximating any single variable, real valued function $f:\mathbb{R}\to\mathbb{R}$ with a lookup table (LUT). This tool aims to streamline the process of finding an optimal LUT of $f$ for a given program. This includes factors such as
+`FunC` (Function Comparator) is a C++ tool for approximating any single variable, real valued function $f:\mathbb{R}\to\mathbb{R}$ with a lookup table (LUT). This tool aims to streamline the process of finding a good LUT of $f$ for a given program. This includes factors such as
 - error tolerance
 - domain usage (ie the inputs to $f$ during runtime)
 - evaluation frequency (ie how much work is being done in between calls to $f$)
