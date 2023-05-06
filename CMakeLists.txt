@@ -25,15 +25,15 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 option(FUNC_USE_BOOST "Use Boost library" ON)
 set(MIN_BOOST_VERSION 1.71.0)
 # TODO the following line may cause the build to fail if Boost doesn't exist on the user's computer.
-# CMake's provided FindBoost might be the problem?
+# CMake's provided FindBoost should be the problem?
 find_package(Boost ${MIN_BOOST_VERSION})
 
 if(FUNC_USE_BOOST)
-  if(Boost_FOUND AND NOT (Boost_VERSION VERSION_LESS 1.71.0))
+  if(Boost_FOUND AND NOT (Boost_VERSION VERSION_LESS ${MIN_BOOST_VERSION}))
     message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
   else()
     set(FUNC_USE_BOOST OFF)
-    message(WARNING "CMake either could not find Boost or the copy of Boost found has version less than 1.71.0. You may still read table data from an existing json file but table generation is severly limited. If you wish to generate any lookup tables then you need a newer version of Boost. Silence this warning by setting -DUSE_BOOST=OFF")
+    message(WARNING "CMake either could not find Boost or Boost was found with version less than 1.71.0. FunC can still read LUT data from an existing json file, but table generation is severly limited. A newer version of Boost is recommended. Silence this warning by setting -DUSE_BOOST=OFF")
   endif()
 else()
   message(STATUS "Not using Boost")
@@ -46,7 +46,6 @@ find_package(Armadillo)
 
 if(FUNC_USE_ARMADILLO)
   if(ARMADILLO_FOUND)
-    message(STATUS "Found Armadillo incl: ${ARMADILLO_INCLUDE_DIR}")
     message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
   else()
     set(FUNC_USE_ARMADILLO OFF)
@@ -58,8 +57,6 @@ endif()
 
 option(FUNC_USE_OPENMP "Use OpenMP" ON)
 find_package(OpenMP)
-
-#message(STATUS "${OpenMP::OpenMP_CXX}")
 
 if(OpenMP_FOUND)
   message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
@@ -118,9 +115,9 @@ add_subdirectory("include")
 add_subdirectory("examples")
 
 # Summarize compilation flags for quick review on configuration
-#macro(print_variable var)
-#  message(STATUS "${var}: ${${var}}")
-#endmacro()
+macro(print_variable var)
+  message(STATUS "${var}: ${${var}}")
+endmacro()
 
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message(STATUS "--- Compile and link flags ------------------")
@@ -135,5 +132,12 @@ elseif(build_lower MATCHES relwithdebinfo)
 elseif(build_lower MATCHES minsizerel)
   print_variable(CMAKE_CXX_FLAGS_MINSIZEREL)
 endif()
+
+# Print every variable for debugging purposes
+#get_cmake_property(_variableNames VARIABLES)
+#list (SORT _variableNames)
+#foreach (_variableName ${_variableNames})
+#    message(STATUS "${_variableName}=${${_variableName}}")
+#endforeach()
 
 message(STATUS "---------------------------------------------")
