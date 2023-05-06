@@ -187,8 +187,7 @@ class ArgumentRecord
 
     /* std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from this SO post
      * https://stackoverflow.com/questions/16605967/set-precision-of-stdto-string-when-converting-floating-point-values
-     * Default is the max possible precision by so users can choose how they'll round the answer on their own
-     */
+     * Default is the max possible precision by so users can choose how they'll round the answer on their own */
     template <typename T>
     std::string to_string_with_precision(const T val, const int n = std::numeric_limits<T>::max_digits10)
     {
@@ -251,8 +250,8 @@ class ArgumentRecord
           << 100.0*mv_histogram[m_peak_index]/((double) complete_total) << "\% of the total evaluations).\n";
       /* iostream rounds to like 6 digits by default but the rounding can make the min/max args too large/small 
        * which is annoying so we'll just print every digit of the output and let users round on their own */
-      out << "The largest argument seen was x=" << to_string_with_precision(m_max_recorded) << "\n";
-      out << "The lowest argument seen was x=" << to_string_with_precision(m_min_recorded) << std::endl;
+      out << "The largest argument recorded was x=" << to_string_with_precision(m_max_recorded) << "\n";
+      out << "The lowest argument recorded was x=" << to_string_with_precision(m_min_recorded) << std::endl;
     }
 
     // print each field in this class to the given ostream

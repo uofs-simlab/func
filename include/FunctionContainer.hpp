@@ -30,12 +30,12 @@
 #pragma once
 #include <stdexcept>
 #include <functional>
-#include <boost/math/differentiation/autodiff.hpp>
 #include "config.hpp" // FUNC_USE_BOOST
 
 namespace func {
 
 #ifdef FUNC_USE_BOOST
+#include <boost/math/differentiation/autodiff.hpp>
 // two helper macros to make FUNC_SET_F appear like a variadic macro
 #define FUNC_SET_F_ONE_TYPE(F,TYPE)               \
   F<TYPE>, F<func::adVar<TYPE,1>>,                \
