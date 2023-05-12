@@ -105,10 +105,10 @@ CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(FunctionContainer<TIN,TOUT>
   /* -- actually build the given tables and update cumulative member vars -- */
   for(auto name_l_r_step : name_l_r_steps){
     // build each given LUT
-    auto name  = get<0>(name_l_r_step);
-    auto left  = get<1>(name_l_r_step);
-    auto right = get<2>(name_l_r_step);
-    auto step  = get<3>(name_l_r_step);
+    auto name  = std::get<0>(name_l_r_step);
+    auto left  = std::get<1>(name_l_r_step);
+    auto right = std::get<2>(name_l_r_step);
+    auto step  = std::get<3>(name_l_r_step);
     LookupTableGenerator<TIN,TOUT> gen(func_container, left, right);
     m_lutmap.insert(right, gen.generate_by_step(name, step));
   }
