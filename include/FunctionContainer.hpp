@@ -32,8 +32,6 @@
 #include <functional>
 #include "config.hpp" // FUNC_USE_BOOST
 
-namespace func {
-
 #ifdef FUNC_USE_BOOST
 #include <boost/math/differentiation/autodiff.hpp>
 // two helper macros to make FUNC_SET_F appear like a variadic macro
@@ -43,13 +41,14 @@ namespace func {
   F<func::adVar<TYPE,4>>, F<func::adVar<TYPE,5>>, \
   F<func::adVar<TYPE,6>>, F<func::adVar<TYPE,7>>
 
-#define FUNC_SET_F_TWO_TYPE(F,TIN,TOUT)                                                         \
+#define FUNC_SET_F_TWO_TYPE(F,TIN,TOUT)                                                 \
   F<TIN,TOUT>, F<func::adVar<TIN,1>,func::adVar<TOUT,1>>,                               \
   F<func::adVar<TIN,2>,func::adVar<TOUT,2>>, F<func::adVar<TIN,3>,func::adVar<TOUT,3>>, \
   F<func::adVar<TIN,4>,func::adVar<TOUT,4>>, F<func::adVar<TIN,5>,func::adVar<TOUT,5>>, \
   F<func::adVar<TIN,6>,func::adVar<TOUT,6>>, F<func::adVar<TIN,7>,func::adVar<TOUT,7>>
 
-// setup the automatically differentiable variable
+namespace func {
+// convenient typename for Boost's forward mode autodiff variable
 using boost::math::differentiation::autodiff_fvar;
 template <typename T, unsigned int N>
 using adVar = autodiff_fvar<T,N>;
@@ -69,6 +68,8 @@ struct nth_differentiable<TIN,TOUT,0>{
 #else
 #define FUNC_SET_F_ONE_TYPE(F,TYPE)     F<TYPE>
 #define FUNC_SET_F_TWO_TYPE(F,TIN,TOUT) F<TIN,TOUT>
+
+namespace func {
 #endif // FUNC_USE_BOOST
 
 #define FUNC_GET_MACRO_FUNCTION_CONTAINER(_1,_2,_3,NAME,...) NAME
