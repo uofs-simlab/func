@@ -150,5 +150,5 @@ public:
     out << jsonStats.dump(2) << std::endl;
   }  
 };
-// TODO make to/from_json()
+// TODO make to_json()
 } // namespace func
