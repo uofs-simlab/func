@@ -27,72 +27,60 @@
   unique_ptr<LookupTable> version of from_json in LookupTableFactory
   */
 #pragma once
-#include "EvaluationImplementation.hpp"
 #include "LookupTable.hpp"
 #include "LookupTableGenerator.hpp"
-#include <vector> // store LUTs, names, special points
+#include <map> // store LUTs
+#include <vector> // arguments to ctor are vectors
 #include <memory> // shared_ptr
-#include <utility> // std::pair
-#include <stdexcept> // domain_error, invalid_argument
-#include <string> // to_string
+#include <utility> // std::tuple
+#include <stdexcept> // invalid_argument
+#include <numeric>
 
 
 namespace func {
 
 template <typename TIN, typename TOUT = TIN>
-class CompositeLookupTable final : public EvaluationImplementation<TIN,TOUT> {
-  INHERIT_EVALUATION_IMPL(TIN,TOUT);
-
+class CompositeLookupTable final : public LookupTableTIN,TOUT> {
   // collection of FunC lookup tables used to sample from
   std::map<TIN,std::shared_ptr<LookupTable<TIN,TOUT>>> m_lutmap;
-  LookupTableFactory<TIN,TOUT> factory;
+  std::shared_ptr<LookupTable<TIN,TOUT>> recentLUT;
+  std::function<TOUT(TIN)> m_f;
+  //LookupTableFactory<TIN,TOUT> factory; TODO maybe useful for building from a file...
 
 public:
   /* vector of n table names, a vector of n step sizes, and a vector of n pairs.
    * Order of names determines which tables are used on which subintervals */
-  CompositeLookupTable(FunctionContainer<TIN,TOUT> *func_container, std::vector<std::tuple<std::string,TIN,TIN,TIN>> name_l_r_steps);
-  //CompositeLookupTable(FunctionContainer<TIN,TOUT> *func_container, std::vector<std::tuple<std::string,TIN,TIN,TIN,TIN>> name_l_r_atol_rtols);
+  CompositeLookupTable(const FunctionContainer<TIN,TOUT>& func_container, const std::vector<std::tuple<std::string,TIN,TIN,TIN>>& name_l_r_steps);
+  //CompositeLookupTable(const FunctionContainer<TIN,TOUT>& func_container, const std::vector<std::tuple<std::string,TIN,TIN,TIN,TIN>>& name_l_r_atol_rtols);
   ~CompositeLookupTable(){}
 
-  TOUT operator()(TIN x) override
+  TOUT operator()(TIN x) final
   {
     /* check if x is within the bounds of the most recently used LUT */
-    //std::shared_ptr<LookupTable<TIN,TOUT>> recentTable = m_lutmap[mostRecentlyUsed_idx];
+    if((recentLUT.min_arg() < x) && (x < recentLUT.max_arg()))
+      return (*recentLUT)(x);
 
-    /* Find the LUT whose right endpoint is strictly greater than x */
+    /* Find the LUT whose right endpoint is strictly greater than x
+     * TODO is this problematic for the max arg of the compositeLUT? Probably..... */
     auto iter = m_lutmap(x).upper_bound();
     if(iter != m_lutmap.end()){
       auto lut = iter->first;
-      if(lut.min_arg() < x)
+      if(lut.min_arg() < x){
+        recentLUT = lut;
         return (*lut)(x);
-      else
+      }else{
         return m_func(x);
+      }
     }
   }
 
   std::shared_ptr<LookupTable<TIN,TOUT>> get_table(TIN x){ return m_lutmap(x).lower_bound->first; }
-
-  void print_details(std::ostream &out) override
-  {
-    out << this->m_name << " ";
-    for(auto lut : m_lutmap)
-      lut->print_details(out);
-  }
-
-  /* TODO this does not make it easy to reconstruct a CompositeLUT from a file!
-   * Needs to make an nlohmann::json and use it with each LUT's to_json */
-  void print_details_json(std::ostream &out) override
-  {
-    for(auto lut : m_lutmap)
-      lut->print_details_json(out);
-  }
-
 };
 
 /* ---- Class implementation ---- */
 template <typename TIN, typename TOUT>
-CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(FunctionContainer<TIN,TOUT> *func_container, std::vector<std::tuple<std::string,TIN,TIN,TIN>> name_l_r_steps) : 
-  EvaluationImplementation<TIN,TOUT>((func_container != nullptr) ? func_container->standard_func : nullptr, "CompositeLookupTable")
+CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(const FunctionContainer<TIN,TOUT>& func_container, std::vector<std::tuple<std::string,TIN,TIN,TIN>> name_l_r_steps) :
+  function(func_container.standard_func)
 {
   if(m_func == nullptr)
     throw std::invalid_argument("Error in func::CompositeLUT: requires a func::FunctionContainer.");
@@ -114,7 +102,7 @@ CompositeLookupTable<TIN,TOUT>::CompositeLookupTable(FunctionContainer<TIN,TOUT>
   }
 
   // set the global min/max
-  this->m_dataSize = 0; // TODO sum across the map
+  this->m_dataSize = std::accumulate();
   this->m_minArg = m_lutmap.begin()->first;
   this->m_maxArg = m_lutmap.end()->second->max_arg();
 }

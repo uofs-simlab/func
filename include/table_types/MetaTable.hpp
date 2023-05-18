@@ -21,16 +21,31 @@
    independent of the LUT in use)
 */
 #pragma once
-#include "LookupTable.hpp"
+#include "MetaTable.hpp"
 #include "TransferFunctionSinh.hpp"
-#include "json.hpp"
+
+
 #include <array>
 #include <stdexcept>
+#include "json.hpp"
 
-#define INHERIT_META(TIN,TOUT,N,GT) \
-  using MetaTable<TIN,TOUT,N,GT>::m_table; \
-  using MetaTable<TIN,TOUT,N,GT>::m_grid; \
-  using MetaTable<TIN,TOUT,N,GT>::m_transferFunction
+/* Give inheriting classes access to member variables without
+   having to use "this->" excessively. These "using" statements must have protected access */
+#define INHERIT_META(N,TIN,TOUT,GT) \
+  using MetaTable<N,TIN,TOUT,GT>::m_func; \
+  using MetaTable<N,TIN,TOUT,GT>::m_order; \
+  using MetaTable<N,TIN,TOUT,GT>::m_name; \
+  using MetaTable<N,TIN,TOUT,GT>::m_dataSize; \
+  using MetaTable<N,TIN,TOUT,GT>::m_minArg; \
+  using MetaTable<N,TIN,TOUT,GT>::m_maxArg \
+  using MetaTable<N,TIN,TOUT,GT>::m_numIntervals; \
+  using MetaTable<N,TIN,TOUT,GT>::m_numTableEntries; \
+  using MetaTable<N,TIN,TOUT,GT>::m_stepSize; \
+  using MetaTable<N,TIN,TOUT,GT>::m_stepSize_inv; \
+  using MetaTable<N,TIN,TOUT,GT>::m_tableMaxArg \
+  using MetaTable<N,TIN,TOUT,GT>::m_table; \
+  using MetaTable<N,TIN,TOUT,GT>::m_grid; \
+  using MetaTable<N,TIN,TOUT,GT>::m_transferFunction
 
 /* Parallelization macro. Notes:
  * - m_table is aligned to sizeof(TOUT) so that might give some speedup.
@@ -52,14 +67,14 @@ static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,1
  * and LUTs could have that polynomial's derivative's coefs, etc). */
 template <typename TOUT, unsigned int N>
 struct alignas(sizeof(TOUT)*alignments[N]) polynomial {
-  static const unsigned int num_coefs = N;
+  static const unsigned int ncoefs_per_interval = N;
   TOUT coefs[N];
 };
 
 enum class GridTypes {UNIFORM, NONUNIFORM, NONUNIFORM_PSEUDO};
 
 template <GridTypes GT>
-const std::string grid_type_to_string() {
+constexpr std::string grid_type_to_string() {
   switch(GT){
     case GridTypes::UNIFORM:
       return "Uniform";
@@ -71,28 +86,43 @@ const std::string grid_type_to_string() {
   } 
 }
 
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
+template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class MetaTable : public LookupTable<TIN,TOUT>
 {
 protected:
-  INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_LUT(TIN,TOUT);
+  std::string m_name;             // name of implementation type
+  TIN m_minArg, m_maxArg;         // bounds of evaluation
+  TIN m_stepSize, m_stepSize_inv; // fixed grid spacing (and its inverse)
+  TIN m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
-  // m_grid and m_table MUST have size m_numTableEntries!
-  std::unique_ptr<TIN[]> m_grid; // useful for nonuniform tables
+  unsigned int m_order;           // order of accuracy of implementation
+  unsigned int m_dataSize;        // size of relevant data for impl evaluation
+
+  unsigned int m_numIntervals;    // = (m_tableMaxArg - m_minArg)/m_stepSize;
+  unsigned int m_numTableEntries; // length of m_grid and m_table (usually = m_numIntervals + 1)
+  std::unique_ptr<TIN[]> m_grid;  // necessary for nonuniform tables
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; // holds polynomials coefficients
   TransferFunctionSinh<TIN> m_transferFunction; // used to make nonuniform grids (default constructable)
 
 public:
-  // std::unique_ptr m_array implicitly deletes the default move ctor so we have to explicitly
-  // ask for the default move ctor
+  /* using a std::unique_ptr member variables implicitly deletes the default
+   * move ctor so we must explicitly ask for the default move ctor */
   MetaTable(MetaTable&&) = default;
   MetaTable() = default;
 
   /* Set every generic member variable from a json file */
-  MetaTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par) :
-    LookupTable<TIN,TOUT>(func_container, par)
+  MetaTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par) :
+    m_minArg(par.minArg), m_maxArg(par.maxArg), m_stepSize(par.stepSize)
   {
+    /* If the step size does not exactly divide the arg domain, the max arg of the table is set
+     * to the nearest value above such that it does. */
+    if(m_stepSize <= static_cast<TIN>(0.0))
+      throw std::invalid_argument("func::MetaTable was given a nonpositive stepSize. stepSize must be positive.");
+
+    m_stepSize_inv = static_cast<TIN>(1.0)/m_stepSize;
+    m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
+    m_tableMaxArg = m_minArg+m_stepSize*numIntervals; // always >= m_maxArg
+
     // We need a valid FunctionContainer to generate any LUT
     if(m_func == nullptr)
       throw std::invalid_argument("Error in func::MetaTable. Function not defined in given FunctionContainer");
@@ -103,31 +133,40 @@ public:
   }
 
   /* build this table from a json file */
-  MetaTable(const nlohmann::json& jsonStats, std::string tablename, FunctionContainer<TIN,TOUT> *func_container = nullptr)
+  MetaTable(const nlohmann::json& jsonStats)
   {
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::MetaTable: The provided nlohmann::json is empty");
-
-    // check that the names match
-    m_name = jsonStats["name"].get<std::string>();
-    if(m_name != tablename)
-      throw std::invalid_argument("Error while building " + tablename + " : provided nlohmann::json "
-          " contains data for building a " + m_name + " which is not compatible");
-
-    // user might want to still have info about the original function attached to this LUT
-    m_func = (func_container != nullptr) ? func_container->standard_func : nullptr;
-
     from_json(jsonStats, *this);
   }
 
-
-  /* Write table data to the provided ostream in the form of json */
-  virtual void print_details_json(std::ostream& out) override {
+  void print_details_json(std::ostream& out) override {
     nlohmann::json jsonStats = *this; // call to_json(jsonStats, this)
     out << jsonStats.dump(2) << std::endl;
   }
 
-  // give the nlohmann json functions access to every member variable (note the silly template names)
+  /* public access to protected member vars */
+  TIN min_arg() const final { return m_minArg; }
+  TIN max_arg() const final { return m_maxArg; }
+  unsigned int order() const final { return m_order; }
+  unsigned int size() const final { return m_dataSize; }
+  std::string name() const final { return m_name; }
+  TIN step_size() const final { return m_stepSize; };
+  unsigned int num_table_entries() const final { return m_numTableEntries; };
+  unsigned int num_intervals() const final { return m_numIntervals; };
+  std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final
+  {
+    return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
+  }
+
+  unsigned int ncoefs_per_interval() const { return N; }
+  TOUT table_entry(unsigned int i, unsigned int j) const { return m_table[i].coefs[j]; }
+  TIN grid_entry(unsigned int i) const { return m_grid[i]; }
+  std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
+
+
+  /* give the nlohmann json functions access to every member variable (note the silly template names)
+   * TODO don't have to friend if to_json just uses the member functions */
   template <typename TIN1, typename TOUT1, unsigned int N1, GridTypes GT1,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
                                  std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
@@ -138,55 +177,53 @@ public:
                                  std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void from_json(const nlohmann::json& jsonStats, MetaTable<TIN1,TOUT1,N1,GT1>& lut);
 
-  /* public access to protected member vars */
-  unsigned int num_coefs() const { return N; }
-  TOUT table_entry(unsigned int i, unsigned int j) const { return m_table[i].coefs[j]; }
-  TIN grid_entry(unsigned int i) const { return m_grid[i]; }
-  std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
 
-  /* Provide the most common hash. The compiler should simplify this method when templates are instantiated 
-   * TODO profile to verify that this is actually inlined and doesn't have to be a macro */
-  inline std::pair<unsigned int, TOUT> hash(TIN x){
-    /* TODO might be able to get some speedup by using c++14's constexpr for this switch?
-     * But idk hopefully the compiler optimizes out the unnecessary cases anyways */
-    unsigned int x0; TOUT dx;
-    switch(GT){
-      case GridTypes::UNIFORM:
-        {
-        // nondimensionalized x position, scaled by step size
-        dx  = static_cast<TOUT>(m_stepSize_inv*(x-m_minArg));
-        // index of previous table entry
-        x0  = static_cast<unsigned>(dx);
-        // value of table entries around x position
-        dx -= x0;
-        break;
-        }
-      case GridTypes::NONUNIFORM:
-        {
-        // find the subinterval x lives in
-        x0 = static_cast<unsigned>(m_transferFunction.g_inv(x));
-        // find where x is within that interval
-        TIN h = m_grid[x0+1] - m_grid[x0];
-        dx    = (x - m_grid[x0])/h;
-        break;
-        }
-      case GridTypes::NONUNIFORM_PSEUDO:
-        {
-        // find the subinterval x lives in
-        dx  = static_cast<TOUT>(m_transferFunction.g_inv(x));
-        // just take the fractional part of dx as x's location in this interval
-        x0  = static_cast<unsigned>(dx);
-        dx -= x0;
-        break;
-        }
-    }
+
+
+
+  /* use SFINAE (COMPILES SLOWLY) to emulate partial template specialization
+   * TODO a switch case might compile down to the exact same code. Profile this because switch case would compile way faster */
+  template <typename TIN1, typename TOUT1, GridTypes GT1,
+    typename std::enable_if<GT1 == GridTypes::UNIFORM,bool>::type = true>
+  inline std::pair<unsigned int, TOUT1> hash(TIN1 x){
+    unsigned int x0; TOUT1 dx;
+    // nondimensionalized x position, scaled by step size
+    dx  = static_cast<TOUT1>(m_stepSize_inv*(x-m_minArg));
+    // index of previous table entry
+    x0  = static_cast<unsigned>(dx);
+    // value of table entries around x position
+    dx -= x0;
     return std::make_pair(x0, dx);
   }
 
-  /* TODO this currently cannot be final because the Pade tables must override it; however,
-   * there might be a performance benefit to making this final. Profile to check the pros & cons */
+  template <typename TIN1, typename TOUT1, GridTypes GT1,
+    typename std::enable_if<GT1 == GridTypes::NONUNIFORM,bool>::type = true>
+  inline std::pair<unsigned int, TOUT1> hash(TIN1 x){
+    unsigned int x0; TOUT1 dx;
+    // find the subinterval x lives in
+    x0 = static_cast<unsigned>(m_transferFunction.g_inv(x));
+    // find where x is within that interval
+    TIN1 h = m_grid[x0+1] - m_grid[x0];
+    dx     = (x - m_grid[x0])/h;
+    return std::make_pair(x0, dx);
+  }
+
+  template <typename TIN1, typename TOUT1, GridTypes GT1,
+    typename std::enable_if<GT1 == GridTypes::NONUNIFORM_PSEUDO,bool>::type = true>
+  inline std::pair<unsigned int, TOUT1> hash(TIN1 x){
+    unsigned int x0; TOUT1 dx;
+    // find the subinterval x lives in
+    dx  = static_cast<TOUT1>(m_transferFunction.g_inv(x));
+    // save some time by taking the fractional part of dx as x's location in this interval
+    x0  = static_cast<unsigned>(dx);
+    dx -= x0;
+    return std::make_pair(x0, dx);
+  }
+
+  /* Implementations must provide their own operator() and diff() */
+  /*
   #pragma omp declare simd
-  TOUT operator()(TIN x) override
+  TOUT operator()(TIN x) final
   {
     unsigned int x0; TOUT dx;
     std::tie(x0,dx) = hash(x);
@@ -197,18 +234,11 @@ public:
       sum = dx*(m_table[x0].coefs[k] + sum);
     return m_table[x0].coefs[0]+sum;
   }
-
-  //template <unsigned K>
-  //std::array<TOUT,K> transform(std::array<TIN,K>& v) {
-  //  std::array<TOUT,K> w;
-  //  #pragma omp simd
-  //  for(int k=0; k<K; k++){
-  //    w[k] = operator()(v[k]);
-  //  }
-  //}
-
-  //virtual TOUT diff(unsigned int N, TIN x) = 0;
+  TOUT diff(unsigned int N, TIN x) final {}
+  */
 };
+
+
 
 /* Reading & writing functions for any LUT derived from MetaTable.
  * Enables the convenient "get" syntax from nlohmann::json for specific implementations.
@@ -218,7 +248,10 @@ public:
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<func::UniformLinearInterpolationTable<TIN,TOUT>>();
   ```
- * Uses SFINAE to automatically disable these functions if TIN or TOUT do not support nlohmann's json */
+ * Uses SFINAE to automatically disable these functions if TIN or TOUT do not support nlohmann's json
+ *
+ * TODO can we just edit the json library to make the compile time errors into runtime errors? SFINAE takes forever to compile...
+ * */
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 
                                  std::is_constructible<nlohmann::json,TOUT>::value, bool>::type = true>
@@ -243,7 +276,7 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<TIN,TOUT,N,GT>& lut)
   // save the polynomial coefs of each lookup table
   // Note: m_order is used as the number of polynomial coefs
   for(unsigned int i=0; i<lut.m_numTableEntries; i++)
-    for(unsigned int j=0; j<lut.num_coefs(); j++)
+    for(unsigned int j=0; j<lut.ncoefs_per_interval(); j++)
       jsonStats["table"][std::to_string(i)]["coefs"][std::to_string(j)] = lut.table_entry(i,j);
 }
 
@@ -286,12 +319,11 @@ void from_json(const nlohmann::json& jsonStats, MetaTable<TIN,TOUT,N,GT>& lut)
   // Recompute m_table (the array of polynomials) and the transfer function
   lut.m_table.reset(new polynomial<TOUT,N>[lut.m_numTableEntries]);
   for(unsigned int i=0; i<lut.m_numTableEntries; i++)
-    for(unsigned int j=0; j<lut.num_coefs(); j++)
+    for(unsigned int j=0; j<lut.ncoefs_per_interval(); j++)
       jsonStats.at("table").at(std::to_string(i)).at("coefs").at(std::to_string(j)).get_to(lut.m_table[i].coefs[j]);
 
   // rebuild the transfer function
-  lut.m_transferFunction = TransferFunctionSinh<TIN>(lut.m_minArg,lut.m_tableMaxArg,lut.m_stepSize,
-      jsonStats["transfer_function_coefs"].get<std::array<TIN,4>>());
+  lut.m_transferFunction = TransferFunctionSinh<TIN>(jsonStats["transfer_function_coefs"].get<std::array<TIN,4>>());
 }
 
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT,

@@ -38,29 +38,29 @@
 namespace func {
 
 template <typename TIN, typename TOUT = TIN>
-class DirectEvaluation final : public EvaluationImplementation<TIN,TOUT>
+class DirectEvaluation final : public LookupTable<TIN,TOUT>
 {
-  INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  #ifdef FUNC_DEBUG
-    std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
-    StdRng<TOUT> mp_sampler{-1,1};
-    TOUT m_tol; // TODO save/load to file?
-  #endif
+#ifdef FUNC_DEBUG
+  std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
+  StdRng<TIN> m_sampler{0,1}; // uniformly distrubuted random numbers in [0,1]
+  // TODO save/load error to json?
+  TIN  m_rerr;
+  TOUT m_aerr;
+#endif
 public:
 
-  /* set base class args and set up argument recording if 
-     FUNC_DEBUG is defined used at compile time */
-  DirectEvaluation(FunctionContainer<TIN,TOUT> *func_container,
-      TIN min = 0, TIN max = 1, unsigned int histSize = 10, TOUT tol = 0) :
-    EvaluationImplementation<TIN,TOUT>(func_container->standard_func, "DirectEvaluation")
+  /* Setup argument recording if FUNC_DEBUG is defined used at compile time */
+  DirectEvaluation(const FunctionContainer<TIN,TOUT>& func_container,
+      TIN min = 0, TIN max = 1, unsigned int histSize = 10, TIN aerr = 0, TIN rerr = 0) :
+    m_name("DirectEvaluation")
   {
-    m_minArg = min, m_maxArg = max, m_dataSize = 0;
     #ifdef FUNC_DEBUG
       mp_recorder = std::unique_ptr<ArgumentRecord<TIN>>(new ArgumentRecord<TIN>(min, max, histSize));
-      m_tol = tol;
+      m_rerr = rerr;
+      m_aerr = aerr;
     #endif
-    (void) histSize; // ignore debugging args if -DFUNC_DEBUG isn't specified
-    (void) tol;
+    /* ignore debugging args if -DFUNC_DEBUG isn't specified */
+    (void) histSize; (void) rerr; (void) aerr;
   }
 
   /* rebuild this class and it's arg record from a file */
@@ -70,8 +70,6 @@ public:
     nlohmann::json jsonStats;
     std::ifstream(filename) >> jsonStats;
     m_name = jsonStats["name"].get<std::string>();
-    m_minArg = jsonStats["minArg"].get<TIN>();
-    m_maxArg = jsonStats["maxArg"].get<TIN>();
 
   #ifdef FUNC_DEBUG
     // reconstruct our arg record
@@ -80,17 +78,17 @@ public:
   }
 
   // Evaluate the underlying std::function and optionally record the arg
-  TOUT operator()(TIN x) override
+  TOUT operator()(TIN x) final
   {
     #ifdef FUNC_DEBUG
       mp_recorder->record_arg(x);
-      return m_func(x)*(((TOUT) 1) + m_tol*mp_sampler.get_point());
+      return m_aerr*m_sampler.get_point() + m_func(x)*(static_cast<TIN>(1.0) + m_rerr*m_sampler.get_point());
     #endif
     return m_func(x);
   }
 
-  void print_details(std::ostream& out) override;
-  void print_details_json(std::ostream& out) override;
+  //void print_details(std::ostream& out) override;
+  //void print_details_json(std::ostream& out) override;
   ~DirectEvaluation(){};
 };
 
@@ -98,7 +96,7 @@ public:
 template <typename TIN, typename TOUT>
 inline void DirectEvaluation<TIN,TOUT>::print_details(std::ostream& out)
 {
-  out<< m_name << " " << m_minArg << " " << m_maxArg;
+  out<< m_name;
   #ifdef FUNC_DEBUG
     out << std::endl;
     mp_recorder->print_details(out);

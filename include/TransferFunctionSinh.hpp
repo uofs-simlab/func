@@ -3,7 +3,7 @@
   We only mandate that a TransferFunction is a monotonically increasing
   cubic polynomial, and the table hash must be baked into those coefficients.
   For example, it initializes itself the identity transfer function which
-  is the linear polynomial with coefs {-m_minArg/m_stepSize,1/m_stepSize,0,0}.
+  is the linear polynomial with coefs {-minArg/stepSize,1/stepSize,0,0}.
 
   If this class is given a function container then it will use
   Boost's automatic differentiation to generate a cubic monotone Hermite
@@ -46,45 +46,31 @@ namespace func {
 template <typename TIN>
 class TransferFunctionSinh
 {
+  // aligned array of polynomial coefs approximating g_inv
+  __attribute__((aligned)) std::array<TIN,4> m_inv_coefs = {{0,0,0,0}};
   /* This min, max must be the same as the corresponding table's min and
   max resp. (though note that the table max is not necessarily equal to
   the function's max arg) */
-  TIN m_minArg, m_tableMaxArg;
-  TIN m_stepSize;
-
-  // aligned array of polynomial coefs approximating g_inv
-  __attribute__((aligned)) std::array<TIN,4> m_inv_coefs = {{0,0,0,0}};
-
+  //TIN minArg, tableMaxArg;
+  //TIN stepSize;
 public:
   /* Set m_inv_coefs equal to a vector that is (presumably) either the identity or came from a json file */
-  TransferFunctionSinh(TIN minArg, TIN tableMaxArg, TIN stepSize, std::array<TIN,4> inv_coefs) :
-    m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) { m_inv_coefs = inv_coefs; }
+  TransferFunctionSinh(const std::array<TIN,4>& inv_coefs) { m_inv_coefs = inv_coefs; }
 
   TransferFunctionSinh() = default;
   /* initialize the identity transfer function */
   //TransferFunctionSinh(TIN minArg, TIN tableMaxArg, TIN stepSize) :
   //  TransferFunctionSinh<TIN>(minArg, tableMaxArg, stepSize, {-minArg/stepSize,1/stepSize,0,0}) {}
 
-  //template <typename TOUT,
-  //         typename std::enable_if<!std::is_arithmetic<TOUT>::value, bool>::type = true>
-  //TransferFunctionSinh(FunctionContainer<TIN,TOUT> *fc, TIN minArg, TIN tableMaxArg, TIN stepSize) :
-  //  m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize)
-  //{
-  //}
-
   /* Build the coefficients in g_inv 
-   * TODO TOUT only needs to be defined for sqrt() (ie cannot be LookupTable<...>).
+   * TODO do SFINAE because TOUT need only be defined for sqrt() (ie TOUT cannot be LookupTable<...>).
    * So, it doesn't necessarily need to be accepted by std::is_arithmetic */
   template<typename TOUT>
            //typename std::enable_if<std::is_arithmetic<TOUT>::value, bool>::type = true>
-  TransferFunctionSinh(FunctionContainer<TIN,TOUT> *fc,
-      TIN minArg, TIN tableMaxArg, TIN stepSize) :
-    m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize)
+  TransferFunctionSinh(const FunctionContainer<TIN,TOUT>& fc, TIN minArg, TIN tableMaxArg, TIN stepSize) :
   {
 #ifndef FUNC_USE_BOOST
-    // Template code is only compiled if the template is instantiated
-    // so this will cause a compile time error only when this
-    // constructor is called without Boost available:
+    /* cause a compile time error precisely when this constructor is called without Boost: */
     static_assert(sizeof(TIN) != sizeof(TIN), "Cannot generate a nonuniform grid without Boost verion 1.71.0 or higher");
 #else
     using boost::math::quadrature::gauss_kronrod;
@@ -94,24 +80,23 @@ public:
       throw std::invalid_argument("Error in func::TransferFunction. 1st derivative of function is needed to generate nonuniform grids but is null");
 
     // build a function to return the first derivative of f
-    std::function<TOUT(TIN)> f_prime = [fc](TIN x) -> TOUT {
+    std::function<TOUT(TIN)> f_prime = [&fc](TIN x) -> TOUT {
       return (fc->autodiff1_func)(make_fvar<TIN,1>(x)).derivative(1);
     };
 
     // build the integrand. Notice that it is strictly positive
-    std::function<TIN(TIN)> integrand = [f_prime](TIN x) -> TIN {
-          return 1/((TIN) sqrt(1 + f_prime(x)*f_prime(x)));
-        };
+    std::function<TIN(TIN)> integrand = [&f_prime](TIN x) -> TIN {
+      return static_cast<TIN>(1.0)/static_cast<TIN>(sqrt(static_cast<TOUT>(1.0) + f_prime(x)*f_prime(x)));
+    };
 
-    TIN a = m_minArg;
-    TIN b = m_tableMaxArg;
+    TIN a = minArg;
+    TIN b = tableMaxArg;
 
     // integrate over [a,b] using adaptive quadrature & a default tol of sqrt(epsilon).
     TIN c = gauss_kronrod<TIN, 15>::integrate(integrand, a, b);
 
     // rescale the integrand to map [a,b] -> [a,b]
-    std::function<TIN(TIN)> g_prime = [integrand,a,b,c](TIN x) -> TIN
-    {
+    std::function<TIN(TIN)> g_prime = [&integrand,a,b,c](TIN x) -> TIN {
       return (b-a) * integrand(x)/c;
     };
 
@@ -120,8 +105,9 @@ public:
     TIN m0 = 1/g_prime(a);
     TIN m1 = 1/g_prime(b);
 
-    // ensure monotonicity of the Hermite interpolating polynomial.
-    // We already know m0,m1 >= 0
+    /* ensure monotonicity of the Hermite interpolating polynomial.
+     * TODO this doesn't capture every condition of cubic monotone polynomials
+     * Note that m0,m1 >= 0 */
     m0 = (m0 > 3) ? 3 : m0;
     m1 = (m1 > 3) ? 3 : m1;
 
@@ -133,11 +119,10 @@ public:
     m_inv_coefs[2] = -(a*m0 - 3*b - 3*a + 2*a*m1 + 2*b*m0 + b*m1)/(a - b)/(a - b);
     m_inv_coefs[3] = (m0 + m1 - 2)/(a - b)/(a - b);
 
-    /* build the real version of g_inv by encoding the
-       underlying table's hash into the transfer function eval. This
-       will obfuscate our code, but now the only price of using
-       nonuniform tables is an indirection */
-    m_inv_coefs[0] = m_inv_coefs[0] - m_minArg;
+    /* build the version of g_inv we'll actually use by encoding the
+       underlying table's hash into the transfer function eval.
+       This way, the only cost of using a transfer function is to lookup 4 stack allocated numbers */
+    m_inv_coefs[0] = m_inv_coefs[0] - minArg;
     for(unsigned int i=0; i<4; i++)
       m_inv_coefs[i] = m_inv_coefs[i] / stepSize;
 #endif
@@ -162,14 +147,14 @@ public:
   }
 
   /* Use newton-raphson_iteration on g_inv. Recall that each coef in g was divided by h
-   * and we subtracted by m_minArg */
+   * and we subtracted by minArg */
   TIN g(TIN x)
   {
     // This will have at least 0.9*std::numeric_limits<TIN>::digits digits of accuracy
     boost::uintmax_t maxit = 55;
     return boost::math::tools::newton_raphson_iterate(
-        [this,x](const TIN z){ return std::make_tuple(g_inv(z) - (x-m_minArg)/m_stepSize, g_inv_prime(z));},
-        x,m_minArg, m_tableMaxArg, 0.9*std::numeric_limits<TIN>::digits, maxit);
+        [this,x](const TIN z){ return std::make_tuple(g_inv(z) - (x-minArg)/stepSize, g_inv_prime(z));},
+        x,minArg, tableMaxArg, 0.9*std::numeric_limits<TIN>::digits, maxit);
   }
 
   // public access to private vars
@@ -181,7 +166,6 @@ public:
   }
 
   std::array<TIN,4> get_coefs() const { return m_inv_coefs; }
-
-  std::pair<TIN,TIN> arg_bounds_of_interval(){ return std::make_pair(m_minArg, m_tableMaxArg); }
+  std::pair<TIN,TIN> arg_bounds_of_interval(){ return std::make_pair(minArg, tableMaxArg); }
 };
 }

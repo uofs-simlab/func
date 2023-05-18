@@ -49,10 +49,10 @@ public:
     m_name = classname;
     m_order = 4;
     m_numTableEntries = m_numIntervals+1;
-    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * m_numTableEntries);
 
     if(func_container->autodiff1_func == nullptr)
-      throw std::invalid_argument("CubicHermiteTable needs the 1st derivative but this is not defined");
+      throw std::invalid_argument("Error in func::CubicHermiteTable: 1st derivative of given function is not provided");
     mp_boost_func = func_container->autodiff1_func;
 
     /* Allocate and set table */

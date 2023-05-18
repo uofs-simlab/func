@@ -1,4 +1,8 @@
 /*
+ *  TODO FIX THE HASH
+ *
+ *
+ *
   LUT using [M/N] pade approximants with uniform sampling. Polynomial coefficients are calculated using
   Armadillo.
 
@@ -95,7 +99,7 @@ public:
 
       // find the coefficients of Q.
       arma::Mat<double> Q = arma::null(T.rows(M+1, M+N));
-      bool Q_has_root = false; // TODO it'll probably be significantly easier to use brent_find_minima from Boost to check for any zeros of Q
+      bool Q_has_root = false; // TODO it might be significantly easier to use brent_find_minima to find a bracket for Q
 
       /* TODO This can happen! Which is particularly confounding because Pade approximants are supposed to be unique...?? */
       if(Q.n_elem != N+1){

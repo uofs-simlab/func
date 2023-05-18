@@ -27,6 +27,9 @@
 
   TODO this class should support to_json but not from_json! Add another constructor
   to build this class from a FunctionContainer and a filename
+
+
+  TODO LUTS DON'T STORE THEIR FUNCTIONS ANYMORE
 */
 #pragma once
 #include "EvaluationImplementation.hpp"
@@ -45,8 +48,7 @@
 namespace func {
 
 template <typename TIN, typename TOUT = TIN, class LUT_TYPE = LookupTable<TIN,TOUT>>
-class FailureProofTable final : public EvaluationImplementation<TIN,TOUT> {
-  INHERIT_EVALUATION_IMPL(TIN,TOUT);
+class FailureProofTable final : public LookupTable<TIN,TOUT> {
   std::unique_ptr<LUT_TYPE> mp_LUT;
   #ifdef FUNC_DEBUG
     std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
@@ -54,10 +56,7 @@ class FailureProofTable final : public EvaluationImplementation<TIN,TOUT> {
 public:
   /* Steal the given LUTs identity */
   FailureProofTable(std::unique_ptr<LUT_TYPE> LUT,
-      TIN histMin = 1,
-      TIN histMax = 0,
-      unsigned int histSize = 10
-      ) :
+      TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10) :
     mp_LUT(std::move(LUT))
   {
     // m_func and m_name can't be set in the super class b/c the
@@ -69,19 +68,15 @@ public:
     m_order  = mp_LUT->order();
     m_dataSize = mp_LUT->size();
     #ifdef FUNC_DEBUG
-      // check if we're using default/bad histogram arguments
+      // check if we're using the default (aka bad) histogram arguments
       if(histMin >= histMax){
         histMin = m_minArg;
         histMax = m_maxArg;
       }
-      mp_recorder.reset(new ArgumentRecord<TIN>(
-            histMin, histMax, histSize
-            ));
+      mp_recorder.reset(new ArgumentRecord<TIN>(histMin, histMax, histSize));
     #endif
     // ignore hist parameters if they're unused
-    (void) histMin;
-    (void) histMax;
-    (void) histSize;
+    (void) histMin; (void) histMax; (void) histSize;
   }
 
   /* Build our own LUT_TYPE. Only works if the template is specific enough */

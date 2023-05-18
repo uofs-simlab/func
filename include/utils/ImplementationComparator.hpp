@@ -1,5 +1,6 @@
 /*
   Class for comparing variations of EvaluationImplementations
+  TODO this is fine for now, but ImplementationComparator should really accept any callable types
 
   - takes ownership of the vector of implementations passed to it
 */

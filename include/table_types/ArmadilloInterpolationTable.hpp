@@ -129,15 +129,15 @@ public:
   // operator() comes straight from the MetaTable
 };
 
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
-const std::string ArmadilloInterpolationTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>() + "ArmadilloInterpolationTable<" + std::to_string(N) + ">";
+template <std::size_t N, typename TIN, typename TOUT, GridTypes GT>
+const std::string ArmadilloInterpolationTable<N,TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "ArmadilloInterpolationTable<" + std::to_string(N) + ">";
 
 // define friendlier names
-template <typename TIN, typename TOUT, unsigned int N>
+template <std::size_t N, typename TIN, typename TOUT=TIN>
 using UniformArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::UNIFORM>;
-template <typename TIN, typename TOUT, unsigned int N>
+template <std::size_t N, typename TIN, typename TOUT=TIN>
 using NonUniformArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM>;
-template <typename TIN, typename TOUT, unsigned int N>
+template <std::size_t N, typename TIN, typename TOUT=TIN>
 using NonUniformPseudoArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM_PSEUDO>;
 
 } // namespace func

@@ -28,29 +28,18 @@ class TaylorTable final : public MetaTable<TIN,TOUT,N+1,GT>
   std::function<adVar<TOUT,N>(adVar<TOUT,N>)> mp_boost_func;
 #endif
 
-  static const std::string degree_to_string() {
-    switch(N){
-      case 1:
-        return "Linear";
-      case 2:
-        return "Quadratic";
-      case 3:
-        return "Cubic";
-      default:
-        return "Degree" + std::to_string(N);
-    }
-  }
-
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  TaylorTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  TaylorTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
       std::move(MetaTable<TIN,TOUT,N+1,GT>(func_container, par)) :
       std::move(MetaTable<TIN,TOUT,N+1,GT>(jsonStats, classname, func_container)))
   {
 #ifndef FUNC_USE_BOOST
-    static_assert(sizeof(TIN)!=sizeof(TIN), "Cannot generate a TaylorTable without Boost version 1.71.0 or newer");
+    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (not useful!) */
+    if(jsonStats.empty())
+      throw std::invalid_argument("Error in func::TaylorTable: Boost version 1.71.0 or newer is not available but FunC must use Boost's automatic differentiation to compute Taylor sums");
 #else
     if(!jsonStats.empty())
       return; // all our work is already done
@@ -61,10 +50,10 @@ public:
     m_name = classname;
     m_order = N+1;
     m_numTableEntries = m_numIntervals+1;
-    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
+    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * m_numTableEntries);
 
     if(func_container->template get_nth_func<N>() == nullptr)
-      throw std::invalid_argument(m_name+" needs the "+std::to_string(N)+"th derivative but this is not defined");
+      throw std::invalid_argument(m_name+" needs the " + std::to_string(N) + "th derivative but this is not defined");
     mp_boost_func = func_container->template get_nth_func<N>();
 
     /* Allocate and set table */
@@ -88,8 +77,8 @@ public:
       for(unsigned int k=0; k<N+1; k++)
         d[k] = derivs.derivative(k);
 
-      /* TODO there is certainly a nice enough closed form solution for the coefs of 
-       * an arbitrary degree shifted Taylor approx. but we can figure that out another day */
+      /* TODO there should be a nice enough closed form solution for the coefs of 
+       * a Taylor approx. of arbitrary degree */
       switch(N){
         case 1:
           {
@@ -128,28 +117,14 @@ public:
 #endif
 };
 
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
-const std::string TaylorTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>()+TaylorTable<TIN,TOUT,N,GT>::degree_to_string()+"TaylorTable";
+template <std::size_t N, typename TIN, typename TOUT, GridTypes GT>
+const std::string TaylorTable<N,TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "TaylorTable<" + std::to_string(N) + ">";
 
 /* define friendlier names */
-template <typename TIN, typename TOUT=TIN>
-using UniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,GridTypes::UNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformLinearTaylorTable = TaylorTable<TIN,TOUT,1,GridTypes::NONUNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoLinearTaylorTable = TaylorTable<TIN,TOUT,1,GridTypes::NONUNIFORM_PSEUDO>;
-
-template <typename TIN, typename TOUT=TIN>
-using UniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,GridTypes::UNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,GridTypes::NONUNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoQuadraticTaylorTable = TaylorTable<TIN,TOUT,2,GridTypes::NONUNIFORM_PSEUDO>;
-
-template <typename TIN, typename TOUT=TIN>
-using UniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,GridTypes::UNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformCubicTaylorTable = TaylorTable<TIN,TOUT,3,GridTypes::NONUNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoCubicTaylorTable = TaylorTable<TIN,TOUT,3,GridTypes::NONUNIFORM_PSEUDO>;
+template <std::size_t N, typename TIN, typename TOUT=TIN>
+using UniformTaylorTable = TaylorTable<N,TIN,TOUT,GridTypes::UNIFORM>;
+template <std::size_t N, typename TIN, typename TOUT=TIN>
+using NonUniformTaylorTable = TaylorTable<N,TIN,TOUT,GridTypes::NONUNIFORM>;
+template <std::size_t N, typename TIN, typename TOUT=TIN>
+using NonUniformPseudoTaylorTable = TaylorTable<N,TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

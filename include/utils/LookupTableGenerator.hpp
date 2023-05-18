@@ -20,8 +20,6 @@
   - plot a table implementation against the exact function
 
   TODO:
-  - only include iostream when FUNC_DEBUG is defined because it makes this class take longer
-  to compile into user code
   - Newton's iterate is currently unused because it was far too conservative in the past.
   Might behave better with the new error estimate?
 */
@@ -30,7 +28,6 @@
 #include "LookupTableFactory.hpp"
 #include "config.hpp" // FUNC_USE_QUADMATH, FUNC_USE_BOOST
 
-#include <iostream>
 #include <string>
 #include <memory>
 #include <limits>
