@@ -1,6 +1,6 @@
 /*
-  Class for comparing variations of EvaluationImplementations
-  TODO this is fine for now, but ImplementationComparator should really accept any callable types
+  Class for comparing any class implementing LookupTables
+  TODO ImplementationComparator's constructor should accept any callable type
 
   - takes ownership of the vector of implementations passed to it
 */
@@ -8,7 +8,7 @@
 #include "Timer.hpp"
 #include "RngInterface.hpp"
 #include "StdRng.hpp"
-#include "EvaluationImplementation.hpp"
+#include "LookupTable.hpp"
 #include "json.hpp"
 
 #include <memory>
@@ -26,7 +26,7 @@ namespace func {
 typedef std::vector<double> TimeContainer;
 
 template <typename TIN, typename TOUT>
-using ImplType = EvaluationImplementation<TIN,TOUT>;
+using ImplType = LookupTable<TIN,TOUT>;
 
 template <typename TIN, typename TOUT>
 using ImplContainer = std::vector<std::unique_ptr<ImplType<TIN,TOUT>>>;
@@ -62,9 +62,9 @@ struct ImplTimer
   void print_timing_stats(std::ostream& out)
   {
     out << "Min " << minTime << "s"
-      << " Max " << maxTime << "s"
-      << " Mean " << meanTime << "s"
-      << "\n";
+        << " Max " << maxTime << "s"
+        << " Mean " << meanTime << "s"
+        << "\n";
   }
 };
 
@@ -99,8 +99,7 @@ private:
   //} m_timingStatistics;
 
   /* Fill mp_randomEvaluations with random points to be evaluated */
-  void draw_new_sample_points()
-  {
+  void draw_new_sample_points() {
     for (int ii=0;ii<m_nEvals;++ii)
       mp_randomEvaluations[ii] = mp_sampler->get_point();
   }
@@ -111,7 +110,7 @@ private:
     for (auto &itImplTimer : m_implTimers) {
       Timer evalTimer;
       for (int ii=0;ii<m_nEvals;++ii)
-         m_evalHolder[ii] = (*(itImplTimer.impl))(mp_randomEvaluations[ii]);
+        m_evalHolder[ii] = (*(itImplTimer.impl))(mp_randomEvaluations[ii]);
 
       evalTimer.stop();
       itImplTimer.append_runtime(evalTimer.duration());
@@ -120,7 +119,7 @@ private:
 
 public:
 
-  ImplementationComparator(ImplContainer<TIN,TOUT> &inImpl, int nEvals = 100000,
+  ImplementationComparator(ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, int nEvals = 100000,
       unsigned int seed = 2017, std::unique_ptr<RngInterface<TIN>> inRng = nullptr);
   ~ImplementationComparator(){}
 
@@ -146,10 +145,10 @@ public:
   /* Sort the vector of implementations (m_implTimers) based on their max, mean, or min times */
   void sort_timings(SortType type = SortType::mean);
 
-  /* Print out the computed statistics for each EvaluationImplementation (no raw timings are displayed) */
+  /* Print out the computed statistics for each LookupTable (no raw timings are displayed) */
   void print_summary(std::ostream&);
 
-  /* Print out the raw timings for each EvaluationImplementation */
+  /* Print out the raw timings for each LookupTable */
   void print_details(std::ostream&);
   void print_details_json(std::ostream&);
   void print_csv_header(std::ostream&);
@@ -177,7 +176,7 @@ public:
 /* Constructor's implementation */
 template <typename TIN, typename TOUT>
 inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
-    ImplContainer<TIN,TOUT> &inImpl, int nEvals, unsigned int seed, std::unique_ptr<RngInterface<TIN>> inRng) :
+    ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, int nEvals, unsigned int seed, std::unique_ptr<RngInterface<TIN>> inRng) :
   m_implementations(std::move(inImpl)), mp_sampler(std::move(inRng)), m_nEvals(nEvals)
 {
   /*
@@ -194,11 +193,11 @@ inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
     m_implTimers.emplace_back(ImplTimer<TIN,TOUT>(itImpl.get()));
   }
 
-  /* Ensure all implementations are using the same min/max range */
-  // TODO I don't think we need all the implementations to use the same min/max range
-  m_minArg = m_implementations.front()->min_arg();
-  m_maxArg = m_implementations.front()->max_arg();
+  // TODO alert the user if [minArg,maxArg] are outside the domain of any LUT
+  m_minArg = minArg;
+  m_maxArg = maxArg;
 
+  // ensuring each domain is unnecessary IMO
   //for(auto & itImpl : m_implementations) {
   //  assert(abs(itImpl->min_arg() - m_minArg) < std::numeric_limits<TIN>::epsilon());
   //  assert(abs(itImpl->max_arg() - m_maxArg) < std::numeric_limits<TIN>::epsilon());
@@ -286,8 +285,7 @@ inline void ImplementationComparator<TIN,TOUT>::print_details(std::ostream &out)
 
   for (auto itImplTimer : m_implTimers) {
     out << "----------------------------------------------------------------------------\n";
-    out << "| ";
-    (itImplTimer.impl)->print_details(out);
+    out << "| " << (*itImplTimer.impl);
     out << "| Memory usage (B): " << (itImplTimer.impl)->size() << "\n";
     out << "| Run times (seconds / " << m_nEvals << " evals):" << "\n";
 
@@ -341,7 +339,7 @@ inline void ImplementationComparator<TIN,TOUT>::print_summary(std::ostream &out)
 
   for (auto itImplTimer : m_implTimers) {
     out << "----------------------------------------------------------------------------\n";
-    out << "| Implementation:   "; (itImplTimer.impl)->print_details(out);
+    out << "| Implementation:   " << (*itImplTimer.impl);
     out << "\n| Memory usage (B): " << (itImplTimer.impl)->size() << "\n";
     out << "| Timings:          "; itImplTimer.print_timing_stats(out);
   }

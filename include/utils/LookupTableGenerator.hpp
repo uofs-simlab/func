@@ -20,8 +20,9 @@
   - plot a table implementation against the exact function
 
   TODO:
-  - Newton's iterate is currently unused because it was far too conservative in the past.
-  Might behave better with the new error estimate?
+  - Newton's iterate is currently unused because sometimes it'll try
+    building a LUT with a stepsize that will mortal computers.
+  - It might behave better with the new error estimate? or if we start approximating function's roots
 */
 #pragma once
 #include "LookupTable.hpp"
@@ -32,7 +33,7 @@
 #include <memory>
 #include <limits>
 #include <stdexcept>
-#include <cmath> // fabs, min
+#include <cmath> // std::abs, std::min
 //#include <algorithm> // std::min
 
 #ifdef FUNC_USE_BOOST
@@ -53,12 +54,11 @@ template <typename TIN, typename TOUT = TIN, typename TERR = long double> // TER
 class LookupTableGenerator
 {
 private:
-  FunctionContainer<TIN,TOUT> *mp_func_container;
+  FunctionContainer<TIN,TOUT> m_fc;
+  LookupTableParameters<TIN> m_par;
+  TIN m_min, m_max; // min/max member variables are convenient but they should be removed in favour of m_par...
 
   LookupTableFactory<TIN,TOUT> factory;
-
-  TIN m_min;
-  TIN m_max;
 
   /* Nested functor for error evaluation */
   struct LookupTableErrorFunctor;
@@ -66,16 +66,26 @@ private:
   /* Nested functor for optimal grid spacing determination */
   struct OptimalStepSizeFunctor;
 
+
   /* check if filename exists or if the user can access it */
   bool file_exists(std::string filename){
     return static_cast<bool>(std::ifstream(filename));
   }
 
+  inline void save_lut(LookupTable<TIN,TOUT>* lut, std::string filename){
+    if(filename == "") return;
+
+    std::ofstream out_file(filename);
+    lut->print_json(out_file);
+    return;
+  }
+
 public:
-  /* set member variables */
-  LookupTableGenerator(FunctionContainer<TIN,TOUT> *func_container,
-      TIN minArg, TIN maxArg) :
-    mp_func_container(func_container), m_min(minArg), m_max(maxArg) {}
+  LookupTableGenerator(const FunctionContainer<TIN,TOUT>& fc, const LookupTableParameters<TIN>& par) :
+    m_fc(fc), m_par(par), m_min(par.minArg), m_max(par.maxArg) {}
+
+  LookupTableGenerator(const FunctionContainer<TIN,TOUT>& fc, TIN minArg, TIN maxArg) :
+    LookupTableGenerator(fc, {minArg, maxArg, static_cast<TIN>(0.0)}) {}
 
   ~LookupTableGenerator(){}
 
@@ -93,7 +103,7 @@ public:
       tableKey = jsonStats["name"].get<std::string>();
     }
     // MetaTable will check that tableKey actually matches the name in filename
-    return factory.create(tableKey, mp_func_container, LookupTableParameters<TIN>{0,0,0}, jsonStats);
+    return factory.create(tableKey, m_fc, LookupTableParameters<TIN>{0,0,0}, jsonStats);
   }
 
   /* A wrapper for the LookupTableFactory */
@@ -103,23 +113,18 @@ public:
       return generate_by_file(filename, tableKey);
 
     // LookupTable will make sure the stepsize is positive
-    LookupTableParameters<TIN> par;
-    par.minArg = m_min;
-    par.maxArg = m_max;
+    LookupTableParameters<TIN> par = m_par;
     par.stepSize = stepSize;
 
-    auto lut = factory.create(tableKey, mp_func_container, par);
-    if(filename != ""){
-      std::ofstream out_file(filename);
-      lut->print_details_json(out_file);
-    }
+    auto lut = factory.create(tableKey, m_fc, par);
+    save_lut(lut.get(), filename);
     return lut;
   }
 
   /* Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename = "");
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN desiredErr, std::string filename = ""){
-    return generate_by_tol(tableKey,desiredErr,desiredErr,filename); // for users that aren't super concerned with approximating _very_ small f(x)
+    return generate_by_tol(tableKey,desiredErr,desiredErr,filename);
   }
 
   /* Generate a table takes up desiredSize bytes */
@@ -131,6 +136,9 @@ public:
 
   /* compare tableKey to the original function at stepSize */
   void plot_implementation_at_step_size(std::string tableKey, TIN stepSize);
+
+  TIN min_arg(){ return m_par.minArg; }
+  TIN max_arg(){ return m_par.maxArg; }
 };
 
 /*----------------------------------------------------------------------------*/
@@ -141,21 +149,22 @@ public:
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::LookupTableErrorFunctor
 {
-  LookupTableErrorFunctor(LookupTable<TIN,TOUT>* impl, TERR relTol) :
-    m_impl(impl), m_relTol(relTol) {}
+  LookupTableErrorFunctor(LookupTable<TIN,TOUT>* impl, std::function<TOUT(TIN)> fun, TERR relTol) :
+    m_fun(fun), m_impl(impl), m_relTol(relTol) {}
 
   /* Compute -|f(x) - L(x)| / (1 + r_tol/a_tol*|f(x)|). Notes:
    * - We're maximizing this function with brent_find_minima so operator() must always return a negative value
    * - Only parameterized on the tolerance relative to a_tol (needed for error_at_step_size()) */
   TERR operator()(TERR const& x)
   {
-    TERR f_value = static_cast<TERR>((m_impl->function())(static_cast<TIN>(x)));
+    TERR f_value = static_cast<TERR>(m_fun(static_cast<TIN>(x)));
     TERR lut_value = static_cast<TERR>((*m_impl)(static_cast<TIN>(x)));
     return -fabs(f_value - lut_value) / (static_cast<TERR>(1.0) + m_relTol*fabs(f_value));
   }
 
 private:
 
+  std::function<TOUT(TIN)> m_fun;
   LookupTable<TIN,TOUT> *m_impl;
   TERR m_relTol;
 };
@@ -174,11 +183,9 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
   {
     using namespace boost::math::tools;
 
-    LookupTableParameters<TIN> par;
-    par.minArg = m_parent.m_min;
-		par.maxArg = m_parent.m_max;
+    LookupTableParameters<TIN> par = m_parent.m_par; // deep copy
 		par.stepSize = stepSize;
-    auto impl = m_parent.factory.create(m_tableKey, m_parent.mp_func_container, par);
+    auto impl = m_parent.factory.create(m_tableKey, m_parent.m_fc, par);
 
     /* get number of binary bits in mantissa */
     int bits = std::numeric_limits<TERR>::digits/2; // effective maximum
@@ -195,17 +202,17 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
      * - TODO can be too slow for high order tables with very few subintervals
      *   */
     #pragma omp parallel for
-    for(unsigned ii=0; ii<impl->num_intervals(); ii++){
-      std::pair<TIN,TIN> intEndPoints = impl->arg_bounds_of_interval(ii);
+    for(unsigned ii=0; ii<impl->num_subintervals(); ii++){
+      std::pair<TIN,TIN> intEndPoints = impl->bounds_of_subinterval(ii);
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
 
       /* tableMaxArg >= max. We don't care about any error outside [min,max]
        * so ignore any points between (max,tableMax] */
-      if(static_cast<TIN>(xtop) > m_parent.m_max)
-        xtop = static_cast<TERR>(m_parent.m_max);
+      if(static_cast<TIN>(xtop) > m_parent.max_arg())
+        xtop = static_cast<TERR>(m_parent.max_arg());
 
-      std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get(),m_relTol),x,xtop,bits,max_it);
+      std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl.get(),m_parent.m_fc.standard_fun,m_relTol),x,xtop,bits,max_it);
 
       #pragma omp critical
       {
@@ -222,7 +229,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 
 private:
 
-  LookupTableGenerator<TIN,TOUT,TERR> &m_parent;
+  LookupTableGenerator<TIN,TOUT,TERR>& m_parent;
   std::string m_tableKey;
   TERR m_relTol;
   TERR m_desiredErr;
@@ -248,43 +255,32 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   const unsigned long N2 = 10;
   const TIN step2 = (m_max-m_min)/N2;
 
-  LookupTableParameters<TIN> par1;
-  par1.minArg = m_min;
-  par1.maxArg = m_max;
+  LookupTableParameters<TIN> par1 = m_par;
   par1.stepSize = step1;
 
-  LookupTableParameters<TIN> par2;
-  par2.minArg = m_min;
-  par2.maxArg = m_max;
+  LookupTableParameters<TIN> par2 = m_par;
   par2.stepSize = step2;
 
-  std::unique_ptr<EvaluationImplementation<TIN,TOUT>> impl1 =
-    factory.create(tableKey, mp_func_container, par1);
-  std::unique_ptr<EvaluationImplementation<TIN,TOUT>> impl2 =
-    factory.create(tableKey, mp_func_container, par2);
+  auto impl1 = factory.create(tableKey, m_fc, par1);
+  auto impl2 = factory.create(tableKey, m_fc, par2);
 
   unsigned long size1 = impl1->size();
   unsigned long size2 = impl2->size();
 
-  // TODO this shouldn't ever be a problem, but I suppose the check is nice
-  if (size2 == size1)
+  // TODO logically, this can't ever be a problem... but I guess it's nice to check?
+  if(size2 == size1)
     throw std::logic_error("Error in func::LookupTableGenerator.generate_by_impl_size: Query tables have same size");
 
   /* approximate step size for for desired impl size
-   * (assuming linear relationship of num_intervals to size */
+   * (assuming linear relationship of num_subintervals to size */
   const unsigned long N3 = (N2-N1)*(desiredSize-size1)/(size2-size1) + N1;
   par1.stepSize = (m_max-m_min)/static_cast<TIN>(N3);
 
-  if (par1.stepSize <= 0)
+  if(par1.stepSize <= 0)
     throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_impl_size: Requested memory size is too small");
 
-  auto lut = factory.create(tableKey, mp_func_container, par1);
-  if(filename != ""){
-    std::ofstream out_file(filename);
-    lut->print_details_json(out_file);
-  }
-  //std::cerr << "desiredSize = " << desiredSize << "\n";
-  //std::cerr << "actual size is " << lut->size() << "\n";
+  auto lut = factory.create(tableKey, m_fc, par1);
+  save_lut(lut.get(), filename);
   return lut;
 }
 
@@ -297,13 +293,11 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   if(filename != "" && file_exists(filename))
     return generate_by_file(filename, tableKey);
 
-  LookupTableParameters<TIN> par;
-  par.minArg = m_min;
-  par.maxArg = m_max;
+  LookupTableParameters<TIN> par = m_par;
   par.stepSize = m_max-m_min; // max reasonable stepsize
 
   /* generate a first approximation for the implementation */
-  auto impl = factory.create(tableKey, mp_func_container, par);
+  auto impl = factory.create(tableKey, m_fc, par);
   /* And initialize the functor used for refinement:
    * Note relTol is considered the "relative tolerance relative to the absolute tolerance" */
   TERR relTol = r_tol/a_tol;
@@ -313,10 +307,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
    * where bracket_and_solve tries to use a stepsize larger than the table range */
   auto fmax_step = f(m_max-m_min);
   if(fmax_step <= a_tol){
-    if(filename != ""){
-      std::ofstream out_file(filename);
-      impl->print_details_json(out_file);
-    }
+    save_lut(impl.get(), filename);
     //std::cerr << "estimated max error of " << fmax_step << " with stepsize of " << m_max-m_min << std::endl;
     return impl;
   }
@@ -346,7 +337,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   std::vector<std::pair<double,double>> iterates;
   for (int iNewton = 0; iNewton < N_NEWTON_MAX_IT; iNewton++) {
     double err = f(stepSize);
-    if ( fabs(err-a_tol) <  fabs(a_tol)*NEWTON_IT_RTOL+NEWTON_IT_ATOL ) {
+    if (fabs(err-a_tol) <  fabs(a_tol)*NEWTON_IT_RTOL+NEWTON_IT_ATOL) {
       std::cout << "Newton iter: " << iNewton << "\n";
       NEWTON_SUCCESS_FLAG = 1;
       break;
@@ -413,11 +404,8 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
 
   /* Save and return the implementation with the desired stepSize */
   par.stepSize = r.first;
-  auto lut = factory.create(tableKey,mp_func_container,par);
-  if(filename != ""){
-    std::ofstream out_file(filename);
-    lut->print_details_json(out_file); // TODO include comment about the tolerance used?
-  }
+  auto lut = factory.create(tableKey,m_fc,par);
+  save_lut(lut.get(), filename);
   return lut;
 #endif
 }
@@ -438,25 +426,22 @@ long double LookupTableGenerator<TIN,TOUT,TERR>::error_at_step_size(
 }
 
 template <typename TIN, typename TOUT, typename TERR>
-void LookupTableGenerator<TIN,TOUT,TERR>::plot_implementation_at_step_size(
-    std::string tableKey, TIN stepSize)
+void LookupTableGenerator<TIN,TOUT,TERR>::plot_implementation_at_step_size(std::string tableKey, TIN stepSize)
 {
   /*
     Can be implemented in terms of the Functor used in solving for a specific
     tolerance, so that is reused.
   */
-  LookupTableParameters<TIN> par;
-  par.minArg = m_min;
-  par.maxArg = m_max;
+  LookupTableParameters<TIN> par = m_par;
   par.stepSize = stepSize;
-  auto impl = factory.create(tableKey, mp_func_container, par);
+  auto impl = factory.create(tableKey, m_fc, par);
 
   std::cout << "# x func impl" << std::endl;
   for (TIN x = impl->min_arg();
            x < impl->max_arg();
-           x+= impl->step_size()/10){
+           x+= impl->step_size()/static_cast<double>(100)){
     std::cout << x << " " <<
-      (impl->function())(x) << " " <<
+      (m_fc.standard_fun)(x) << " " <<
       (*impl)(x) << std::endl;
   }
 }

@@ -18,7 +18,7 @@
   - set up anything needed for 'evaluation'
   - determine size of data needed for 'evaluation'
   - override the brackets operator to perform 'evaluation'
-  - read/write data to json with print_details_json
+  - write data to json with print_json
   - cleanup in destructor
 */
 
@@ -64,23 +64,25 @@ public:
   virtual unsigned int size() const = 0;
   virtual unsigned int num_subintervals() const = 0;
   virtual TIN step_size() const = 0;
-  virtual std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) = 0;
+  virtual std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const = 0;
+  virtual void print_json(std::ostream& out) const = 0;
 
   /* to_json is defined for each specific LUT implementation */
 };
 
 /* print basic info about a LookupTable */
 template <typename TIN, typename TOUT = TIN>
-std::ostream& operator<<(std::ostream& os, const LookupTable<TIN2,TOUT2>& L){
+std::ostream& operator<<(std::ostream& out, const LookupTable<TIN,TOUT>& L){
   out << L.name() << " " << L.min_arg() << " " << L.max_arg() << " "
   << L.step_size() << " " << L.num_subintervals() << " ";
+  return out;
 }
 
 /* wraps operator<< */
 template <typename TIN, typename TOUT = TIN>
-inline std::string to_string(const LookupTable<TIN,TOUT>& x) {
+inline std::string to_string(const LookupTable<TIN,TOUT>& L) {
   std::ostringstream ss;
-  ss << x;
+  ss << L;
   return ss.str();
 }
 

@@ -1,5 +1,7 @@
 /*
- *  TODO FIX THE HASH
+ *  TODO FIX THE OPERATOR()
+ *  - use armadillo to solve the uppertriangular system
+ *  - 
  *
  *
  *
@@ -39,28 +41,22 @@ namespace func {
 
 static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
 
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
-class PadeTable final : public MetaTable<TIN,TOUT,M+N+1,GT>
+template <unsigned int M, unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
+class PadeTable final : public MetaTable<M+N+1,TIN,TOUT,GT>
 {
-  INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,M+N+1,GT);
-
-  static const std::string classname;
-#ifdef FUNC_USE_BOOST
-  std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> mp_boost_func;
-#endif
-
+  INHERIT_META(M+N+1,TIN,TOUT,GT);
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  PadeTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  PadeTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
-    MetaTable<TIN,TOUT,M+N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
-      std::move(MetaTable<TIN,TOUT,M+N+1,GT>(func_container, par)) :
-      std::move(MetaTable<TIN,TOUT,M+N+1,GT>(jsonStats, classname, func_container)))
+    MetaTable<M+N+1,TIN,TOUT,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<M+N+1,TIN,TOUT,GT>(func_container, par)) :
+      std::move(MetaTable<M+N+1,TIN,TOUT,GT>(jsonStats)))
   {
 #if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
-    static_assert(sizeof(TIN)!=sizeof(TIN), "Pade tables need both Armadillo and Boost to be generated");
+    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
+    if(jsonStats.empty())
+      throw std::invalid_argument("Error in func::PadeTable: Pade LUTs need both Armadillo and Boost to be generated");
 #else
     if(!jsonStats.empty())
       return; // all our work is already done
@@ -68,14 +64,14 @@ public:
     using boost::math::differentiation::make_fvar;
 
     /* Base class default variables */
-    m_name = classname;
+    m_name = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(N) + ">";
     m_order = M+N+1;
-    m_numTableEntries = m_numIntervals+1; // needs to know f(max)
+    m_numTableEntries = m_numIntervals+1;
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
 
-    if(func_container->template get_nth_func<M+N>() == nullptr)
-      throw std::invalid_argument(m_name + " needs the "+std::to_string(N+M)+"th derivative but this is not defined");
-    mp_boost_func = func_container->template get_nth_func<M+N>();
+    auto boost_fun = func_container.template get_nth_func<M+N>();
+    if(boost_fun == nullptr)
+      throw std::invalid_argument(m_name + " needs the " + std::to_string(N+M) + "th derivative but this was not provided in FunctionContainer");
 
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
@@ -89,7 +85,7 @@ public:
 
       // build the matrix of taylor coefficients
       arma::Mat<double> T = arma::zeros<arma::Mat<double>>(M+N+1, N+1);
-      const auto derivs = (mp_boost_func)(make_fvar<TIN,M+N>(x));
+      const auto derivs = boost_fun(make_fvar<TIN,M+N>(x));
       for(unsigned int i=0; i<M+N+1; i++)
         T(i,0) = static_cast<double>(derivs.derivative(i))/(fact[i]);
 
@@ -99,7 +95,7 @@ public:
 
       // find the coefficients of Q.
       arma::Mat<double> Q = arma::null(T.rows(M+1, M+N));
-      bool Q_has_root = false; // TODO it might be significantly easier to use brent_find_minima to find a bracket for Q
+      bool Q_has_root = false; // TODO using brent_find_minima to check for a minimum will result in less source code
 
       /* TODO This can happen! Which is particularly confounding because Pade approximants are supposed to be unique...?? */
       if(Q.n_elem != N+1){
@@ -117,7 +113,7 @@ public:
       // find the coefficients of P
       arma::Col<double> P = T.rows(0,M)*Q;
 
-      /* Check if the Q has any roots within the subinterval [-m_stepSize/2,m_stepSize/2]
+      /* Check if the Q has any roots within the subinterval [0,m_stepSize]
        * by building a bracket (Q(0)=1 is the positive endpoint so we just need a negative endpoint).
        * If any roots exist, then lower the degree of Q. */
       for(unsigned int k=N; k>0; k--){
@@ -191,7 +187,7 @@ public:
 #endif
 
   // override operator() from MetaTable so we work with rational functions instead
-  TOUT operator()(TIN x) override
+  TOUT operator()(TIN x) const final
   {
     // nondimensionalized x position
     TOUT dx  = (x-m_minArg);
@@ -210,18 +206,11 @@ public:
     TOUT Q = dx*m_table[x1].coefs[M+N];
     for (int k=N-1; k>0; k--)
       Q = dx*(m_table[x1].coefs[M+k] + Q);
-    Q = 1+Q;  // the constant term in Q will always be 1
+    Q = 1+Q; // the constant term in Q will always be 1
     return P/Q;
   }
-
-#ifdef FUNC_USE_BOOST
-  std::function<adVar<TOUT,M+N>(adVar<TOUT,M+N>)> boost_function(){ return mp_boost_func; }
-#endif
 };
 
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N, GridTypes GT>
-const std::string PadeTable<TIN,TOUT,M,N,GT>::classname = grid_type_to_string<GT>() + "PadeTable<" + std::to_string(M) + "," + std::to_string(N) + ">";
-
-template <typename TIN, typename TOUT, unsigned int M, unsigned int N>
-using UniformPadeTable = PadeTable<TIN,TOUT,M,N,GridTypes::UNIFORM>;
+template <unsigned int M, unsigned int N, typename TIN, typename TOUT=TIN>
+using UniformPadeTable = PadeTable<M,N,TIN,TOUT,GridTypes::UNIFORM>;
 } // namespace func

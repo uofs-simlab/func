@@ -2,7 +2,7 @@
 # Assumes these variables are defined:
 # ARMADILLO_LIBRARIES QUADMATH_LIBRARIES Boost_LIBRARIES OpenMP_CXX_LIBRARIES
 
-# We shouldn't have written any cpp files by hand so globbing here is fine
+# We didn't write any cpp files by hand so it's good to glob here
 file(GLOB func_src ${func_src_dir}/*.cpp)
 
 # add the func lib with the lists we built above
@@ -20,30 +20,21 @@ endif()
 
 # explicitly declare which headers we're distributing
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
-config.hpp;func.hpp;\
-FunctionContainer.hpp;EvaluationImplementation.hpp;\
-DirectEvaluation.hpp;ArgumentRecord.hpp;\
-ImplementationComparator.hpp;RngInterface.hpp;StdRng.hpp;Timer.hpp;\
-json.hpp;\
-FailureProofTable.hpp;CompositeLookupTable.hpp;\
-TransferFunctionSinh.hpp;\
-LookupTableFactory.hpp;\
-LookupTableGenerator.hpp;\
-table_types/TableIncludes.hpp;\
-table_types/LookupTable.hpp;\
-table_types/MetaTable.hpp;\
-table_types/ArmadilloInterpolationTable.hpp;\
-table_types/ChebyInterpolationTable.hpp;\
-table_types/ConstantTaylorTable.hpp;\
+FunctionContainer.hpp;LookupTable.hpp;config.hpp;func.hpp;json.hpp;\
+table_types/table_includes.hpp;\
+table_types/MetaTable.hpp;table_types/TransferFunction.hpp;\
+table_types/ChebyInterpTable.hpp;\
 table_types/CubicHermiteTable.hpp;\
-table_types/CubicInterpolationTable.hpp;\
-table_types/LinearTaylorTable.hpp;\
-table_types/QuadraticTaylorTable.hpp;\
-table_types/CubicTaylorTable.hpp;\
-table_types/LinearInterpolationTable.hpp;\
-table_types/LinearRawInterpolationTable.hpp;\
+table_types/EqSpaceInterpTable.hpp;\
+table_types/LinearRawInterpTable.hpp;\
 table_types/PadeTable.hpp;\
-table_types/QuadraticInterpolationTable.hpp;\
+table_types/TaylorTable.hpp;\
+utils/DirectEvaluation.hpp;utils/ArgumentRecord.hpp;\
+LookupTableFactory.hpp;utils/LookupTableGenerator.hpp;\
+utils/FailureProofTable.hpp; utils/CompositeLookupTable.hpp;\
+utils/RngInterface.hpp; utils/StdRng.hpp;\
+utils/ImplementationComparator.hpp;\
+utils/Timer.hpp;\
 ")
 
 target_include_directories(func ${FUNC_PUBLIC}
@@ -51,7 +42,7 @@ target_include_directories(func ${FUNC_PUBLIC}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/table_types>
   )
 
-target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
+target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost)
 #target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} ${Boost_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
 
 # TODO add more required compile features (it's nice to have cmake determine the minimal standard on its own)

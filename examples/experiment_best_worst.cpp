@@ -43,13 +43,14 @@ int main(int argc, char* argv[])
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-    // "UniformLinearInterpolationTable",
-      "UniformLinearPrecomputedInterpolationTable",
-      "UniformQuadraticPrecomputedInterpolationTable",
-      "UniformCubicPrecomputedInterpolationTable",
-      "UniformLinearTaylorTable",
-      "UniformQuadraticTaylorTable",
-      "UniformCubicTaylorTable"};
+    "UniformLinearRawInterpTable",
+    "UniformInterpTable<1>",
+    "UniformInterpTable<2>",
+    "UniformInterpTable<3>",
+    "UniformTaylorTable<1>",
+    "UniformTaylorTable<2>",
+    "UniformTaylorTable<3>",
+  };
 
   /* get cache sizes running something like `lscpu | grep cache` */
   // const unsigned long cacheSize = (3072u+256u+32u)*1024u;
@@ -64,10 +65,10 @@ int main(int argc, char* argv[])
   std::cout << "\n# impls using ~ " << percentRam <<"% of RAM\n";
   cout << "# Function:  " << FUNCNAME << endl << endl;
 
-  LookupTableGenerator<double> gen(&func_container, 0, 1);
+  LookupTableGenerator<double> gen(func_container, 0, 1);
 
   /* Fill in the implementations */
-  std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
+  std::vector<unique_ptr<LookupTable<double>>> impls;
 
 
   /* Run the best case */

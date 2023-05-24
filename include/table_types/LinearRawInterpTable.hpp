@@ -1,7 +1,6 @@
 /*
   Linear Interpolation LUT. Coefficients are computed at lookup time.
-  Approx 50% less memory usage compared to LinearInterpTable
-  but the hash is slower.
+  Approx 50% less memory usage compared to EqSpaceInterpTable<1> but the hash involves an additional subtraction.
 
   Usage example:
     LinearRawInterpTable look(&function,0,10,0.0001);
@@ -17,27 +16,27 @@
 namespace func {
 
 template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
-class LinearRawInterpTable final : public MetaTable<TIN,TOUT,1,GT>
+class LinearRawInterpTable final : public MetaTable<1,TIN,TOUT,GT>
 {
-  //INHERIT_META(TIN,TOUT,1,GT);
-
-  //static const std::string classname;
-  static constexpr const char * classname = "LinearRawInterpTable";
+  INHERIT_META(1,TIN,TOUT,GT);
 public:
-  // build the LUT from scratch or look in filename for an existing LUT
-  //#pragma omp declare simd
+  // build the LUT from scratch or look in jsonStats for an existing LUT
   LinearRawInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
-    MetaTable<TIN,TOUT,1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
-      std::move(MetaTable<TIN,TOUT,1,GT>(func_container, par)) :
-      std::move(MetaTable<TIN,TOUT,1,GT>(jsonStats))),
-    m_name(classname), m_order(2), m_numTableEntries(m_numIntervals+2)
+    MetaTable<1,TIN,TOUT,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<1,TIN,TOUT,GT>(func_container, par)) :
+      std::move(MetaTable<1,TIN,TOUT,GT>(jsonStats)))
   {
     if(!jsonStats.empty())
       return; // all our work is already done
 
     /* Base class variables */
+    m_name = "LinearRawInterpTable";
+    m_order = 2;
+    m_numTableEntries = m_numIntervals+2;
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * m_numTableEntries);
+
+    auto fun = func_container.standard_fun;
 
     /* Allocate and set table */
     m_grid.reset(new TIN[m_numTableEntries]);
@@ -50,20 +49,21 @@ public:
       if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else
-        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
+        x = m_transferFunction(m_minArg + ii*m_stepSize);
 
       m_grid[ii] = x;
-      m_table[ii].coefs[0] = m_func(x);
+      m_table[ii].coefs[0] = fun(x);
     }
     // special case to make lut(tableMaxArg) work
     m_table[m_numTableEntries-1].coefs[0] = m_table[m_numTableEntries-2].coefs[0];
   }
 
-  // this operator() is slightly different from MetaTable's provided Horner's method
-  TOUT operator()(TIN x) override
+  /* this operator() is slightly different from MetaTable's provided Horner's method
+   * TODO is there a good way to make this work with nonuniform grids? */
+  TOUT operator()(TIN x) const override
   {
     unsigned int x0; TOUT dx;
-    std::tie(x0,dx) = MetaTable<TIN,TOUT,1,GT>::hash(x);
+    std::tie(x0,dx) = MetaTable<1,TIN,TOUT,GT>::template hash<GT>(x);
 
     // linear interpolation
     TOUT y1 = m_table[x0].coefs[0];
@@ -72,13 +72,8 @@ public:
   }
 };
 
-//template <typename TIN, typename TOUT, GridTypes GT>
-//const std::string LinearRawInterpTable<TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "LinearRawInterpTable";
-
 template <typename TIN, typename TOUT=TIN>
 using UniformLinearRawInterpTable = LinearRawInterpTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>
 using NonUniformLinearRawInterpTable = LinearRawInterpTable<TIN,TOUT,GridTypes::NONUNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformPseudoLinearRawInterpTable = LinearRawInterpTable<TIN,TOUT,GridTypes::NONUNIFORM_PSEUDO>;
 } // namespace func

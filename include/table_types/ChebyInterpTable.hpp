@@ -26,24 +26,20 @@
 
 namespace func {
 
-template <std::size_t N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
+template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class ChebyInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
-  INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_LUT(TIN,TOUT);
   INHERIT_META(N+1,TIN,TOUT,GT);
-
-  static const std::string classname;
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  ChebyInterpTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  ChebyInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
-    MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
-      std::move(MetaTable<TIN,TOUT,N+1,GT>(func_container, par)) :
-      std::move(MetaTable<TIN,TOUT,N+1,GT>(jsonStats, classname, func_container)))
+    MetaTable<N+1,TIN,TOUT,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<N+1,TIN,TOUT,GT>(func_container, par)) :
+      std::move(MetaTable<N+1,TIN,TOUT,GT>(jsonStats)))
   {
 #ifndef FUNC_USE_ARMADILLO
-    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (not useful!) */
+    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::ChebyInterpTable: Chebyshev LUTs need Armadillo to be generated");
 #else
@@ -51,18 +47,19 @@ public:
       return; // all our work is already done
 
     /* Base class default variables */
-    m_name = classname;
+    m_name = grid_type_to_string<GT>() + "ChebyInterpTable<" + std::to_string(N) + ">";
     m_numTableEntries = m_numIntervals+1;
     m_order = N+1; // N is the degree of the polynomial interpolant so the order is N+1
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * m_numTableEntries);
 
-    /* build the vandermonde system for finding the interpolating polynomial's coefficients */
+    auto fun = func_container.standard_fun;
+
+    /* build the vandermonde system whose solution yields the coefficients of a polynomial interpolating $f$ on N+1 Chebyshev nodes over [0,1] */
     // TODO
-    // - take a continuity parameter (type 2 nodes for C0, clamped spline for C1)
+    // - take a continuity parameter (use 2 nodes for C0, clamped spline for C1)
     // - replace nearest points with user-provided roots of the function
-    using arma::datum::pi;
     arma::mat Van = arma::ones(N+1, N+1);
-    Van.col(1) = (1 + arma::cos(pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1))))/2;
+    Van.col(1) = (1 + arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1))))/2;
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
 
@@ -77,28 +74,34 @@ public:
       if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
-        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
-        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
+        x = m_transferFunction(m_minArg + ii*m_stepSize);
+        h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
       auto a = static_cast<double>(x);
       auto b = static_cast<double>(x+h);
-      arma::vec xvec = (a+b)/2 + (b-a)*arma::cos(pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)))/2;
+      arma::vec xvec = (a+b)/2 + (b-a)*arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)))/2;
       arma::vec y(N+1);
       for (unsigned int k=0; k<N+1; k++)
-        y[k] = static_cast<double>(m_func(static_cast<TIN>(xvec[k])));
+        y[k] = static_cast<double>(fun(static_cast<TIN>(xvec[k])));
 
       y = arma::solve(Van, y);
 
       // move this back into the m_table array
       for (unsigned int k=0; k<N+1; k++)
         m_table[ii].coefs[k] = static_cast<TOUT>(y[k]);
+
+      if(GT == GridTypes::NONUNIFORM){
+        auto p = m_table[ii];
+        for(unsigned int k=0; k<N+1; k++)
+          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/std::pow(h,k)/boost::math::factorial<double>(k);
+      }
     }
     // special case to make lut(tableMaxArg) work
     m_grid[m_numTableEntries-1] = m_tableMaxArg;
-    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
       m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
@@ -107,15 +110,10 @@ public:
   // operator() is in MetaTable
 };
 
-template <typename TIN, typename TOUT, unsigned int N, GridTypes GT>
-const std::string ChebyInterpTable<TIN,TOUT,N,GT>::classname = grid_type_to_string<GT>() + "ChebyInterpTable<" + std::to_string(N) + ">";
-
 // define friendlier names
-template <typename TIN, typename TOUT, unsigned int N>
-using UniformChebyInterpTable = ChebyInterpTable<TIN,TOUT,N,GridTypes::UNIFORM>;
-template <typename TIN, typename TOUT, unsigned int N>
-using NonUniformChebyInterpTable = ChebyInterpTable<TIN,TOUT,N,GridTypes::NONUNIFORM>;
-template <typename TIN, typename TOUT, unsigned int N>
-using NonUniformPseudoChebyInterpTable = ChebyInterpTable<TIN,TOUT,N,GridTypes::NONUNIFORM_PSEUDO>;
+template <unsigned int N, typename TIN, typename TOUT>
+using UniformChebyInterpTable = ChebyInterpTable<N,TIN,TOUT,GridTypes::UNIFORM>;
+template <unsigned int N, typename TIN, typename TOUT>
+using NonUniformChebyInterpTable = ChebyInterpTable<N,TIN,TOUT,GridTypes::NONUNIFORM>;
 
 } // namespace func

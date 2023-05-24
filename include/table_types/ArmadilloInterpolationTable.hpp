@@ -3,7 +3,7 @@
   coefficients solved using Armadillo matrices)
 
   Usage example for a 4th degree interpolant:
-    ArmadilloInterpolationTable<double,double,4> look(&function,LookupTableParameters<double>{0,10,0.0001});
+    ArmaInterpTable<double,double,4> look(&function,LookupTableParameters<double>{0,10,0.0001});
     double val = look(0.87354);
 
   Notes:
@@ -41,24 +41,20 @@
 namespace func {
 
 template <typename TIN, typename TOUT, unsigned int N, GridTypes GT=GridTypes::UNIFORM>
-class ArmadilloInterpolationTable final : public MetaTable<TIN,TOUT,N+1,GT>
+class ArmaInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
-  INHERIT_EVALUATION_IMPL(TIN,TOUT);
-  INHERIT_LUT(TIN,TOUT);
-  INHERIT_META(TIN,TOUT,N+1,GT);
-
-  static const std::string classname;
+  INHERIT_META(N+1,TIN,TOUT,GT);
+  static constexpr const char * classname = grid_type_to_string<GT>() + "ArmaInterpTable<" + std::to_string(N) + ">";
 public:
   // build the LUT from scratch or look in filename for an existing LUT
-  ArmadilloInterpolationTable(FunctionContainer<TIN,TOUT> *func_container, LookupTableParameters<TIN> par,
+  ArmaInterpTable(const FunctionContainer<TIN,TOUT>& fun_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
-    MetaTable<TIN,TOUT,N+1,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
-      std::move(MetaTable<TIN,TOUT,N+1,GT>(func_container, par)) :
-      std::move(MetaTable<TIN,TOUT,N+1,GT>(jsonStats, classname, func_container)))
+    MetaTable<N+1,TIN,TOUT,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
+      std::move(MetaTable<N+1,TIN,TOUT,GT>(fun_container, par)) :
+      std::move(MetaTable<N+1,TIN,TOUT,GT>(jsonStats)))
   {
 #ifndef FUNC_USE_ARMADILLO
-    // throw a descriptive exception. This could theoretically be a compile time error; however, that will only stop us from
-    // registering this table (in which case, users would just get a vague "table not registered" error)
+    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Armadillo tables need Armadillo to be generated");
 #else
@@ -70,6 +66,8 @@ public:
     m_numTableEntries = m_numIntervals+1;
     m_order = N+1; // N is the degree of the polynomial interpolant so the order is N+1
     m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * (m_numTableEntries));
+
+    auto fun = fun_container.standard_function;
 
     /* build the vandermonde system for finding the interpolating polynomial's coefficients */
     arma::mat Van = arma::ones(N+1, N+1);
@@ -94,18 +92,16 @@ public:
       if (GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
-        x = m_transferFunction.g(m_minArg + ii*m_stepSize);
-        h = m_transferFunction.g(m_minArg + (ii+1)*m_stepSize) - x;
+        x = m_transferFunction(m_minArg + ii*m_stepSize);
+        h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
       // grid points
       m_grid[ii] = x;
       // build the vector of coefficients from function values
       arma::vec xvec = arma::linspace(static_cast<double>(x),static_cast<double>(x+h),N+1);
       arma::vec y(N+1);
-      // TODO is this performed in simd: y.for_each([this](Mat<double>::elem_type& xk) { xk = static_cast<double>(m_func(static_cast<TIN>(xk))); });
-      //#pragma omp simd
       for (unsigned int k=0; k<N+1; k++)
-        y[k] = static_cast<double>(m_func(static_cast<TIN>(xvec[k])));
+        y[k] = static_cast<double>(fun(static_cast<TIN>(xvec[k])));
 
       // make y the coefficients of the polynomial interpolant
 #ifdef FUNC_ARMA_LU_SOLVE
@@ -120,24 +116,19 @@ public:
     }
     // special case to make lut(tableMaxArg) work
     m_grid[m_numTableEntries-1] = m_tableMaxArg;
-    m_table[m_numTableEntries-1].coefs[0] = m_func(m_tableMaxArg);
+    m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
       m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
 
-  // operator() comes straight from the MetaTable
+  // operator() comes from MetaTable
 };
 
-template <std::size_t N, typename TIN, typename TOUT, GridTypes GT>
-const std::string ArmadilloInterpolationTable<N,TIN,TOUT,GT>::classname = grid_type_to_string<GT>() + "ArmadilloInterpolationTable<" + std::to_string(N) + ">";
-
 // define friendlier names
-template <std::size_t N, typename TIN, typename TOUT=TIN>
-using UniformArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::UNIFORM>;
-template <std::size_t N, typename TIN, typename TOUT=TIN>
-using NonUniformArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM>;
-template <std::size_t N, typename TIN, typename TOUT=TIN>
-using NonUniformPseudoArmadilloInterpolationTable = ArmadilloInterpolationTable<TIN,TOUT,N,GridTypes::NONUNIFORM_PSEUDO>;
+template <unsigned int N, typename TIN, typename TOUT=TIN>
+using UniformArmaInterpTable = ArmaInterpTable<N,TIN,TOUT,GridTypes::UNIFORM>;
+template <unsigned int N, typename TIN, typename TOUT=TIN>
+using NonUniformArmaInterpTable = ArmaInterpTable<N,TIN,TOUT,GridTypes::NONUNIFORM>;
 
 } // namespace func

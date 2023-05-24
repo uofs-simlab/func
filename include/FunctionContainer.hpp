@@ -82,61 +82,61 @@ class FunctionContainer
 {
 #ifdef FUNC_USE_BOOST
   template<unsigned int N>
-  using func_type = nth_differentiable<TIN,TOUT,N>;
+  using fun_type = nth_differentiable<TIN,TOUT,N>;
   // 2 parter for providing a way to access each member function with a number.
-  // overload func_type 9 different ways to get a function that seemingly does different
+  // overload fun_type 9 different ways to get a function that seemingly does different
   // things based on its template value.
-  template<unsigned int N> typename func_type<N>::type get_nth_func(func_type<N>)
+  template<unsigned int N> typename fun_type<N>::type get_nth_func(fun_type<N>) const
   {
     throw std::out_of_range("Template value must be in 0<=N<=7");
   }
-  typename func_type<0>::type get_nth_func(func_type<0>){ return standard_func;  };
-  typename func_type<1>::type get_nth_func(func_type<1>){ return autodiff1_func; };
-  typename func_type<2>::type get_nth_func(func_type<2>){ return autodiff2_func; };
-  typename func_type<3>::type get_nth_func(func_type<3>){ return autodiff3_func; };
-  typename func_type<4>::type get_nth_func(func_type<4>){ return autodiff4_func; };
-  typename func_type<5>::type get_nth_func(func_type<5>){ return autodiff5_func; };
-  typename func_type<6>::type get_nth_func(func_type<6>){ return autodiff6_func; };
-  typename func_type<7>::type get_nth_func(func_type<7>){ return autodiff7_func; };
+  typename fun_type<0>::type get_nth_func(fun_type<0>) const { return standard_fun;  };
+  typename fun_type<1>::type get_nth_func(fun_type<1>) const { return autodiff1_fun; };
+  typename fun_type<2>::type get_nth_func(fun_type<2>) const { return autodiff2_fun; };
+  typename fun_type<3>::type get_nth_func(fun_type<3>) const { return autodiff3_fun; };
+  typename fun_type<4>::type get_nth_func(fun_type<4>) const { return autodiff4_fun; };
+  typename fun_type<5>::type get_nth_func(fun_type<5>) const { return autodiff5_fun; };
+  typename fun_type<6>::type get_nth_func(fun_type<6>) const { return autodiff6_fun; };
+  typename fun_type<7>::type get_nth_func(fun_type<7>) const { return autodiff7_fun; };
 
 public:
   // call as func_container->template get_nth_func<N>() to get the member
   // function that is differentiated N times for each function call.
   template<unsigned int N>
-  typename func_type<N>::type get_nth_func(){ return get_nth_func(func_type<N>()); }
+  typename fun_type<N>::type get_nth_func() const { return get_nth_func(fun_type<N>()); }
 #endif // FUNC_USE_BOOST
 public:
 
-  std::function<TOUT(TIN)> standard_func;
+  std::function<TOUT(TIN)> standard_fun;
 #ifdef FUNC_USE_BOOST
-  std::function<adVar<TOUT,1>(adVar<TIN,1>)> autodiff1_func;
-  std::function<adVar<TOUT,2>(adVar<TIN,2>)> autodiff2_func;
-  std::function<adVar<TOUT,3>(adVar<TIN,3>)> autodiff3_func;
-  std::function<adVar<TOUT,4>(adVar<TIN,4>)> autodiff4_func;
-  std::function<adVar<TOUT,5>(adVar<TIN,5>)> autodiff5_func;
-  std::function<adVar<TOUT,6>(adVar<TIN,6>)> autodiff6_func;
-  std::function<adVar<TOUT,7>(adVar<TIN,7>)> autodiff7_func;
+  std::function<adVar<TOUT,1>(adVar<TIN,1>)> autodiff1_fun;
+  std::function<adVar<TOUT,2>(adVar<TIN,2>)> autodiff2_fun;
+  std::function<adVar<TOUT,3>(adVar<TIN,3>)> autodiff3_fun;
+  std::function<adVar<TOUT,4>(adVar<TIN,4>)> autodiff4_fun;
+  std::function<adVar<TOUT,5>(adVar<TIN,5>)> autodiff5_fun;
+  std::function<adVar<TOUT,6>(adVar<TIN,6>)> autodiff6_fun;
+  std::function<adVar<TOUT,7>(adVar<TIN,7>)> autodiff7_fun;
 #endif // FUNC_USE_BOOST
 
   // some constructors
   FunctionContainer(){}
 
-  FunctionContainer(std::function<TOUT(TIN)> func) :
-    standard_func(func) {};
+  FunctionContainer(std::function<TOUT(TIN)> fun) :
+    standard_fun(fun) {};
 
 #ifdef FUNC_USE_BOOST
-  FunctionContainer(std::function<TOUT(TIN)>   func,
-      std::function<adVar<TOUT,1>(adVar<TIN,1>)> func1,
-      std::function<adVar<TOUT,2>(adVar<TIN,2>)> func2,
-      std::function<adVar<TOUT,3>(adVar<TIN,3>)> func3,
-      std::function<adVar<TOUT,4>(adVar<TIN,4>)> func4,
-      std::function<adVar<TOUT,5>(adVar<TIN,5>)> func5,
-      std::function<adVar<TOUT,6>(adVar<TIN,6>)> func6,
-      std::function<adVar<TOUT,7>(adVar<TIN,7>)> func7) :
-    standard_func(func),   autodiff1_func(func1),
-    autodiff2_func(func2), autodiff3_func(func3),
-    autodiff4_func(func4), autodiff5_func(func5),
-    autodiff6_func(func6), autodiff7_func(func7) {}
+  FunctionContainer(std::function<TOUT(TIN)>   fun,
+      std::function<adVar<TOUT,1>(adVar<TIN,1>)> fun1,
+      std::function<adVar<TOUT,2>(adVar<TIN,2>)> fun2,
+      std::function<adVar<TOUT,3>(adVar<TIN,3>)> fun3,
+      std::function<adVar<TOUT,4>(adVar<TIN,4>)> fun4,
+      std::function<adVar<TOUT,5>(adVar<TIN,5>)> fun5,
+      std::function<adVar<TOUT,6>(adVar<TIN,6>)> fun6,
+      std::function<adVar<TOUT,7>(adVar<TIN,7>)> fun7) :
+    standard_fun(fun),   autodiff1_fun(fun1),
+    autodiff2_fun(fun2), autodiff3_fun(fun3),
+    autodiff4_fun(fun4), autodiff5_fun(fun5),
+    autodiff6_fun(fun6), autodiff7_fun(fun7) {}
 #endif // FUNC_USE_BOOST
 };
 

@@ -1,17 +1,24 @@
 // Global include for FunC
 #pragma once
 #include "config.hpp"
-#include "DirectEvaluation.hpp"
-#include "TableIncludes.hpp" // includes every table type
+#include "LookupTable.hpp"
+#include "utils/DirectEvaluation.hpp"
 
-#include "FailureProofTable.hpp"
-#include "CompositeLookupTable.hpp"
+#include "ChebyInterpTable.hpp"
+#include "CubicHermiteTable.hpp"
+#include "EqSpaceInterpTable.hpp"
+#include "LinearRawInterpTable.hpp"
+#include "PadeTable.hpp"
+#include "TaylorTable.hpp"
+
+#include "utils/FailureProofTable.hpp"
+#include "utils/CompositeLookupTable.hpp"
 
 #include "LookupTableFactory.hpp"
-#include "LookupTableGenerator.hpp"
+#include "utils/LookupTableGenerator.hpp"
 
-#include "ImplementationComparator.hpp"
-#include "RngInterface.hpp"
-#include "StdRng.hpp"
+#include "utils/RngInterface.hpp"
+#include "utils/StdRng.hpp"
+#include "utils/ImplementationComparator.hpp"
 
-#include "TransferFunctionSinh.hpp"
+

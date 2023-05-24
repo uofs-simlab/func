@@ -1,4 +1,5 @@
-/*
+/* TODO don't wrap a smart pointer. Just store a LUT directly!
+ *
   A wrapper for a standard func table class. If an argument is outside a
   table's range then the original function is used and the arg is recorded.
 
@@ -32,10 +33,9 @@
   TODO LUTS DON'T STORE THEIR FUNCTIONS ANYMORE
 */
 #pragma once
-#include "EvaluationImplementation.hpp"
 #include "FunctionContainer.hpp"
+#include "LookupTableGenerator.hpp"
 #include "LookupTable.hpp"
-#include "LookupTableGenerator.hpp" // generate_by_filename
 #include "json.hpp"
 #include <memory> // unique_ptr
 #include <fstream> //ifstream
@@ -47,31 +47,26 @@
 
 namespace func {
 
-template <typename TIN, typename TOUT = TIN, class LUT_TYPE = LookupTable<TIN,TOUT>>
+template <class LUT_TYPE, typename TIN, typename TOUT = TIN>
 class FailureProofTable final : public LookupTable<TIN,TOUT> {
-  std::unique_ptr<LUT_TYPE> mp_LUT;
+  std::function<TOUT(TIN)> m_func;
+  LUT_TYPE m_LUT;
   #ifdef FUNC_DEBUG
-    std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
+  std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
   #endif
 public:
-  /* Steal the given LUTs identity */
-  FailureProofTable(std::unique_ptr<LUT_TYPE> LUT,
-      TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10) :
-    mp_LUT(std::move(LUT))
+  /* Deep copy the given LUT */
+  FailureProofTable(const FunctionContainer<TIN,TOUT>& fc, const LUT_TYPE& LUT,
+      TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10) : m_LUT(LUT)
   {
     // m_func and m_name can't be set in the super class b/c the
     // base class constructor would be evaluated before mp_LUT is set
-    m_func   = mp_LUT->function();
-    m_name   = "FailureProof" + mp_LUT->name();
-    m_minArg = mp_LUT->min_arg();
-    m_maxArg = mp_LUT->max_arg();
-    m_order  = mp_LUT->order();
-    m_dataSize = mp_LUT->size();
+    m_func = fc.standard_function;
     #ifdef FUNC_DEBUG
       // check if we're using the default (aka bad) histogram arguments
       if(histMin >= histMax){
-        histMin = m_minArg;
-        histMax = m_maxArg;
+        histMin = m_LUT.min_arg();
+        histMax = m_LUT.max_arg();
       }
       mp_recorder.reset(new ArgumentRecord<TIN>(histMin, histMax, histSize));
     #endif
@@ -80,35 +75,18 @@ public:
   }
 
   /* Build our own LUT_TYPE. Only works if the template is specific enough */
-  FailureProofTable(FunctionContainer<TIN,TOUT> *fc,
-      LookupTableParameters<TIN> par,
+  FailureProofTable(const FunctionContainer<TIN,TOUT>& fc, const LookupTableParameters<TIN>& par,
       TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10) :
-    FailureProofTable(std::unique_ptr<LUT_TYPE>(new LUT_TYPE(fc,par)), histMin, histMax, histSize) {}
-
-  /* Build our own LUT_TYPE from a file */
-  FailureProofTable(FunctionContainer<TIN,TOUT> *fc, std::string filename) :
-    FailureProofTable(LookupTableGenerator<TIN,TOUT>(fc,1,0).generate_by_file(filename))
-  {
-    nlohmann::json jsonStats;
-    std::ifstream(filename) >> jsonStats;
-
-    #ifdef FUNC_DEBUG
-      // reconstruct our arg record if it was ever saved to jsonStats
-      try{
-        mp_recorder =
-          std::unique_ptr<ArgumentRecord<TIN>>(new ArgumentRecord<TIN>(jsonStats));
-      } catch (const nlohmann::detail::type_error&) {}
-    #endif
-  }
+    FailureProofTable(fc, LUT_TYPE(fc, par), histMin, histMax, histSize) {}
 
   /* if x isn't contained within the tables bounds,
    * then resort to evaluating the original function */
-  TOUT operator()(TIN x) override
+  TOUT operator()(TIN x) const final
   {
     // check if x is in the range of the table
     //if((x - m_minArg)*(m_maxArg - x) > 0){ // possible micro-optimization?
-    if((m_minArg < x) && (x < m_maxArg)){
-      return (*mp_LUT)(x);
+    if((m_LUT.min_arg() < x) && (x < m_LUT.max_arg())){
+      return m_LUT(x);
     }else{
       #ifdef FUNC_DEBUG
         mp_recorder->record_arg(x);
@@ -117,33 +95,15 @@ public:
     }
   }
 
-  void print_details(std::ostream &out) override 
-  {
-    out << m_name << " " << m_minArg << " " << m_maxArg << " "
-        << mp_LUT->step_size() << " " << mp_LUT->num_intervals() << " ";
-  #ifdef FUNC_DEBUG
-    out << std::endl;
-    mp_recorder->print_details(out);
-  #endif
-  }
+  std::string name() const final { return std::string("FailureProof") + m_LUT.name(); }
+  TIN min_arg() const { return m_LUT.min_arg(); }
+  TIN max_arg() const { return m_LUT.max_arg();}
+  unsigned int order() const { return m_LUT.order();}
+  unsigned int size() const { return m_LUT.size();}
+  unsigned int num_subintervals() const { return m_LUT.num_subintervals();}
+  TIN step_size() const { return m_LUT.step_size(); }
+  std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) { return m_LUT.bounds_of_subinterval(intervalNumber);}
 
-  // TODO test
-  void print_details_json(std::ostream &out) override
-  {
-    nlohmann::json jsonStats;
-
-    jsonStats["_comment"] = "FunC FailureProofTable data";
-    jsonStats["name"] = m_name;
-    jsonStats["minArg"] = m_minArg;
-    jsonStats["maxArg"] = m_maxArg;
-    #ifdef FUNC_DEBUG
-      // have our ArgumentRecord add it's own data
-      mp_recorder->print_details_json(jsonStats);
-    #endif
-    mp_LUT->print_details_json(out);
-    
-    out << jsonStats.dump(2) << std::endl;
-  }  
 };
 // TODO make to_json()
 } // namespace func

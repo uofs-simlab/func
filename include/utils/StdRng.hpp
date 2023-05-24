@@ -31,7 +31,7 @@ template <typename POINT_TYPE,
          class RNG_TYPE  = std::mt19937>
 class StdRng : public RngInterface<POINT_TYPE>
 {
-  /* TODO do these really need to be pointers? What generic superclass was I thinking of? */
+  /* TODO should these really be pointers? */
   std::unique_ptr<DIST_TYPE> mp_distribution;
   std::unique_ptr<RNG_TYPE>  mp_generator;
   unsigned int m_seed = 1;

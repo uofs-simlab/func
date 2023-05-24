@@ -1,4 +1,7 @@
-/*
+/* TODO JUST USE BOOST HISTOGRAM INSTEAD
+ *
+ *
+ *
   Helper class which acts as an extension to any existing
   EvaluationImplementation. Wraps a vector of unsigned
   int which acts as a histogram for recording the
@@ -127,8 +130,7 @@ class ArgumentRecord
 #endif
 
     /* Rebuild our argument record
-       Note: Assuming the encapsulating
-       EvaluationImplementation gave us a valid json object */
+       Note: Assuming the encapsulating LookupTable gave us a valid json object */
     ArgumentRecord(nlohmann::json jsonStats)
     {
       m_minArg = jsonStats["ArgumentRecord"]["minArg"].get<TIN>();
@@ -154,7 +156,6 @@ class ArgumentRecord
 
         // manually lock bucket x_index until we leave this scope
         FuncScopedLock lock(mv_histogram_mutex[x_index]);
-        //#pragma omp critical
         mv_histogram[x_index]++;
 
         #pragma omp critical
