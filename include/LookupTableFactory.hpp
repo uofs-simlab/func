@@ -5,7 +5,7 @@
 */
 #pragma once
 #include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO, FUNC_DECLARE_TEMPLATE_AS_EXTERN
-#include "table_includes.hpp"
+#include "func_tables.hpp"
 #include <memory>     // unique_ptr
 #include <map>
 #include <vector>
@@ -80,10 +80,7 @@ private:
  * --------------------------------------------------------------------------
  *      Implementation
  * --------------------------------------------------------------------------
- * -------------------------------------------------------------------------- */
-
-/*
- *  Initialize the registry
+ * -------------------------------------------------------------------------- */ /* *  Initialize the registry
  *  - New implementations of table types must be added to the registry here
  */
 template <typename TIN, typename TOUT>
@@ -119,19 +116,6 @@ void LookupTableFactory<TIN, TOUT>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,3,3);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformPadeTable,4,3);
 
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,1,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,2,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,3,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,4,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,5,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,6,1);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,2,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,3,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,4,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,5,2);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,3,3);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformPadeTable,4,3);
-
   FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpTable,1);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpTable,2);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformChebyInterpTable,3);
@@ -156,7 +140,6 @@ void LookupTableFactory<TIN, TOUT>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformEqSpaceInterpTable,1);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformEqSpaceInterpTable,2);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformEqSpaceInterpTable,3);
-  //FUNC_ADD_TABLE_TO_REGISTRY(NonUniformLinearRawInterpTable);
 }
 
 /*
@@ -199,15 +182,12 @@ LookupTableFactory<TIN, TOUT>::create(std::string name, const FunctionContainer<
   std::ifstream(filename) >> jsonStats;
   auto lut = jsonStats.get<std::unique_ptr<func::LookupTable<TIN,TOUT>>>(); // call the constructor (or the from_json) referred to by "name"
 ```
-Only drawback of this function is we lose access to the function that generated that LUT
-this works because std::unique_ptr<T> is default constructable
+This is only possible because std::unique_ptr<T> is default constructable
 */
 template <typename TIN, typename TOUT>
 void from_json(const nlohmann::json& jsonStats, std::unique_ptr<LookupTable<TIN,TOUT>>& lut) {
-  std::string name = jsonStats.at("name");
   LookupTableFactory<TIN,TOUT> factory;
-
-  lut = factory.create(name, nullptr, LookupTableParameters<TIN>{0,0,0}, jsonStats);
+  lut = factory.create(jsonStats);
 }
 
 FUNC_DECLARE_TEMPLATE_AS_EXTERN(LookupTableFactory)

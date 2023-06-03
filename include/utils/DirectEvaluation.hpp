@@ -38,7 +38,7 @@ class DirectEvaluation final : public LookupTable<TIN,TOUT>
   static constexpr const char * classname = "DirectEvaluation";
   std::function<TOUT(TIN)> m_func;
 #ifdef FUNC_DEBUG
-  std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
+  std::unique_ptr<mutable ArgumentRecord<TIN>> mp_recorder;
   StdRng<TIN> m_sampler{0,1}; // uniformly distrubuted random numbers in [0,1]
   // TODO save/load error to json?
   TIN  m_rerr;
@@ -93,10 +93,12 @@ public:
   unsigned int num_subintervals() const final { return 0u; };
   TIN step_size() const final { return static_cast<TIN>(0); };
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final { (void) intervalNumber; return std::make_pair(min_arg(),max_arg()); };
+
+  /* TODO make to_json() */
   void print_json(std::ostream& out) const final {
     out << name() << "\n";
     #ifdef FUNC_DEBUG
-    out << mp_recorder->print_json(out);
+    //out << mp_recorder->print_json(out);
     #endif
   }
 
@@ -105,10 +107,11 @@ public:
 
 template <typename TIN, typename TOUT = TIN>
 std::ostream& operator<<(std::ostream& out, const DirectEvaluation<TIN,TOUT>& D){
-  out << D.name() << "\n";
+  out << D.name() << "\n"; // TODO call superclass operator<<
 #ifdef FUNC_DEBUG
   out << *D.mp_recorder;
 #endif
+  return out;
 }
 
 // TODO make to_json()

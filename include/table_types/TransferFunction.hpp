@@ -22,6 +22,8 @@ Notes:
 
   TODO Currently, transfer functions are basically useless if $f'$ is not extreme near the endpoints of its domain.
   (b/c we use cubic hermite interpolation at the endpoints).
+
+  We want to accurately approximate S anywhere f'(x) is extreme!
   
   Note that a cubic polynomial
     p(x) = a_0 + a_1x + a_2x^2 + a_3x^3
@@ -75,12 +77,13 @@ public:
     using boost::math::quadrature::gauss_kronrod;
     using boost::math::differentiation::make_fvar;
 
-    if(fc.autodiff1_fun == nullptr)
+    auto fun = fc.autodiff1_fun;
+    if(fun == nullptr)
       throw std::invalid_argument("Error in func::TransferFunction. 1st derivative of function is needed to generate nonuniform grids but is null");
 
     /* std::function to return the first derivative of f */
-    std::function<TOUT(TIN)> f_prime = [&fc](TIN x) -> TOUT {
-      return (fc.autodiff1_fun)(make_fvar<TIN,1>(x)).derivative(1);
+    std::function<TOUT(TIN)> f_prime = [&fun](TIN x) -> TOUT {
+      return fun(make_fvar<TIN,1>(x)).derivative(1);
     };
 
     /* build the integrand. Notice that it is strictly positive */
@@ -118,9 +121,8 @@ public:
     m_inverse_coefs[2] = -(a*m0 - 3*b - 3*a + 2*a*m1 + 2*b*m0 + b*m1)/(a - b)/(a - b);
     m_inverse_coefs[3] = (m0 + m1 - 2)/(a - b)/(a - b);
 
-    /* build the version of g_inv we'll actually use by encoding the
-       underlying table's hash into the transfer function eval.
-       This way, the only cost of using a transfer function is to lookup 4 stack allocated numbers */
+    /* build the inverse function that we'll actually use by encoding the underlying table's hash into
+     * the transfer function eval. This way, the only cost of using a transfer function is 4 stack IOPs and 6 FLOPs */
     m_inverse_coefs[0] = m_inverse_coefs[0] - m_minArg;
     for(unsigned int i=0; i<4; i++)
       m_inverse_coefs[i] = m_inverse_coefs[i] / m_stepSize;
@@ -128,7 +130,7 @@ public:
   }
 
   /* Horner's method */
-  TIN inverse(TIN x) const {
+  inline TIN inverse(TIN x) const {
     TIN sum = static_cast<TIN>(0);
     for (int k=3; k>0; k--)
       sum = x*(m_inverse_coefs[k] + sum);
@@ -136,7 +138,7 @@ public:
   }
   
   /* Horner's method */
-  TIN inverse_diff(TIN x) {
+  inline TIN inverse_diff(TIN x) const {
     TIN sum = static_cast<TIN>(0);
     for (int k=3; k>1; k--)
       sum = x*(k*m_inverse_coefs[k] + sum);
@@ -145,8 +147,7 @@ public:
 
   /* Use newton-raphson_iteration on p. Recall that each coef in
    * g was divided by h and we subtracted by m_minArg */
-  TIN operator()(TIN x)
-  {
+  TIN operator()(TIN x) const {
     // This will have at least 0.9*std::numeric_limits<TIN>::digits digits of accuracy
     boost::uintmax_t maxit = 55;
     return boost::math::tools::newton_raphson_iterate(
@@ -166,6 +167,7 @@ std::ostream& operator<<(std::ostream& out, const TransferFunction<TIN>& F){
   out << "degree 3 monotone Hermite interpolation with polynomial: \n";
   out << std::to_string(coefs[3]) << "x^3 + " << std::to_string(coefs[2]) << "x^2 + " <<
     std::to_string(coefs[1]) << "x + " << std::to_string(coefs[0]) << ". Defined over [" << F.min_arg() << "," << F.max_arg() << "].\n";
+  return out;
 }
 
 /* wraps operator<< */

@@ -21,7 +21,7 @@ endif()
 # explicitly declare which headers we're distributing
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
 FunctionContainer.hpp;LookupTable.hpp;config.hpp;func.hpp;json.hpp;\
-table_types/table_includes.hpp;\
+table_types/func_tables.hpp;utils/func_utils.hpp;\
 table_types/MetaTable.hpp;table_types/TransferFunction.hpp;\
 table_types/ChebyInterpTable.hpp;\
 table_types/CubicHermiteTable.hpp;\
@@ -31,18 +31,20 @@ table_types/PadeTable.hpp;\
 table_types/TaylorTable.hpp;\
 utils/DirectEvaluation.hpp;utils/ArgumentRecord.hpp;\
 LookupTableFactory.hpp;utils/LookupTableGenerator.hpp;\
-utils/FailureProofTable.hpp; utils/CompositeLookupTable.hpp;\
-utils/RngInterface.hpp; utils/StdRng.hpp;\
-utils/ImplementationComparator.hpp;\
+utils/FailureProofTable.hpp;utils/CompositeLookupTable.hpp;\
+utils/RngInterface.hpp;utils/StdRng.hpp;\
+utils/LookupTableComparator.hpp;\
 utils/Timer.hpp;\
 ")
 
 target_include_directories(func ${FUNC_PUBLIC}
-  $<INSTALL_INTERFACE:.> $<INSTALL_INTERFACE:table_types>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/table_types>
+  $<INSTALL_INTERFACE:.> $<INSTALL_INTERFACE:table_types> $<INSTALL_INTERFACE:utils>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/table_types> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils>
   )
 
-target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost)
+
+#target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost)
+target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
 #target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} ${Boost_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
 
 # TODO add more required compile features (it's nice to have cmake determine the minimal standard on its own)

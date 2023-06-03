@@ -1,5 +1,5 @@
 /*
-  Main program for using ImplementationComparator to compare LookUpTable and Direct
+  Main program for using LookupTableComparator to compare LookUpTable and Direct
   Evaluation performance.
 
   Usage:
@@ -47,7 +47,6 @@ int main(int argc, char* argv[])
   unsigned int seed   = std::stoi(argv[6]);
 
   FunctionContainer<TYPE> func_container{FUNC_SET_F(MyFunction,TYPE)};
-
   LookupTableFactory<TYPE> factory;
 
   /* Check which implementations are available */
@@ -61,55 +60,92 @@ int main(int argc, char* argv[])
   std::vector<unique_ptr<LookupTable<TYPE>>> impls;
 
   /* Which LUT implementations to use */
-  std::vector<std::string> implNames {
-    //"UniformLinearRawInterpTable",
-    //"UniformEqSpaceInterpTable<1>",
-    //"UniformEqSpaceInterpTable<2>",
-    //"UniformEqSpaceInterpTable<3>",
-    //"UniformTaylorTable<1>",
-    //"UniformTaylorTable<2>",
-    //"UniformTaylorTable<3>",
+  std::vector<std::string> uniformNames {
     "UniformChebyInterpTable<1>",
     "UniformChebyInterpTable<2>",
     "UniformChebyInterpTable<3>",
+    "UniformChebyInterpTable<4>",
+    "UniformChebyInterpTable<5>",
+    "UniformChebyInterpTable<6>",
+    "UniformChebyInterpTable<7>",
+    //"UniformCubicHermiteTable",
+    //"UniformEqSpaceInterpTable<1>",
+    //"UniformEqSpaceInterpTable<2>",
+    //"UniformEqSpaceInterpTable<3>",
+    //"UniformLinearRawInterpTable",
+    //"UniformTaylorTable<1>",
+    //"UniformTaylorTable<2>",
+    //"UniformTaylorTable<3>",
+    //"UniformTaylorTable<4>",
+    //"UniformTaylorTable<5>",
+    //"UniformTaylorTable<6>",
+    //"UniformTaylorTable<7>",
+  };
+
+  std::vector<std::string> nonuniformNames {
     "NonUniformChebyInterpTable<1>",
     "NonUniformChebyInterpTable<2>",
     "NonUniformChebyInterpTable<3>",
+    "NonUniformChebyInterpTable<4>",
+    "NonUniformChebyInterpTable<5>",
+    //"NonUniformChebyInterpTable<6>",
+    //"NonUniformChebyInterpTable<7>",
+    //"NonUniformCubicHermiteTable",
+    //"NonUniformEqSpaceInterpTable<1>",
+    //"NonUniformEqSpaceInterpTable<2>",
+    //"NonUniformEqSpaceInterpTable<3>",
+    //"NonUniformTaylorTable<1>",
+    //"NonUniformTaylorTable<2>",
+    //"NonUniformTaylorTable<3>",
+    //"NonUniformTaylorTable<4>",
+    //"NonUniformTaylorTable<5>",
+    //"NonUniformTaylorTable<6>",
+    //"NonUniformTaylorTable<7>",
   };
 
-  //std::vector<std::string> padeNames {
-  //  "UniformPadeTable<1,1>",
-  //  "UniformPadeTable<2,1>",
-  //  "UniformPadeTable<3,1>",
-  //  "UniformPadeTable<4,1>",
-  //  "UniformPadeTable<5,1>",
-  //  "UniformPadeTable<6,1>",
-  //  "UniformPadeTable<2,2>",
-  //  "UniformPadeTable<3,2>",
-  //  "UniformPadeTable<4,2>",
-  //  "UniformPadeTable<5,2>",
-  //  "UniformPadeTable<3,3>",
-  //  "UniformPadeTable<4,3>",
-  //};
+
+  std::vector<std::string> padeNames {
+    //"UniformPadeTable<1,1>",
+    //"UniformPadeTable<2,1>",
+    //"UniformPadeTable<3,1>",
+    //"UniformPadeTable<4,1>",
+    //"UniformPadeTable<5,1>",
+    //"UniformPadeTable<6,1>",
+    //"UniformPadeTable<2,2>",
+    //"UniformPadeTable<3,2>",
+    //"UniformPadeTable<4,2>",
+    //"UniformPadeTable<5,2>",
+    //"UniformPadeTable<3,3>",
+    //"UniformPadeTable<4,3>",
+  };
 
   LookupTableGenerator<TYPE> gen(func_container, tableMin, tableMax);
 
   impls.emplace_back(unique_ptr<LookupTable<TYPE>>(new DirectEvaluation<TYPE>(func_container,tableMin,tableMax)));
-  for (auto itName : implNames) {
-    cerr << "Building " << itName << " ..." << endl;
+  for (auto itName : uniformNames) {
+    std::cerr << "Building " << itName << " ..." << std::endl;
+    impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+  }
+  for (auto itName : nonuniformNames) {
+    std::cerr << "Building " << itName << " ..." << std::endl;
+    impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+  }
+  for (auto itName : padeNames) {
+    std::cerr << "Building " << itName << " ..." << std::endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
 
+
   std::cout << "Running timings ..." << std::endl;
 
-  ImplementationComparator<TYPE> implCompare(impls, tableMin, tableMax, nEvals, seed);
+  LookupTableComparator<TYPE> implCompare(impls, tableMin, tableMax, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
   /* Summarize the results */
   cout << "# Function:  " << FUNCNAME << std::endl;
   cout << "# Range:      (" << tableMin << "," << tableMax << ")" << std::endl;
 
-  implCompare.compute_timing_statistics();
+  implCompare.compute_statistics();
   implCompare.sort_timings(SortType::worst);
   implCompare.print_summary(std::cout);
 }

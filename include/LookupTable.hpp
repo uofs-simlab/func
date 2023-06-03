@@ -47,7 +47,8 @@ template <typename TIN, typename TOUT = TIN>
 class LookupTable
 {
 public:
-  //LookupTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par){}
+  /* any implementation will have a constructor that looks like this:
+   * LookupTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par) {} */
   LookupTable() = default;
   virtual ~LookupTable(){};
 
@@ -65,9 +66,9 @@ public:
   virtual unsigned int num_subintervals() const = 0;
   virtual TIN step_size() const = 0;
   virtual std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const = 0;
-  virtual void print_json(std::ostream& out) const = 0;
 
-  /* to_json is defined for each specific LUT implementation */
+  /* any implementation of print_json should call their implementation of nlohmann's to_json */
+  virtual void print_json(std::ostream& out) const = 0;
 };
 
 /* print basic info about a LookupTable */

@@ -124,7 +124,8 @@ class ArgumentRecord
     }
 
 #ifdef FUNC_DEBUG
-    ~ArgumentRecord(){print_details(std::cerr);}
+    /* make the specific stream printed to depend on a printing function */
+    ~ArgumentRecord(){ std::cerr << *this;}
 #else
     ~ArgumentRecord(){}
 #endif
@@ -190,7 +191,7 @@ class ArgumentRecord
      * https://stackoverflow.com/questions/16605967/set-precision-of-stdto-string-when-converting-floating-point-values
      * Default is the max possible precision by so users can choose how they'll round the answer on their own */
     template <typename T>
-    std::string to_string_with_precision(const T val, const int n = std::numeric_limits<T>::max_digits10)
+    std::string to_string_with_precision(const T val, const int n = std::numeric_limits<T>::max_digits10) const 
     {
         std::ostringstream out;
         out.precision(n);
@@ -198,14 +199,14 @@ class ArgumentRecord
         return out.str();
     }
 
-    std::string ith_interval(unsigned int i, const int n = 3){
+    std::string ith_interval(unsigned int i, const int n = 3) const {
       return "[" + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*i/static_cast<TIN>(m_histSize), n) + ", "
           + to_string_with_precision(m_minArg + (m_maxArg - m_minArg)*(i+1)/static_cast<TIN>(m_histSize), n) + ")";
     }
 
 
     // make a string representation of the histogram
-    std::string to_string()
+    std::string to_string() const
     {
       // avoid division by zero by printing nothing if the histogram is empty
       if(mv_histogram[m_peak_index]==0)
@@ -228,35 +229,8 @@ class ArgumentRecord
       return hist_str;
     }
 
-    // human readable output of the histogram and other statistics
-    void print_details(std::ostream& out)
-    {
-      unsigned int total_recorded = 0;
-      for(unsigned int i=0; i<m_histSize; i++)
-        total_recorded += mv_histogram[i];
-
-      unsigned int complete_total = m_num_out_of_bounds + total_recorded;
-
-      if(complete_total == 0){
-        out << "No arguments were recorded by arg record" << "\n";
-        return;
-      }
-
-      out << "histogram: \n";
-      out << this->to_string() << "\n";
-      out << complete_total << " total args were sampled. Of those, "
-          << total_recorded << " were recorded by the histogram.\n";
-      out << "Recorded args were sampled the most often from the subinterval "
-          << ith_interval(m_peak_index) << " with " << mv_histogram[m_peak_index] << " evaluations ("
-          << 100.0*mv_histogram[m_peak_index]/((double) complete_total) << "\% of the total evaluations).\n";
-      /* iostream rounds to like 6 digits by default but the rounding can make the min/max args too large/small 
-       * which is annoying so we'll just print every digit of the output and let users round on their own */
-      out << "The largest argument recorded was x=" << to_string_with_precision(m_max_recorded) << "\n";
-      out << "The lowest argument recorded was x=" << to_string_with_precision(m_min_recorded) << std::endl;
-    }
-
     // print each field in this class to the given ostream
-    void print_details_json(nlohmann::json& jsonStats)
+    void print_json(nlohmann::json& jsonStats) const
     {
       jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
       jsonStats["ArgumentRecord"]["minArg"] = m_minArg;
@@ -270,7 +244,53 @@ class ArgumentRecord
       
       // insert more statistics here
     }
+
+  TIN min_arg() const { return m_minArg; }
+  TIN max_arg() const { return m_maxArg; }
+  /* TODO use a standard algorithm */
+  unsigned int total_recorded() const {
+    unsigned int t = 0;
+    for(unsigned int i=0; i<m_histSize; i++)
+      t += mv_histogram[i];
+    return t;
+  }
+  
+  /* the index of the bucket with the largest count */
+  unsigned int index_of_peak() const { return m_peak_index; }
+  unsigned int peak() const { return mv_histogram[m_peak_index]; }
+
+  /* the number of elements outside the histogram's range */
+  unsigned int num_out_of_bounds() const { return m_num_out_of_bounds; }
+
+  /* Return the extreme args to help the user decide what bounds to use for their LUTs */
+  TIN max_recorded() const { return m_max_recorded; }
+  TIN min_recorded() const { return m_min_recorded; }
 };
+
+
+template <typename TIN>
+std::ostream& operator<<(std::ostream& out, const ArgumentRecord<TIN>& arg_record){
+  unsigned int complete_total = arg_record.num_out_of_bounds() + arg_record.total_recorded();
+
+  if(complete_total == 0){
+    out << "No arguments were recorded by arg record" << "\n";
+    return out;
+  }
+
+  out << "histogram: \n";
+  out << arg_record.to_string() << "\n";
+  out << complete_total << " total args were sampled. Of those, "
+      << arg_record.total_recorded() << " were recorded by the histogram.\n";
+  out << "Recorded args were sampled the most often from the subinterval "
+      << arg_record.ith_interval(arg_record.index_of_peak()) << " with " << arg_record.peak() << " evaluations ("
+      << 100.0*arg_record.peak()/static_cast<double>(complete_total) << "% of the total evaluations).\n";
+  /* iostream rounds to like 6 digits by default but the rounding can make the min/max args too large/small 
+   * which is annoying so we'll just print every digit of the output and let users round on their own */
+  out << "The largest argument recorded was x=" << arg_record.to_string_with_precision(arg_record.max_recorded()) << "\n";
+  out << "The lowest argument recorded was x=" << arg_record.to_string_with_precision(arg_record.min_recorded()) << std::endl;
+  return out;
+}
+
 
 //TODO make to/from_json()
 } // namespace func

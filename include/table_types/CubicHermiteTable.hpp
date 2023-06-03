@@ -81,12 +81,12 @@ public:
       if(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<4; k++)
-          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/std::pow(h,k)/boost::math::factorial<double>(k);
+          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
       }
     }
     // special case to make lut(tableMaxArg) work
     m_grid[m_numTableEntries-1] = m_tableMaxArg;
-    m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
+    m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
     for (unsigned int k=1; k<4; k++)
       m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif

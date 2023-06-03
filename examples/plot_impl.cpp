@@ -38,5 +38,5 @@ int main(int argc, char* argv[])
   //std::cout << std::endl;
 
   LookupTableGenerator<double> gen(func_container,tableMin,tableMax);
-  gen.plot_implementation_at_step_size("UniformTaylorTable<1>",tableStep);
+  gen.plot_implementation_at_step_size("NonUniformChebyInterpTable<1>",tableStep);
 }

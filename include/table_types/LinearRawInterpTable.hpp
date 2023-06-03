@@ -9,6 +9,7 @@
   Notes:
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
+  - Does not have a nonuniform variant and it's not obvious how to make one unless we make the operator() far slower (lookup data from m_grid?)
 */
 #pragma once
 #include "MetaTable.hpp"
@@ -31,10 +32,10 @@ public:
       return; // all our work is already done
 
     /* Base class variables */
-    m_name = "LinearRawInterpTable";
+    m_name = grid_type_to_string<GT>() + "LinearRawInterpTable";
     m_order = 2;
     m_numTableEntries = m_numIntervals+2;
-    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * m_numTableEntries);
+    m_dataSize = static_cast<unsigned int>(sizeof(m_table[0]) * m_numTableEntries);
 
     auto fun = func_container.standard_fun;
 
@@ -44,13 +45,7 @@ public:
 
     FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
-      TIN x;
-      // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == GridTypes::UNIFORM)
-        x = m_minArg + ii*m_stepSize;
-      else
-        x = m_transferFunction(m_minArg + ii*m_stepSize);
-
+      TIN x = m_minArg + ii*m_stepSize;
       m_grid[ii] = x;
       m_table[ii].coefs[0] = fun(x);
     }
@@ -74,6 +69,4 @@ public:
 
 template <typename TIN, typename TOUT=TIN>
 using UniformLinearRawInterpTable = LinearRawInterpTable<TIN,TOUT,GridTypes::UNIFORM>;
-template <typename TIN, typename TOUT=TIN>
-using NonUniformLinearRawInterpTable = LinearRawInterpTable<TIN,TOUT,GridTypes::NONUNIFORM>;
 } // namespace func

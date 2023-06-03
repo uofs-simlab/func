@@ -69,6 +69,8 @@ struct alignas(sizeof(TOUT)*alignments[N]) polynomial {
   TOUT coefs[N];
 };
 
+
+/* convenient methods for differentiating a polynomial */
 constexpr unsigned int permutation(unsigned int n, unsigned int k){
   if(k == 0u) return 1u;
   return n*permutation(n-1u,k-1u);
@@ -81,6 +83,15 @@ TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
     sum = p.coefs[k-1]*permutation(k-1,s) + sum*x;
   return sum;
 }
+
+/* convenient debugging method for printing a polynomial */
+//template <unsigned int N, typename TOUT, typename TIN = TOUT>
+//std::string polynomial_print(polynomial<TOUT,N> p){
+//  std::string sum = "";
+//  for(unsigned int k=N; k>0; k--)
+//    sum = sum + std::to_string(p.coefs[k-1]) + "x^" + std::to_string(k);
+//  return sum;
+//}
 
 enum class GridTypes {UNIFORM, NONUNIFORM};
 
@@ -135,7 +146,8 @@ public:
     if(func_container.standard_fun == nullptr)
       throw std::invalid_argument("Error in func::MetaTable. Function not defined in given FunctionContainer");
 
-    // initialize the transfer function to something useful if the grid is nonuniform
+    /* build the transfer function for nonuniform grids
+     * TODO could make transfer function coefficients a field in LookupTableParameters */
     if(GT != GridTypes::UNIFORM)
       m_transferFunction = TransferFunction<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
   }
@@ -161,7 +173,11 @@ public:
   TIN step_size() const final { return m_stepSize; };
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final
   {
-    return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
+    if(GT == GridTypes::UNIFORM)
+      return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
+    else
+      return std::make_pair(m_transferFunction(m_minArg + intervalNumber*m_stepSize),
+          m_transferFunction(m_minArg + (intervalNumber+1)*m_stepSize));
   }
   void print_json(std::ostream& out) const final {
     nlohmann::json jsonStats = *this; // call to_json(jsonStats, this)
@@ -175,41 +191,37 @@ public:
   std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
 
 
-  /* give the nlohmann json functions access to every member variable (note the silly template names)
-   * TODO don't have to friend if to_json if it just uses public member functions */
-  //template <unsigned int N1, typename TIN1, typename TOUT1, GridTypes GT1,
-  //       typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
-  //                               std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
-  //friend void to_json(nlohmann::json& jsonStats, const MetaTable<N1,TIN1,TOUT1,GT1>& lut);
-
+  /* give the nlohmann json functions access to every member variable (must use SFINAE because we want people
+   * to construct LUTs over arbitrary types regardless of whether they have to/from json functions) */
   template <unsigned int N1, typename TIN1, typename TOUT1, GridTypes GT1,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
                                  std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void from_json(const nlohmann::json& jsonStats, MetaTable<N1,TIN1,TOUT1,GT1>& lut);
 
 
-
-  /* could speed up these hashes by not using */
+  /* find which polynomial p_k to evaluate. Also, each p_k:[0,1]->R so we must set dx=(x-x_k)/(x_{k+1}-x_k) */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::UNIFORM,bool>::type = true>
   inline std::pair<unsigned int, TIN> hash(TIN x) const {
     // nondimensionalized x position, scaled by step size
     TIN dx = m_stepSize_inv*(x-m_minArg);
-    // index of previous table entry
-    unsigned int x0 = static_cast<unsigned>(dx);
-    // value of table entries around x position
-    dx -= x0;
+    // index of table entry
+    unsigned int x0 = static_cast<unsigned int>(dx);
+    dx -= x0; // dx\in[0,1)
     return std::make_pair(x0, dx);
   }
 
+  /* the polynomials for nonuniform LUTs map [x_k,x_{k+1}]->R so we don't have to change x */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::NONUNIFORM,bool>::type = true>
   inline std::pair<unsigned int, TIN> hash(TIN x) const {
-    // find the subinterval x lives in
-    unsigned int x0 = static_cast<unsigned>(m_transferFunction.inverse(x));
-    return std::make_pair(x0, x);
+    // perform interval search in 6 FLOPs and 4 IOPs (but the data are contiguous so is it 1 IOP?)
+    unsigned int x0 = static_cast<unsigned int>(m_transferFunction.inverse(x));
+    return std::make_pair(x0, x); // don't subtract dx by x0 because every polynomial must be rescaled accordingly
   }
 
-  /* Implementations must provide their own operator() and diff() */
-  #pragma omp declare simd
+  /* TODO Pade & LinearRawInterpTable must override this operator. The vtable MIGHT be optimized out,
+   * but if each implementation provides their own operator() and diff() then we can be sure a
+   * vtable isn't slowing a LUT down. */
+  //#pragma omp declare simd // warning: GCC does not currently support mixed size types for 'simd' functions
   TOUT operator()(TIN x) const override
   {
     unsigned int x0; TIN dx;
@@ -217,7 +229,7 @@ public:
     
     // general degree horners method, evaluated from the inside out.
     TOUT sum = static_cast<TOUT>(0); // must initialize sum with a nonzero value to make LUT addition easy
-    for(int k=N-1; k>0; k--)
+    for(unsigned int k=N-1; k>0; k--)
       sum = (m_table[x0].coefs[k] + sum)*dx;
     return m_table[x0].coefs[0]+sum;
   }
@@ -273,7 +285,7 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut)
 {
   (void) jsonStats;
   (void) lut;
-  throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
+  throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not have an implementation of nlohmann's to_json");
 }
 
 /* this variant of from_json will be called for any specific implementation of a LUT

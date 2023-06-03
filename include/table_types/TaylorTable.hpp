@@ -61,10 +61,13 @@ public:
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
       m_grid[ii] = x;
+
+      /* Taylor expansion of f over the basis: (xh+0.5h)^k for k=0,1,...,N */
       auto const derivs = boost_fun(make_fvar<TIN,N>(x + 0.5*h));
       for(unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = derivs.derivative(k)*std::pow(h,k)/boost::math::factorial<double>(k);
+        m_table[ii].coefs[k] = derivs.derivative(k)*pow(h,k)/boost::math::factorial<double>(k);
 
+      /* Taylor expansion of the above polynomial over the basis: x^k */
       auto p = m_table[ii];
       for(unsigned int k=0; k<N+1; k++)
         m_table[ii].coefs[k] = polynomial_diff(p,-0.5,k)/boost::math::factorial<double>(k);
@@ -72,7 +75,7 @@ public:
       if(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<N+1; k++)
-          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/std::pow(h,k)/boost::math::factorial<double>(k);
+          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
       }
     }
     // special case to make lut(tableMaxArg) work

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 # Default to "Release" build
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
@@ -60,13 +60,8 @@ find_package(OpenMP)
 
 if(OpenMP_FOUND)
   message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
-  # TODO this doesn't work anymore
-  if(APPLE AND ${CMAKE_VERSION} VERSION_LESS 3.12.0)
-    message(WARNING "Must have at least CMake version 3.12 to add openmp to FunC on MacOS")
-    set(FUNC_USE_OPENMP OFF)
-  endif()
 else()
-  # TODO maybe use std::lib instead?
+  # TODO maybe use std::lib instead? Actually, pretty much everyone has openmp.....
   option(FUNC_USE_OPENMP OFF)
 endif()
 

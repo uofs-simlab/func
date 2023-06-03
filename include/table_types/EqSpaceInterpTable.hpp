@@ -54,10 +54,11 @@ public:
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
 
+      /* how many equally spaced nodes do we use? */
       m_grid[ii] = x;
       switch(N){
         case 0:
-          m_table[ii].coefs[0] = fun(x + 0.5*h);
+          m_table[ii].coefs[0] = fun(x + h/2);
           break;
         case 1:
           {
@@ -87,12 +88,14 @@ public:
           m_table[ii].coefs[3] = -9*y0/2+27*y1/2-27*y2/2+9*y3/2;
           break;
           }
-        default: { throw std::invalid_argument("Broken switch case in func::TaylorTable"); }
+        default: { throw std::invalid_argument(std::string("EqSpaceInterpTables<N> only support N=0,1,2,3 but given N=") + std::to_string(N)); }
       }
+
+      /* TODO This formula is too unstable for this table type as given in this form when N>2 and h is small. */
       if(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<N+1; k++)
-          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/std::pow(h,k)/boost::math::factorial<double>(k);
+          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
       }
     }
     // special case to make lut(tableMaxArg) work

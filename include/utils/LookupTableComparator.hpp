@@ -1,6 +1,6 @@
 /*
   Class for comparing any class implementing LookupTables
-  TODO ImplementationComparator's constructor should accept any callable type
+  TODO LookupTableComparator's constructor should accept any callable type
 
   - takes ownership of the vector of implementations passed to it
 */
@@ -20,16 +20,9 @@
 #include <typeinfo> // typeid
 
 namespace func {
-/*
-  Data types and containers used in FunC's ImplementationComparator
-*/
-typedef std::vector<double> TimeContainer;
 
 template <typename TIN, typename TOUT>
-using ImplType = LookupTable<TIN,TOUT>;
-
-template <typename TIN, typename TOUT>
-using ImplContainer = std::vector<std::unique_ptr<ImplType<TIN,TOUT>>>;
+using ImplContainer = std::vector<std::unique_ptr<LookupTable<TIN,TOUT>>>;
 
 enum class SortType {best, mean, worst};
 
@@ -40,17 +33,18 @@ enum class SortType {best, mean, worst};
 template <typename TIN, typename TOUT>
 struct ImplTimer
 {
-  /* Note the the ImplType can NOT be a reference here, because we
+  /* Note the the LookupTable can NOT be a reference here, because we
      want to be able to sort a container of these ImplTimers. sort
      requires operator=, and classes that have non-static reference
      members cannot implement this */
-  ImplType<TIN,TOUT> *impl;
-  TimeContainer evaluationTimes;
+  LookupTable<TIN,TOUT> *impl;
+  std::vector<double> evaluationTimes;
   double maxTime, minTime, meanTime;
-  ImplTimer(ImplType<TIN,TOUT> *inImpl) : impl(inImpl), maxTime(0), minTime(0), meanTime(0) {};
+
+  ImplTimer(LookupTable<TIN,TOUT> *inImpl) : impl(inImpl), maxTime(0), minTime(0), meanTime(0) {};
+
   void append_runtime(double time){ evaluationTimes.push_back(time); };
-  void compute_timing_stats()
-  {
+  void compute_timing_stats() {
     /* get min and max execution times */
     auto extremeTimes = minmax_element( evaluationTimes.begin(), evaluationTimes.end() );
     minTime = *(extremeTimes.first);
@@ -58,7 +52,7 @@ struct ImplTimer
     /* mean execution time */
     auto sum = std::accumulate(evaluationTimes.begin(), evaluationTimes.end(), 0.0);
     meanTime =  sum / evaluationTimes.size();
-  };
+  }
   void print_timing_stats(std::ostream& out)
   {
     out << "Min " << minTime << "s"
@@ -70,7 +64,7 @@ struct ImplTimer
 
 /* ------------------------------------------------------------------------ */
 template <typename TIN, typename TOUT = TIN>
-class ImplementationComparator
+class LookupTableComparator
 {
 private:
 
@@ -78,7 +72,7 @@ private:
   std::vector<ImplTimer<TIN,TOUT>> m_implTimers;
   unsigned int                     m_numberOfImplementations;
 
-  std::vector<TimeContainer> m_evaluationTimers;
+  std::vector<std::vector<double>> m_evaluationTimers;
 
   TIN m_minArg,m_maxArg;
 
@@ -119,9 +113,9 @@ private:
 
 public:
 
-  ImplementationComparator(ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, int nEvals = 100000,
+  LookupTableComparator(ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, unsigned int nEvals = 100000,
       unsigned int seed = 2017, std::unique_ptr<RngInterface<TIN>> inRng = nullptr);
-  ~ImplementationComparator(){}
+  ~LookupTableComparator(){}
 
   /* Run timings with different set of random arguments */
   void run_timings(int nRuns = 1)
@@ -136,7 +130,7 @@ public:
   const std::unique_ptr<TIN> sample_points(){ return mp_randomEvaluations; }
 
   /* Compute fastest and slowest times */
-  void compute_timing_statistics()
+  void compute_statistics()
   {
     for (auto &itImplTimer : m_implTimers)
       itImplTimer.compute_timing_stats();
@@ -149,10 +143,9 @@ public:
   void print_summary(std::ostream&);
 
   /* Print out the raw timings for each LookupTable */
-  void print_details(std::ostream&);
-  void print_details_json(std::ostream&);
+  void print_json(std::ostream&);
   void print_csv_header(std::ostream&);
-  void print_details_csv(std::ostream&);
+  void print_csv(std::ostream&);
 
   std::vector<double> fastest_times()
   {
@@ -175,8 +168,8 @@ public:
 
 /* Constructor's implementation */
 template <typename TIN, typename TOUT>
-inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
-    ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, int nEvals, unsigned int seed, std::unique_ptr<RngInterface<TIN>> inRng) :
+inline LookupTableComparator<TIN,TOUT>::LookupTableComparator(
+    ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, unsigned int nEvals, unsigned int seed, std::unique_ptr<RngInterface<TIN>> inRng) :
   m_implementations(std::move(inImpl)), mp_sampler(std::move(inRng)), m_nEvals(nEvals)
 {
   /*
@@ -216,7 +209,7 @@ inline ImplementationComparator<TIN,TOUT>::ImplementationComparator(
 
 /* sort the vector of timings based on the min, max, or mean times */
 template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::sort_timings(SortType type)
+inline void LookupTableComparator<TIN,TOUT>::sort_timings(SortType type)
 {
   switch(type){
   case SortType::best: // sort by minimum (ie. best case performance)
@@ -240,13 +233,13 @@ inline void ImplementationComparator<TIN,TOUT>::sort_timings(SortType type)
         { return (a.maxTime < b.maxTime); } );
     break;
   }
-  default: { throw std::logic_error("Broken switch case in func::ImplementationComparator"); }
+  default: { throw std::logic_error("Broken switch case in func::LookupTableComparator"); }
   }
 }
 
 /* Implementation of functions that print to an ostream */
 template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::print_details_json(std::ostream &out)
+inline void LookupTableComparator<TIN,TOUT>::print_json(std::ostream &out)
 {
   /* add implementations to vector */
   nlohmann::json jsonStats;
@@ -265,7 +258,43 @@ inline void ImplementationComparator<TIN,TOUT>::print_details_json(std::ostream 
 }
 
 template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::print_details(std::ostream &out)
+inline void LookupTableComparator<TIN,TOUT>::print_csv_header(std::ostream &out)
+{
+  /* Print header */
+  for (auto itImplTimer : m_implTimers) {
+    out << (itImplTimer.impl)->name() << " ";
+  }
+  out << "\n";
+}
+
+template <typename TIN, typename TOUT>
+inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out)
+{
+  print_csv_header(out);
+
+  /* Print all times, row by row */
+  int numTimes = (m_implTimers[0].evaluationTimes).size();
+  for (int i = 0; i<numTimes; ++i) {
+    for (auto itImplTimer : m_implTimers) {
+      out << itImplTimer.evaluationTimes[i] << " ";
+    }
+    out << "\n";
+  }
+}
+
+/* print basic info about a LookupTable */
+template <typename TIN, typename TOUT = TIN>
+std::ostream& operator<<(std::ostream& out, const LookupTableComparator<TIN,TOUT>& comparator){
+  /*
+    Print summary of the timing statistics
+  */
+  comparator.print_summary(out);
+  return out;
+}
+
+
+template <typename TIN, typename TOUT>
+inline void LookupTableComparator<TIN,TOUT>::print_summary(std::ostream &out)
 {
   /* Print details of all timings
      temp_tin and temp_tout are needed to print template values (but the string is probably mangled).
@@ -285,65 +314,11 @@ inline void ImplementationComparator<TIN,TOUT>::print_details(std::ostream &out)
 
   for (auto itImplTimer : m_implTimers) {
     out << "----------------------------------------------------------------------------\n";
-    out << "| " << (*itImplTimer.impl);
+    out << "| LookupTable:      " << (*itImplTimer.impl) << "\n";
     out << "| Memory usage (B): " << (itImplTimer.impl)->size() << "\n";
-    out << "| Run times (seconds / " << m_nEvals << " evals):" << "\n";
-
-    for ( auto itTimer : (itImplTimer.evaluationTimes) ) {
-      out << "|    " << itTimer << "\n";
-    }
-    out << "\n";
-
-  }
-  out << "----------------------------------------------------------------------------" << std::endl;
-}
-
-template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::print_csv_header(std::ostream &out)
-{
-  /* Print header */
-  for (auto itImplTimer : m_implTimers) {
-    out << (itImplTimer.impl)->name() << " ";
-  }
-  out << "\n";
-}
-
-template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::print_details_csv(std::ostream &out)
-{
-  print_csv_header(out);
-
-  /* Print all times, row by row */
-  int numTimes = (m_implTimers[0].evaluationTimes).size();
-  for (int i = 0; i<numTimes; ++i) {
-    for (auto itImplTimer : m_implTimers) {
-      out << itImplTimer.evaluationTimes[i] << " ";
-    }
-    out << "\n";
-  }
-}
-
-template <typename TIN, typename TOUT>
-inline void ImplementationComparator<TIN,TOUT>::print_summary(std::ostream &out)
-{
-  /*
-    Print summary of the timing statistics
-  */
-  out << "----------------------------------------------------------------------------\n";
-  out << "Number of trials performed: "
-	    << m_implTimers[0].evaluationTimes.size()
-	    << std::endl;
-  out << "Number of evaluations used: "
-	    << m_nEvals
-	    << std::endl;
-
-  for (auto itImplTimer : m_implTimers) {
-    out << "----------------------------------------------------------------------------\n";
-    out << "| Implementation:   " << (*itImplTimer.impl);
-    out << "\n| Memory usage (B): " << (itImplTimer.impl)->size() << "\n";
     out << "| Timings:          "; itImplTimer.print_timing_stats(out);
   }
-  out << "----------------------------------------------------------------------------\n";
+  out << "----------------------------------------------------------------------------" << std::endl;
 }
 
 } // namespace func

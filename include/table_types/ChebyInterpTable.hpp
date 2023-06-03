@@ -9,9 +9,14 @@
   - This class only works if TOUT and TIN can both be cast to double. 
     Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
     with float or double (not even long double!) and arma::field is useless.
-    TODO disable constructor if TOUT cannot be cast to double
+    TODO use a symbolic linear algebra library instead...
+
   - the template implementation is only registered for N=1,2,3,4,5,6,7
     but users can manually construct this class with larger N
+
+    TODO
+    - take a continuity parameter (use 2 nodes for C0, clamped spline for C1)
+    - replace nearest points with user-provided roots of the function
  */
 
 
@@ -38,10 +43,10 @@ public:
       std::move(MetaTable<N+1,TIN,TOUT,GT>(func_container, par)) :
       std::move(MetaTable<N+1,TIN,TOUT,GT>(jsonStats)))
   {
-#ifndef FUNC_USE_ARMADILLO
+#if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
     /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
-      throw std::invalid_argument("Error in func::ChebyInterpTable: Chebyshev LUTs need Armadillo to be generated");
+      throw std::invalid_argument("Error in func::ChebyTable: Chebyshev LUTs need Armadillo to be generated but Armadillo is not available");
 #else
     if(!jsonStats.empty())
       return; // all our work is already done
@@ -54,10 +59,13 @@ public:
 
     auto fun = func_container.standard_fun;
 
-    /* build the vandermonde system whose solution yields the coefficients of a polynomial interpolating $f$ on N+1 Chebyshev nodes over [0,1] */
-    // TODO
-    // - take a continuity parameter (use 2 nodes for C0, clamped spline for C1)
-    // - replace nearest points with user-provided roots of the function
+    /* Thoughts: Vandermonde system for cheby nodes over [0,1] has condition number about 1000 times larger than [-1,1]
+     * but shifting polynomials is too poorly conditioned.
+     * TODO this table type should support any values of TIN TOUT that form a field with +,*.
+     * Two options from here:
+     * - Hand code the solutions for N=0-7 (horrible)
+     * - Use a linear algebra that calls TIN/TOUT's overloaded operators
+     * */
     arma::mat Van = arma::ones(N+1, N+1);
     Van.col(1) = (1 + arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1))))/2;
     for(unsigned int i=2; i<N+1; i++)
@@ -77,7 +85,7 @@ public:
         x = m_transferFunction(m_minArg + ii*m_stepSize);
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
-      // grid points
+
       m_grid[ii] = x;
       // build the vector of coefficients from function values
       auto a = static_cast<double>(x);
@@ -93,10 +101,11 @@ public:
       for (unsigned int k=0; k<N+1; k++)
         m_table[ii].coefs[k] = static_cast<TOUT>(y[k]);
 
+      /* TODO This formula is too unstable for this table type as given in this form when N>2 and h is small. */
       if(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<N+1; k++)
-          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/std::pow(h,k)/boost::math::factorial<double>(k);
+          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
       }
     }
     // special case to make lut(tableMaxArg) work
@@ -106,14 +115,12 @@ public:
       m_table[m_numTableEntries-1].coefs[k] = 0;
 #endif
   }
-
-  // operator() is in MetaTable
 };
 
 // define friendlier names
-template <unsigned int N, typename TIN, typename TOUT>
+template <unsigned int N, typename TIN, typename TOUT=TIN>
 using UniformChebyInterpTable = ChebyInterpTable<N,TIN,TOUT,GridTypes::UNIFORM>;
-template <unsigned int N, typename TIN, typename TOUT>
+template <unsigned int N, typename TIN, typename TOUT=TIN>
 using NonUniformChebyInterpTable = ChebyInterpTable<N,TIN,TOUT,GridTypes::NONUNIFORM>;
 
 } // namespace func

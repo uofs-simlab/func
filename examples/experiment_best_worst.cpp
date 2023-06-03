@@ -79,14 +79,14 @@ int main(int argc, char* argv[])
   }
 
   /* Run comparator */
-  ImplementationComparator<double> implCompare_best(impls, nEvals, seed);
+  LookupTableComparator<double> implCompare_best(impls, 0.0, 1.0, nEvals, seed);
   implCompare_best.run_timings(nExperiments);
 
   /* Summarize the results */
-  implCompare_best.compute_timing_statistics();
+  implCompare_best.compute_statistics();
   std::ofstream jsonfs;
   jsonfs.open("best_case.json");
-  implCompare_best.print_details_json(jsonfs);
+  implCompare_best.print_json(jsonfs);
   jsonfs.close();
 
   implCompare_best.sort_timings(SortType::best);
@@ -105,13 +105,13 @@ int main(int argc, char* argv[])
   }
 
   /* Run comparator */
-  ImplementationComparator<double> implCompare_worst(impls, nEvals, seed);
+  LookupTableComparator<double> implCompare_worst(impls, 0.0, 1.0, nEvals, seed);
   implCompare_worst.run_timings(nExperiments);
 
   /* Summarize the results */
-  implCompare_worst.compute_timing_statistics();
+  implCompare_worst.compute_statistics();
   jsonfs.open("worst_case.json");
-  implCompare_worst.print_details_json(jsonfs);
+  implCompare_worst.print_json(jsonfs);
   jsonfs.close();
 
   implCompare_worst.sort_timings(SortType::best);
