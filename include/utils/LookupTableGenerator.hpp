@@ -33,16 +33,61 @@
 #include <limits>
 #include <stdexcept>
 #include <cmath> // std::abs, std::min
-//#include <algorithm> // std::min
+#include <typeinfo> // typeid
+
 
 #ifdef FUNC_USE_BOOST
 #include <boost/math/tools/minima.hpp>
 #include <boost/math/tools/roots.hpp>
 #include <boost/math/special_functions/next.hpp>
+#include <boost/math/special_functions/sign.hpp>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #endif
 
 namespace func {
+
+
+#ifdef FUNC_USE_BOOST
+/* Taken from boost/math/tools/roots.hpp but specialized for LookupTableGenerator.
+ * This is the exact same function as provided by Boost; however, we cannot call f(0)!
+ * so the first two lines are removed and we provide a theoretical value for f(0) instead */
+template <class F, class T, class Tol>
+std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol, boost::uintmax_t& max_iter) {
+  /* check for special cases & errors */
+  if(fmin == 0){ max_iter = 0; return std::make_pair(min, min); }
+  if(fmax == 0){ max_iter = 0; return std::make_pair(max, max); }
+
+  if(min >= max) throw std::invalid_argument("func::LookupTableGenerator: bisect arguments in wrong order");
+  else if(fmin * fmax >= 0) throw std::invalid_argument("func::LookupTableGenerator: function values do not alternate in sign");
+
+  /* bisection iteration */
+  boost::uintmax_t count = max_iter;
+  while (count && (0 == tol(min, max))){
+    T mid = (min + max) / 2.0;
+    T fmid = f(mid);
+    --count;
+    if ((mid == max) || (mid == min)) break;
+    if (fmid == 0) {
+      min = max = mid;
+      break;
+    }else if (boost::math::sign(fmid) * boost::math::sign(fmin) < 0){
+      max = mid;
+    }else{
+      /* use toms748 when the left endpoint changes.
+       * This will have better asymptotics and we don't have to worry about making a gigantic LUT */
+      max_iter -= count; // max_iter = number of iterations of bisection
+      auto r = boost::math::tools::toms748_solve(f, mid, max, fmid, fmax, tol, count);
+      max_iter += count; // add the number of iterations in toms748
+      return r;
+    }
+  }
+
+  /* special case for when we don't use toms748. If we got here then min never changed!
+   * TODO that is problematic!!! */
+  max_iter -= count;
+  return std::make_pair(max, max);
+}
+#endif
 
 
 #if defined(FUNC_USE_BOOST)
@@ -192,7 +237,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     using namespace boost::math::tools;
 
     /* get number of binary bits in mantissa */
-    int bits = std::numeric_limits<TERR>::digits/2; // effective maximum
+    int bits = std::numeric_limits<TERR>::digits/2; // effective maximum for brent_find_minima
     boost::uintmax_t max_it = 20;
 
     TERR max_err = 0;
@@ -333,7 +378,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
        of the table's convergence
      - even if not in asymptotic regime, this thing has some pretty
        robust convergence!
-     - Currently unused. TODO test with new error metric!
+     - Currently unused.
   */
   const int  N_NEWTON_MAX_IT  = 0;     // max log-Newton-iterations
   const double NEWTON_IT_RTOL = 1e-5;
@@ -370,19 +415,14 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
     If a suitable bracket is found, this guarantees a solution below a_tol.
     Otherwise, bracket_and_solve throws an error.
   */
-  const boost::uintmax_t BRACKET_MAX_IT = 50;  // Limit to maximum iterations.
+  const boost::uintmax_t BRACKET_MAX_IT = std::numeric_limits<TIN>::digits - 2;  // Limit to maximum iterations.
   boost::uintmax_t it = BRACKET_MAX_IT;        // Initally our chosen max iterations, but updated with actual.
 
-  /*
-    Throw when the log-Newton method did not converge AND there are no
-    bracketing iterations performed.
-   */
+  /* Throw when the log-Newton method did not converge AND there are no bracketing iterations performed. */
   if(!NEWTON_SUCCESS_FLAG && !BRACKET_MAX_IT)
     throw std::logic_error("Error in func::LookupTableGenerator: No bracketing iterations specified. log-Newton method did not converge in " + std::to_string(N_NEWTON_MAX_IT) + " steps.");
   
-  /*
-    Use the guess step size as an initialization to bracket_and_solve
-  */
+  /* Use the guess step size as an initialization to bracket_and_solve */
   using namespace boost::math::tools;
 
   int digits = std::numeric_limits<TIN>::digits;  // Maximum possible binary digits accuracy for type T.
@@ -401,12 +441,12 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
     - we have to watch out for stepsizes larger than the table range
     so we can't just use bracket_and_solve_root
   */
-  //TIN factor = 2; // Mult/divide factor for bracket expansion when searching.
-  //bool is_rising = 1; // The error curve should always be rising
-  //std::pair<TIN, TIN> r = bracket_and_solve_root(g, stepSize, factor, is_rising, tol, it);
-
   /* f(m_max-m_min) - a_tol > 0 (otherwise we would've quit already) */
-  std::pair<TIN, TIN> r = toms748_solve(g, static_cast<TIN>(0.0), m_max-m_min, -static_cast<TIN>(a_tol), static_cast<TIN>(fmax_step-a_tol), tol, it);
+  //std::pair<TIN, TIN> r = toms748_solve(g, static_cast<TIN>(0.0), m_max-m_min, -static_cast<TIN>(a_tol), static_cast<TIN>(fmax_step-a_tol), tol, it);
+  std::pair<TIN, TIN> r = bisect(g, static_cast<TIN>(0.0), m_max-m_min, -static_cast<TIN>(a_tol), static_cast<TIN>(fmax_step-a_tol), tol, it);
+  /* TODO make a warning if we hit the max tolerance & say that the user should increase the precision in TOUT */
+  if(it == BRACKET_MAX_IT)
+    std::cerr << "Warning from func::LookupTableGenerator::generate_by_tol: bisection/toms748 did not achieve tolerance within the maximum number of iterations = " << BRACKET_MAX_IT << ". Either lower tolerance or use a higher precision type for template parameter TOUT." << std::endl; //"Currently, TOUT = " << typeid(temp_tout).name();
 
   /* Save and return the implementation with the desired stepSize */
   par.stepSize = r.first;
