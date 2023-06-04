@@ -35,7 +35,7 @@ public:
     m_name = grid_type_to_string<GT>() + "LinearRawInterpTable";
     m_order = 2;
     m_numTableEntries = m_numIntervals+2;
-    m_dataSize = static_cast<unsigned int>(sizeof(m_table[0]) * m_numTableEntries);
+    m_dataSize = sizeof(m_table[0]) * m_numTableEntries;
 
     auto fun = func_container.standard_fun;
 

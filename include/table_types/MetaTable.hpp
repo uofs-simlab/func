@@ -116,7 +116,7 @@ protected:
   TIN m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
   unsigned int m_order;           // order of accuracy of implementation
-  unsigned int m_dataSize;        // size of relevant data for impl evaluation
+  std::size_t m_dataSize;        // size of relevant data for impl evaluation
   unsigned int m_numIntervals;    // = (m_tableMaxArg - m_minArg)/m_stepSize;
   unsigned int m_numTableEntries; // length of m_grid and m_table (usually = m_numIntervals + 1)
   std::unique_ptr<TIN[]> m_grid;  // necessary for nonuniform tables
@@ -168,7 +168,7 @@ public:
   TIN max_arg() const final { return m_maxArg; }
   TIN tablemax_arg() const { return m_tableMaxArg; }
   unsigned int order() const final { return m_order; }
-  unsigned int size() const final { return m_dataSize; }
+  std::size_t size() const final { return m_dataSize; }
   unsigned int num_subintervals() const final { return m_numIntervals; };
   TIN step_size() const final { return m_stepSize; };
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final

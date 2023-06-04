@@ -42,7 +42,7 @@ public:
     m_name = grid_type_to_string<GT>() + "TaylorTable<" + std::to_string(N) + ">";
     m_order = N+1;
     m_numTableEntries = m_numIntervals+1;
-    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * m_numTableEntries);
+    m_dataSize = sizeof(m_table[0]) * m_numTableEntries;
 
     auto boost_fun = func_container.template get_nth_func<N>();
     if(boost_fun == nullptr)

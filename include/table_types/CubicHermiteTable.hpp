@@ -43,7 +43,7 @@ public:
     m_name = grid_type_to_string<GT>() + "CubicHermiteTable";
     m_order = 4;
     m_numTableEntries = m_numIntervals+1;
-    m_dataSize = static_cast<unsigned>(sizeof(m_table[0]) * m_numTableEntries);
+    m_dataSize = sizeof(m_table[0]) * m_numTableEntries;
 
     auto fun = func_container.standard_fun;
     auto boost_fun = func_container.autodiff1_fun;
