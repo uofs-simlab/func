@@ -83,7 +83,7 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
   }
 
   /* special case for when we don't use toms748. If we got here then min never changed!
-   * TODO that is problematic!!! */
+   * TODO that is problematic because it means we never actually bracketed the root!!! */
   max_iter -= count;
   return std::make_pair(max, max);
 }
