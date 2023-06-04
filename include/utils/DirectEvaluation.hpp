@@ -114,7 +114,7 @@ public:
 template <typename TIN, typename TOUT = TIN>
 std::ostream& operator<<(std::ostream& out, const DirectEvaluation<TIN,TOUT>& D){
   out << D.name() << "\n"; // TODO call superclass operator<<
-  print_hist(out);
+  D.print_hist(out);
   return out;
 }
 
