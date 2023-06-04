@@ -102,6 +102,11 @@ public:
     #endif
   }
 
+  void print_hist(std::ostream& out) const {
+    out << *(D.mp_recorder);
+  }
+
+
   ~DirectEvaluation(){};
 };
 
@@ -109,7 +114,7 @@ template <typename TIN, typename TOUT = TIN>
 std::ostream& operator<<(std::ostream& out, const DirectEvaluation<TIN,TOUT>& D){
   out << D.name() << "\n"; // TODO call superclass operator<<
 #ifdef FUNC_DEBUG
-  out << *D.mp_recorder;
+  print_hist(out);
 #endif
   return out;
 }
