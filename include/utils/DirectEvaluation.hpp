@@ -103,7 +103,7 @@ public:
   }
 
   void print_hist(std::ostream& out) const {
-    out << *(D.mp_recorder);
+    out << *mp_recorder;
   }
 
 
