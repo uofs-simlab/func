@@ -111,9 +111,9 @@ public:
   unsigned int order() const final { return 0u; }
 
   /* sum the sizes of each LookupTable */
-  unsigned int size() const final {
-    return std::accumulate(m_lutmap.begin(), m_lutmap.end(), 0u,
-      [](unsigned int total, const typename lookup_map_t::value_type& L)
+  std::size_t size() const final {
+    return std::accumulate(m_lutmap.begin(), m_lutmap.end(), std::size_t{0},
+      [](std::size_t total, const typename lookup_map_t::value_type& L)
       { return total + L.second->size(); });
   }
 

@@ -89,7 +89,7 @@ public:
   TIN min_arg() const final { return -std::numeric_limits<TIN>::infinity(); };
   TIN max_arg() const final { return std::numeric_limits<TIN>::infinity(); };
   unsigned int order() const final { return std::numeric_limits<unsigned int>::infinity(); };
-  unsigned int size() const final { return 0u; };
+  std::size_t size() const final { return 0u; };
   unsigned int num_subintervals() const final { return 0u; };
   TIN step_size() const final { return static_cast<TIN>(0); };
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final { (void) intervalNumber; return std::make_pair(min_arg(),max_arg()); };

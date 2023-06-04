@@ -105,7 +105,7 @@ public:
   TIN min_arg() const final { return m_LUT.min_arg(); }
   TIN max_arg() const final { return m_LUT.max_arg();}
   unsigned int order() const final { return m_LUT.order();}
-  unsigned int size() const final { return m_LUT.size();}
+  std::size_t size() const final { return m_LUT.size();}
   unsigned int num_subintervals() const final { return m_LUT.num_subintervals();}
   TIN step_size() const final { return m_LUT.step_size(); }
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final { return m_LUT.bounds_of_subinterval(intervalNumber);}

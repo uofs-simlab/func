@@ -62,7 +62,7 @@ public:
   virtual TIN min_arg() const = 0;
   virtual TIN max_arg() const = 0;
   virtual unsigned int order() const = 0;
-  virtual unsigned int size() const = 0;
+  virtual std::size_t size() const = 0;
   virtual unsigned int num_subintervals() const = 0;
   virtual TIN step_size() const = 0;
   virtual std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const = 0;
