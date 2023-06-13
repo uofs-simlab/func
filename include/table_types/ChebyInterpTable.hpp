@@ -72,7 +72,7 @@ public:
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
 
     /* Allocate and set table */
-    m_grid.reset(new TIN[m_numTableEntries]);
+    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
     for(unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
@@ -86,7 +86,7 @@ public:
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
 
-      m_grid[ii] = x;
+      //m_grid[ii] = x;
       // build the vector of coefficients from function values
       auto a = static_cast<double>(x);
       auto b = static_cast<double>(x+h);
@@ -109,7 +109,7 @@ public:
       }
     }
     // special case to make lut(tableMaxArg) work
-    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
       m_table[m_numTableEntries-1].coefs[k] = 0;

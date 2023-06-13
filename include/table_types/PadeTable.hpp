@@ -67,14 +67,14 @@ public:
     if(boost_fun == nullptr)
       throw std::invalid_argument(m_name + " needs the " + std::to_string(N+M) + "th derivative but this was not provided in FunctionContainer");
 
-    m_grid.reset(new TIN[m_numTableEntries]);
+    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,M+N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
     for (unsigned int ii=0;ii<m_numTableEntries;++ii) {
       /* nonuniform grids are not supported for PadeTables */
       TIN x = m_minArg + ii*m_stepSize;
       TIN h = m_stepSize;
-      m_grid[ii] = x;
+      //m_grid[ii] = x;
 
       // build the matrix of taylor coefficients
       arma::Mat<double> T = arma::zeros<arma::Mat<double>>(M+N+1, N+1);
@@ -154,7 +154,7 @@ public:
 
     }
     // special case to make lut(tableMaxArg) work
-    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
       m_table[m_numTableEntries-1].coefs[k] = 0;

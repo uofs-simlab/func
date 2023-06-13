@@ -40,7 +40,7 @@ public:
     auto fun = fun_container.standard_fun;
 
     /* Allocate and set table */
-    m_grid.reset(new TIN[m_numTableEntries]);
+    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
@@ -55,7 +55,7 @@ public:
       }
 
       /* how many equally spaced nodes do we use? */
-      m_grid[ii] = x;
+      //m_grid[ii] = x;
       switch(N){
         case 0:
           m_table[ii].coefs[0] = fun(x + h/2);
@@ -99,7 +99,7 @@ public:
       }
     }
     // special case to make lut(tableMaxArg) work
-    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
       m_table[m_numTableEntries-1].coefs[k] = 0;

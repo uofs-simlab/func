@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 
   /* Summarize the results */
   cout << "# Function:  " << FUNCNAME << std::endl;
-  cout << "# Range:      (" << tableMin << "," << tableMax << ")" << std::endl;
+  cout << "# Domain:      (" << tableMin << "," << tableMax << ")" << std::endl;
 
   implCompare.compute_statistics();
   implCompare.sort_timings(SortType::worst);

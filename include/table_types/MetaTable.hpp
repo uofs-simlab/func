@@ -42,8 +42,8 @@
   using MetaTable<N,TIN,TOUT,GT>::m_stepSize_inv; \
   using MetaTable<N,TIN,TOUT,GT>::m_tableMaxArg; \
   using MetaTable<N,TIN,TOUT,GT>::m_table; \
-  using MetaTable<N,TIN,TOUT,GT>::m_grid; \
   using MetaTable<N,TIN,TOUT,GT>::m_transferFunction
+  //using MetaTable<N,TIN,TOUT,GT>::m_grid;
 
 /* Parallelization macro. Notes:
  * - m_table is aligned to sizeof(TOUT) so that might give some speedup.
@@ -64,7 +64,7 @@ static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,1
  * (2D LUTs may have coefs for x & y dimensions of each subsquare,
  * and LUTs could have that polynomial's derivative's coefs, etc). */
 template <typename TOUT, unsigned int N>
-struct alignas(sizeof(TOUT)*alignments[N]) polynomial {
+struct polynomial {
   static const unsigned int ncoefs_per_entry = N;
   TOUT coefs[N];
 };
@@ -119,7 +119,7 @@ protected:
   std::size_t m_dataSize;        // size of relevant data for impl evaluation
   unsigned int m_numIntervals;    // = (m_tableMaxArg - m_minArg)/m_stepSize;
   unsigned int m_numTableEntries; // length of m_grid and m_table (usually = m_numIntervals + 1)
-  std::unique_ptr<TIN[]> m_grid;  // necessary for nonuniform tables
+  //std::unique_ptr<TIN[]> m_grid;  // necessary for nonuniform tables
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; // holds polynomials coefficients
   TransferFunction<TIN> m_transferFunction; // used to make nonuniform grids (default constructable)
 
@@ -187,7 +187,6 @@ public:
   unsigned int num_table_entries() const { return m_numTableEntries; };
   unsigned int ncoefs_per_entry() const { return N; }
   TOUT table_entry(unsigned int i, unsigned int j) const { return m_table[i].coefs[j]; }
-  TIN grid_entry(unsigned int i) const { return m_grid[i]; }
   std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
 
 

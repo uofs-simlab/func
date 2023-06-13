@@ -40,13 +40,13 @@ public:
     auto fun = func_container.standard_fun;
 
     /* Allocate and set table */
-    m_grid.reset(new TIN[m_numTableEntries]);
+    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
 
     FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       TIN x = m_minArg + ii*m_stepSize;
-      m_grid[ii] = x;
+      //m_grid[ii] = x;
       m_table[ii].coefs[0] = fun(x);
     }
     // special case to make lut(tableMaxArg) work
@@ -54,7 +54,7 @@ public:
   }
 
   /* this operator() is slightly different from MetaTable's provided Horner's method
-   * TODO is there a good way to make this work with nonuniform grids? */
+   * TODO is there a way to make this work with nonuniform grids in a way that works with our model? */
   TOUT operator()(TIN x) const override
   {
     unsigned int x0; TOUT dx;

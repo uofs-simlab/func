@@ -51,7 +51,7 @@ public:
       throw std::invalid_argument("Error in func::CubicHermiteTable: 1st derivative of given function is not provided");
 
     /* Allocate and set table */
-    m_grid.reset(new TIN[m_numTableEntries]);
+    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
     FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
@@ -64,7 +64,7 @@ public:
         x = m_transferFunction(m_minArg + ii*m_stepSize);
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
-      m_grid[ii] = x;
+      //m_grid[ii] = x;
 
       const auto derivs0 = boost_fun(make_fvar<TIN,1>(x));
       const TOUT y0 = derivs0.derivative(0);
@@ -85,7 +85,7 @@ public:
       }
     }
     // special case to make lut(tableMaxArg) work
-    m_grid[m_numTableEntries-1] = m_tableMaxArg;
+    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
     for (unsigned int k=1; k<4; k++)
       m_table[m_numTableEntries-1].coefs[k] = 0;
