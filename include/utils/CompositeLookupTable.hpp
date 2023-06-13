@@ -106,8 +106,8 @@ public:
   }
 
   std::string name() const final { return "CompositeLookupTable"; }
-  TIN min_arg() const final { return m_lutmap.begin()->first; }
-  TIN max_arg() const final { return m_lutmap.end()->second->max_arg(); }
+  TIN min_arg() const final { return m_lutmap.begin()->second->min_arg(); }
+  TIN max_arg() const final { return m_lutmap.rbegin()->first; }
   unsigned int order() const final { return 0u; }
 
   /* sum the sizes of each LookupTable */

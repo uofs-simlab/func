@@ -38,8 +38,8 @@ class DirectEvaluation final : public LookupTable<TIN,TOUT>
   static constexpr const char * classname = "DirectEvaluation";
   std::function<TOUT(TIN)> m_func;
 #ifdef FUNC_DEBUG
-  std::unique_ptr<mutable ArgumentRecord<TIN>> mp_recorder;
-  StdRng<TIN> m_sampler{0,1}; // uniformly distrubuted random numbers in [0,1]
+  mutable std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
+  mutable StdRng<TIN> m_sampler{0,1}; // uniformly distrubuted random numbers in [0,1]
   // TODO save/load error to json?
   TIN  m_rerr;
   TOUT m_aerr;

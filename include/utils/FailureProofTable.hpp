@@ -49,7 +49,7 @@ class FailureProofTable final : public LookupTable<TIN,TOUT> {
   std::function<TOUT(TIN)> m_fun;
   LUT_TYPE m_LUT;
   #ifdef FUNC_DEBUG
-  std::unique_ptr<mutable ArgumentRecord<TIN>> mp_recorder;
+  mutable std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
   #endif
 public:
   /* Deep copy the given LUT */
