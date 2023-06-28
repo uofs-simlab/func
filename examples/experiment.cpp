@@ -146,6 +146,6 @@ int main(int argc, char* argv[])
   cout << "# Domain:      (" << tableMin << "," << tableMax << ")" << std::endl;
 
   implCompare.compute_statistics();
-  implCompare.sort_timings(SortType::worst);
+  implCompare.sort_timings(Sorter::WORST);
   implCompare.print_summary(std::cout);
 }

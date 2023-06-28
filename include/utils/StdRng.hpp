@@ -27,7 +27,7 @@
 namespace func {
 
 template <typename POINT_TYPE,
-         class DIST_TYPE = std::uniform_real_distribution<POINT_TYPE>,
+         class DIST_TYPE = std::uniform_real_distribution<double>,
          class RNG_TYPE  = std::mt19937>
 class StdRng : public RngInterface<POINT_TYPE>
 {
@@ -59,7 +59,7 @@ class StdRng : public RngInterface<POINT_TYPE>
     unsigned int seed(){ return m_seed; }
 
     // get a random point from the given distribution
-    POINT_TYPE get_point(){ return (*mp_distribution)(*mp_generator); }
+    POINT_TYPE get_point(){ return static_cast<POINT_TYPE>((*mp_distribution)(*mp_generator)); }
 
     ~StdRng(){}
 };

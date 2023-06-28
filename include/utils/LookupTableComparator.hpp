@@ -24,7 +24,7 @@ namespace func {
 template <typename TIN, typename TOUT>
 using ImplContainer = std::vector<std::unique_ptr<LookupTable<TIN,TOUT>>>;
 
-enum class SortType {best, mean, worst};
+enum class Sorter {NONE, BEST, MEAN, WORST};
 
 /*
   ImplTimer struct attaches additional data for timing an implementation
@@ -137,7 +137,7 @@ public:
   }
 
   /* Sort the vector of implementations (m_implTimers) based on their max, mean, or min times */
-  void sort_timings(SortType type = SortType::mean);
+  void sort_timings(Sorter type = Sorter::MEAN);
 
   /* Print out the computed statistics for each LookupTable (no raw timings are displayed) */
   void print_summary(std::ostream&);
@@ -145,7 +145,7 @@ public:
   /* Print out the raw timings for each LookupTable */
   void print_json(std::ostream&);
   void print_csv_header(std::ostream&);
-  void print_csv(std::ostream&);
+  void print_csv(std::ostream&, Sorter type = Sorter::NONE);
 
   std::vector<double> fastest_times()
   {
@@ -190,50 +190,45 @@ inline LookupTableComparator<TIN,TOUT>::LookupTableComparator(
   m_minArg = minArg;
   m_maxArg = maxArg;
 
-  // ensuring each domain is unnecessary IMO
-  //for(auto & itImpl : m_implementations) {
-  //  assert(abs(itImpl->min_arg() - m_minArg) < std::numeric_limits<TIN>::epsilon());
-  //  assert(abs(itImpl->max_arg() - m_maxArg) < std::numeric_limits<TIN>::epsilon());
-  //}
-
   /*
     Prepare to generate random points in the table interval to evaluate.
     If an RngInterface was not provided, set mp_sampler to a uniform real
     distribution on the table's endpoints
   */
   if(mp_sampler == nullptr)
-    mp_sampler = std::unique_ptr<StdRng<TIN>>(new StdRng<TIN>(m_minArg, m_maxArg));
+    mp_sampler = std::unique_ptr<StdRng<TIN>>(new StdRng<TIN>(static_cast<double>(m_minArg), static_cast<double>(m_maxArg)));
   mp_sampler->init(seed);
   mp_randomEvaluations = std::unique_ptr<TIN[]>(new TIN[m_nEvals]);
 }
 
 /* sort the vector of timings based on the min, max, or mean times */
 template <typename TIN, typename TOUT>
-inline void LookupTableComparator<TIN,TOUT>::sort_timings(SortType type)
+inline void LookupTableComparator<TIN,TOUT>::sort_timings(Sorter type)
 {
   switch(type){
-  case SortType::best: // sort by minimum (ie. best case performance)
+  case Sorter::BEST: // sort by minimum (ie. best case performance)
   {
     sort(m_implTimers.begin(), m_implTimers.end(),
         [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
         { return (a.minTime < b.minTime); } );
     break;
   }
-  case SortType::mean: // default sort by mean time
+  case Sorter::MEAN: // default sort by mean time
   {
     sort(m_implTimers.begin(), m_implTimers.end(),
         [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
         { return (a.meanTime < b.meanTime); } );
     break;
   }
-  case SortType::worst: // sort by maximum time (ie. worst case performance)
+  case Sorter::WORST: // sort by maximum time (ie. worst case performance)
   {
     sort(m_implTimers.begin(), m_implTimers.end(),
         [](const ImplTimer<TIN,TOUT> &a, const ImplTimer<TIN,TOUT> &b)
         { return (a.maxTime < b.maxTime); } );
     break;
   }
-  default: { throw std::logic_error("Broken switch case in func::LookupTableComparator"); }
+  default: { throw std::logic_error("func::LookupTableComparator::sort_timings given an invalid Sorter."
+               " Options are Sorter::BEST, Sorter::MEAN, or Sorter::WORST."); }
   }
 }
 
@@ -268,17 +263,33 @@ inline void LookupTableComparator<TIN,TOUT>::print_csv_header(std::ostream &out)
 }
 
 template <typename TIN, typename TOUT>
-inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out)
-{
-  print_csv_header(out);
-
-  /* Print all times, row by row */
-  int numTimes = (m_implTimers[0].evaluationTimes).size();
-  for (int i = 0; i<numTimes; ++i) {
-    for (auto itImplTimer : m_implTimers) {
-      out << itImplTimer.evaluationTimes[i] << " ";
+inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out, Sorter type) {
+  switch(type){
+  case Sorter::BEST: {
+    for (auto itImplTimer : m_implTimers)
+      out << itImplTimer.minTime << "s ";
+    break;
+  }
+  case Sorter::MEAN: {
+    for (auto itImplTimer : m_implTimers)
+      out << itImplTimer.meanTime << "s ";
+    break;
+  }
+  case Sorter::WORST: {
+    for (auto itImplTimer : m_implTimers)
+      out << itImplTimer.maxTime << "s ";
+    break;
+  }
+  default: {
+    /* Print all times, row by row */
+    int numTimes = (m_implTimers[0].evaluationTimes).size();
+    for (int i = 0; i<numTimes; ++i) {
+      out << "\n";
+      for (auto itImplTimer : m_implTimers) {
+        out << itImplTimer.evaluationTimes[i] << " ";
+      }
     }
-    out << "\n";
+  }
   }
 }
 
@@ -298,7 +309,7 @@ inline void LookupTableComparator<TIN,TOUT>::print_summary(std::ostream &out)
 {
   /* Print details of all timings
      temp_tin and temp_tout are needed to print template values (but the string is probably mangled).
-     There are significantly more legible solutions but this is good enough until someone complains */
+     There are more legible solutions but this is good enough until anyone actually cares */
   TIN temp_tin;
   TOUT temp_tout;
 

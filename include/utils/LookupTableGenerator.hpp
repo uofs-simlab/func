@@ -300,9 +300,9 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
     return generate_by_file(filename, tableKey);
 
   /* Use 2 query points to get relationship */
-  const unsigned long N1 = 2;
+  const unsigned long N1 = 1;
   const TIN step1 = (m_max-m_min)/N1;
-  const unsigned long N2 = 10;
+  const unsigned long N2 = 5;
   const TIN step2 = (m_max-m_min)/N2;
 
   LookupTableParameters<TIN> par1 = m_par;
@@ -318,17 +318,17 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   unsigned long size1 = impl1->size();
   unsigned long size2 = impl2->size();
 
+  if(desiredSize <= size1)
+    throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_impl_size: Requested memory size is too small");
+
   // TODO logically, this can't ever be a problem... but I guess it's nice to check?
   if(size2 == size1)
     throw std::logic_error("Error in func::LookupTableGenerator.generate_by_impl_size: Query tables have same size");
 
   /* approximate step size for for desired impl size
    * (assuming linear relationship of num_subintervals to size */
-  const unsigned long N3 = (N2-N1)*(desiredSize-size1)/static_cast<double>(size2-size1) + N1 + 1u;
+  const long N3 = (N2-N1)*(desiredSize-size1)/static_cast<double>(size2-size1) + N1 + 1;
   par1.stepSize = (m_max-m_min)/static_cast<TIN>(N3);
-
-  if(par1.stepSize <= 0)
-    throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_impl_size: Requested memory size is too small");
 
   auto lut = factory.create(tableKey, m_fc, par1);
   save_lut(lut.get(), filename);

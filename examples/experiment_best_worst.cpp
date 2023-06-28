@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
   implCompare_best.print_json(jsonfs);
   jsonfs.close();
 
-  implCompare_best.sort_timings(SortType::best);
+  implCompare_best.sort_timings(Sorter::BEST);
   implCompare_best.print_summary(std::cout);
 
 
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
   implCompare_worst.print_json(jsonfs);
   jsonfs.close();
 
-  implCompare_worst.sort_timings(SortType::best);
+  implCompare_worst.sort_timings(Sorter::BEST);
   implCompare_worst.print_summary(std::cout);
 
   return 0;
