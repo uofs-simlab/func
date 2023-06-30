@@ -145,6 +145,8 @@ public:
   /* Print out the raw timings for each LookupTable */
   void print_json(std::ostream&);
   void print_csv_header(std::ostream&);
+  /* space separated listing of timing results. Does not print a final newline if
+   * type != Sorter::NONE which is helpful for plotting timing results */
   void print_csv(std::ostream&, Sorter type = Sorter::NONE);
 
   std::vector<double> fastest_times()
@@ -284,10 +286,10 @@ inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out, Sorter
     /* Print all times, row by row */
     int numTimes = (m_implTimers[0].evaluationTimes).size();
     for (int i = 0; i<numTimes; ++i) {
-      out << "\n";
       for (auto itImplTimer : m_implTimers) {
         out << itImplTimer.evaluationTimes[i] << " ";
       }
+      out << "\n";
     }
   }
   }

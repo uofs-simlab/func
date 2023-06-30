@@ -35,11 +35,12 @@ namespace func {
 template <typename TIN, typename TOUT = TIN>
 class DirectEvaluation final : public LookupTable<TIN,TOUT>
 {
-  static constexpr const char * classname = "DirectEvaluation";
   std::function<TOUT(TIN)> m_func;
 #ifdef FUNC_DEBUG
   mutable std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
   mutable StdRng<TIN> m_sampler{0,1}; // uniformly distrubuted random numbers in [0,1]
+  bool print_on_destruct = false;
+  std::ostream streamer = std::cout;
   // TODO save/load error to json?
   TIN  m_rerr;
   TOUT m_aerr;
@@ -85,7 +86,7 @@ public:
     return m_func(x);
   }
 
-  std::string name() const final { return classname; }
+  std::string name() const final { return "DirectEvaluation"; }
   TIN min_arg() const final { return -std::numeric_limits<TIN>::infinity(); };
   TIN max_arg() const final { return std::numeric_limits<TIN>::infinity(); };
   unsigned int order() const final { return std::numeric_limits<unsigned int>::infinity(); };
@@ -98,7 +99,7 @@ public:
   void print_json(std::ostream& out) const final {
     out << name() << "\n";
     #ifdef FUNC_DEBUG
-    //out << mp_recorder->print_json(out);
+      //out << mp_recorder->print_json(out);
     #endif
   }
 
@@ -108,7 +109,19 @@ public:
 #endif
   }
 
-  ~DirectEvaluation(){};
+  void set_destructor_print(std::ostream& out){
+#ifdef FUNC_DEBUG
+    print_on_destruct = true;
+    streamer = out;
+#endif
+    return;
+  }
+
+  ~DirectEvaluation(){
+#ifdef FUNC_DEBUG
+    if(print_on_destruct) streamer << *this;
+#endif
+  };
 };
 
 template <typename TIN, typename TOUT = TIN>
