@@ -58,13 +58,12 @@ public:
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == GridTypes::UNIFORM)
+      FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
         x = m_transferFunction(m_minArg + ii*m_stepSize);
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
-      //m_grid[ii] = x;
 
       const auto derivs0 = boost_fun(make_fvar<TIN,1>(x));
       const TOUT y0 = derivs0.derivative(0);
@@ -78,7 +77,7 @@ public:
       m_table[ii].coefs[2] = -3*y0+3*y1-(2*m0+m1)*h;
       m_table[ii].coefs[3] = 2*y0-2*y1+(m0+m1)*h;
 
-      if(GT == GridTypes::NONUNIFORM){
+      FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<4; k++)
           m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
@@ -88,7 +87,7 @@ public:
     //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
     for (unsigned int k=1; k<4; k++)
-      m_table[m_numTableEntries-1].coefs[k] = 0;
+      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
 #endif
   }
 

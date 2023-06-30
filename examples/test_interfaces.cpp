@@ -21,6 +21,7 @@ int main()
   FailureProofTable<UniformEqSpaceInterpTable<3,double>,double> F(func_container, {MIN_ARG,MAX_ARG,(std::exp(7.7/13.0287)-MIN_ARG)/17});
   std::cout << "F(0.01) = " << F(0.01) << std::endl;
   std::cout << "F(1)  = " << F(1)  << std::endl;
+  std::cout << "F(std::exp(7.7/13.0287))  = " << F(std::exp(7.7/13.0287))  << std::endl;
   std::cout << "F(50) = " << F(50) <<  std::endl;
 
   std::vector<std::tuple<std::string,TYPE,TYPE,TYPE>> v{
@@ -32,6 +33,7 @@ int main()
   CompositeLookupTable<TYPE> C(func_container, v);
   std::cout << "C(0.01) = " << C(0.01) << std::endl;
   std::cout << "C(1)  = " << C(1)  << std::endl;
+  std::cout << "C(std::exp(7.7/13.0287))  = " << C(std::exp(7.7/13.0287))  << std::endl;
   std::cout << "C(29) = " << C(29) << std::endl;
   std::cout << "C(50) = " << C(50) << std::endl;
 

@@ -154,10 +154,9 @@ public:
 
     }
     // special case to make lut(tableMaxArg) work
-    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
-      m_table[m_numTableEntries-1].coefs[k] = 0;
+      m_table[m_numTableEntries-1].coefs[k] = static_cast<TOUT>(0);
 #endif
   }
 

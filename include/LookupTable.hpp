@@ -1,25 +1,11 @@
 /*
-  This class is an interface that is useful for our LookupTableFactory.
+  Abstract base class for any FunC object approximating a
+  user provided function.
+  This interface is particularly useful for our LookupTableFactory,
+  LookupTableGenerator, and LookupTableComparator.
 
   Actual data (reading, writing, hashing, etc) is handled
   by specific implementations of this class.
-
-  Notes:
-  - In the case where (max-min)/stepsize is not an integer then
-  the actual maximum allowable argument is greater than max
-*/
-/*
-  Abstract base class for any FunC object approximating a
-  user provided function. This lets us make a vector with
-  both a DirectEvaluation and various other LookupTables
-  in ImplementationComparator.hpp.
-
-  Derived classes generally do the following:
-  - set up anything needed for 'evaluation'
-  - determine size of data needed for 'evaluation'
-  - override the brackets operator to perform 'evaluation'
-  - write data to json with print_json
-  - cleanup in destructor
 */
 
 #pragma once
@@ -56,9 +42,7 @@ public:
   //virtual TOUT diff(unsigned int N, TIN x) = 0;
 
   /* public interface for access to protected data */
-  //virtual std::function<TOUT(TIN)> function() const = 0;
   virtual std::string name() const = 0;
-
   virtual TIN min_arg() const = 0;
   virtual TIN max_arg() const = 0;
   virtual unsigned int order() const = 0;

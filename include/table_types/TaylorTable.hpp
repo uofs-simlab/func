@@ -56,7 +56,7 @@ public:
       auto x = m_minArg + ii*m_stepSize;
       auto h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT != GridTypes::UNIFORM){
+      FUNC_IF_CONSTEXPR(GT != GridTypes::UNIFORM){
         x = m_transferFunction(x);
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
@@ -72,17 +72,16 @@ public:
       for(unsigned int k=0; k<N+1; k++)
         m_table[ii].coefs[k] = polynomial_diff(p,-0.5,k)/boost::math::factorial<double>(k);
 
-      if(GT == GridTypes::NONUNIFORM){
+      FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<N+1; k++)
           m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
       }
     }
     // special case to make lut(tableMaxArg) work
-    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
-      m_table[m_numTableEntries-1].coefs[k] = 0;
+      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
 #endif
   }
 };

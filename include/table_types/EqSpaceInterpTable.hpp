@@ -40,14 +40,13 @@ public:
     auto fun = fun_container.standard_fun;
 
     /* Allocate and set table */
-    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
-    for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
+    for(unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == GridTypes::UNIFORM)
+      FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
         x = m_transferFunction(m_minArg + ii*m_stepSize);
@@ -55,7 +54,6 @@ public:
       }
 
       /* how many equally spaced nodes do we use? */
-      //m_grid[ii] = x;
       switch(N){
         case 0:
           m_table[ii].coefs[0] = fun(x + h/2);
@@ -68,41 +66,42 @@ public:
           }
         case 2:
           {
+          TIN a,b,c;
           const TOUT y0 = fun(x);
           const TOUT y1 = fun(x+h/2);
           const TOUT y2 = fun(x+h);
           m_table[ii].coefs[0] = y0;
-          m_table[ii].coefs[1] = -3*y0+4*y1-y2;
-          m_table[ii].coefs[2] = 2*y0+-4*y1+2*y2;
+          a = -3, b = 4, c = -1; m_table[ii].coefs[1] = a*y0+b*y1+c*y2;
+          a = 2, b = -4, c = 2;  m_table[ii].coefs[2] = a*y0+b*y1+c*y2;
           break;
           }
         case 3:
           {
+          TIN a,b,c,d;
           const TOUT y0 = fun(x);
           const TOUT y1 = fun(x+h/3);
           const TOUT y2 = fun(x+2*h/3);
           const TOUT y3 = fun(x+h);
           m_table[ii].coefs[0] = y0;
-          m_table[ii].coefs[1] = -11*y0/2+9*y1-9*y2/2+y3;
-          m_table[ii].coefs[2] = 9*y0-45*y1/2+18*y2-9*y3/2;
-          m_table[ii].coefs[3] = -9*y0/2+27*y1/2-27*y2/2+9*y3/2;
+          a = -11/2.0, b = 9, c = -9/2.0, d = 1.0;        m_table[ii].coefs[1] = a*y0+b*y1+c*y2+y3;
+          a = 9, b = -45/2.0, c = 18, d = -9/2.0;         m_table[ii].coefs[2] = a*y0+b*y1+c*y2+d*y3;
+          a = -9/2.0, b = 27/2.0, c = -27/2.0, d = 9/2.0; m_table[ii].coefs[3] = a*y0+b*y1+c*y2+d*y3;
           break;
           }
         default: { throw std::invalid_argument(std::string("EqSpaceInterpTables<N> only support N=0,1,2,3 but given N=") + std::to_string(N)); }
       }
 
       /* TODO This formula is too unstable for this table type as given in this form when N>2 and h is small. */
-      if(GT == GridTypes::NONUNIFORM){
+      FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<N+1; k++)
           m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
       }
     }
     // special case to make lut(tableMaxArg) work
-    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
-    for (unsigned int k=1; k<N+1; k++)
-      m_table[m_numTableEntries-1].coefs[k] = 0;
+    for(unsigned int k=1; k<N+1; k++)
+      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
   }
 
   // operator() is in MetaTable

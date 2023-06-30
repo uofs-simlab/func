@@ -59,27 +59,27 @@ public:
 
     auto fun = func_container.standard_fun;
 
-    /* Thoughts: Vandermonde system for cheby nodes over [0,1] has condition number about 1000 times larger than [-1,1]
-     * but shifting polynomials is too poorly conditioned.
-     * TODO this table type should support any values of TIN TOUT that form a field with +,*.
-     * Two options from here:
-     * - Hand code the solutions for N=0-7 (horrible)
-     * - Use a linear algebra that calls TIN/TOUT's overloaded operators
+    /* Thoughts:
+     * - Vandermonde system for cheby nodes over [0,1] has condition number about 1000 times larger than [-1,1]
+     *  but we don't do that because shifting polynomials is too poorly conditioned.
+     * - Yes using inv here is sinful; however, Armadillo (and (every?) other high performance numeric linear algebra library)
+     *   does not have a solver for general vector spaces. That is, most libraries cannot solve Ax=b where the entries of A
+     *   are not float or double and the entries of b don't have the same type as the entries of A.
      * */
     arma::mat Van = arma::ones(N+1, N+1);
     Van.col(1) = (1 + arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1))))/2;
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
+    Van = arma::inv(Van);
 
     /* Allocate and set table */
-    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
     for(unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
       TIN x;
       TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
-      if (GT == GridTypes::UNIFORM)
+      FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
         x = m_minArg + ii*m_stepSize;
       else{
         x = m_transferFunction(m_minArg + ii*m_stepSize);
@@ -91,18 +91,19 @@ public:
       auto a = static_cast<double>(x);
       auto b = static_cast<double>(x+h);
       arma::vec xvec = (a+b)/2 + (b-a)*arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)))/2;
-      arma::vec y(N+1);
+      std::array<TOUT,N+1> y;
       for (unsigned int k=0; k<N+1; k++)
-        y[k] = static_cast<double>(fun(static_cast<TIN>(xvec[k])));
+        y[k] = fun(static_cast<TIN>(xvec[k]));
 
-      y = arma::solve(Van, y);
-
-      // move this back into the m_table array
-      for (unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = static_cast<TOUT>(y[k]);
+      for(unsigned int k=0; k<N+1; k++){
+        m_table[ii].coefs[k] = static_cast<TIN>(Van(k,0))*y[0];
+        for(unsigned int s=1; s<N+1; s++){
+          m_table[ii].coefs[k] += static_cast<TIN>(Van(k,s))*y[s];
+        }
+      }
 
       /* TODO This formula is too unstable for this table type as given in this form when N>2 and h is small. */
-      if(GT == GridTypes::NONUNIFORM){
+      FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<N+1; k++)
           m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
@@ -112,7 +113,7 @@ public:
     //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
-      m_table[m_numTableEntries-1].coefs[k] = 0;
+      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
 #endif
   }
 };

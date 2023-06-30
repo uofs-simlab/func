@@ -1,28 +1,24 @@
 /*
-   MetaTable handles any _piecewise polynomial based_ interpolation:
-   - Reduce code redundancy by factoring out common differences between table types
-   (eg method of generating a nonuniform grid type, setup/reading polynomial coefficients)
-   which can be pieced together based on template parameters.
+  MetaTable handles any _piecewise polynomial based_ interpolation:
 
-   NOTE: if stepSize divides max-min exactly then operator(max) will be out of array bounds!
-   - Every table has an extra (unnecessary in most cases) table entry to avoid this
-   problem.
-   
-   N = number of coefficients used in underlying piecewise polynomials
-   Provided Horner's method which is the most common table evaluation method in FunC
+  Note:
+  - In the case where (max-min)/stepsize is not an integer then
+  the actual maximum allowable argument is greater than max
+  - if stepSize divides max-min exactly then operator(max) will be out of array bounds
+  so every implementation has an extra (unnecessary in most cases) table entry.
 
-   UNIFORM: Every subinterval is the same length so the hash is super fast; however,
-    many more subintervals might be needed
-   NONUNIFORM: Use a transfer function to create a nonuniform grid with an O(1) hash.
+  Info on template parameters:
 
-   TODO we could make another template which makes FunC save derivative coefs
-   on the same cache line as the original coefs (hopefully with implementation
-   independent of the LUT in use)
+  N = number of coefficients used in underlying piecewise polynomials
+  Provided Horner's method which is the most common table evaluation method in FunC
+
+  UNIFORM: Every subinterval is the same length so the hash is super fast; however,
+  many more subintervals might be needed
+  NONUNIFORM: Use a transfer function to create a nonuniform grid with an O(1) hash.
 */
 #pragma once
 #include "LookupTable.hpp"
 #include "TransferFunction.hpp"
-
 
 #include <array>
 #include <stdexcept>
@@ -43,14 +39,11 @@
   using MetaTable<N,TIN,TOUT,GT>::m_tableMaxArg; \
   using MetaTable<N,TIN,TOUT,GT>::m_table; \
   using MetaTable<N,TIN,TOUT,GT>::m_transferFunction
-  //using MetaTable<N,TIN,TOUT,GT>::m_grid;
 
 /* Parallelization macro. Notes:
  * - m_table is aligned to sizeof(TOUT) so that might give some speedup.
  * */
 #define FUNC_BUILDPAR _Pragma("omp parallel for schedule(dynamic)")
-//#define FUNC_BUILDPAR
-
 
 namespace func {
 
@@ -118,8 +111,7 @@ protected:
   unsigned int m_order;           // order of accuracy of implementation
   std::size_t m_dataSize;        // size of relevant data for impl evaluation
   unsigned int m_numIntervals;    // = (m_tableMaxArg - m_minArg)/m_stepSize;
-  unsigned int m_numTableEntries; // length of m_grid and m_table (usually = m_numIntervals + 1)
-  //std::unique_ptr<TIN[]> m_grid;  // necessary for nonuniform tables
+  unsigned int m_numTableEntries; // length of m_table (usually = m_numIntervals + 1)
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; // holds polynomials coefficients
   TransferFunction<TIN> m_transferFunction; // used to make nonuniform grids (default constructable)
 
@@ -148,13 +140,12 @@ public:
 
     /* build the transfer function for nonuniform grids
      * TODO could make transfer function coefficients a field in LookupTableParameters */
-    if(GT != GridTypes::UNIFORM)
+    FUNC_IF_CONSTEXPR(GT != GridTypes::UNIFORM)
       m_transferFunction = TransferFunction<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
   }
 
   /* build this table from a json file */
-  MetaTable(const nlohmann::json& jsonStats)
-  {
+  MetaTable(const nlohmann::json& jsonStats) {
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::MetaTable: The provided nlohmann::json is empty");
     from_json(jsonStats, *this);
@@ -162,8 +153,6 @@ public:
 
   /* public access to protected member vars */
   std::string name() const final { return m_name; }
-  //std::function<TOUT(TIN)> function() const final { return m_fun; };
-
   TIN min_arg() const final { return m_minArg; }
   TIN max_arg() const final { return m_maxArg; }
   TIN tablemax_arg() const { return m_tableMaxArg; }
@@ -173,7 +162,7 @@ public:
   TIN step_size() const final { return m_stepSize; };
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final
   {
-    if(GT == GridTypes::UNIFORM)
+    FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
       return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
     else
       return std::make_pair(m_transferFunction(m_minArg + intervalNumber*m_stepSize),
@@ -212,9 +201,9 @@ public:
   /* the polynomials for nonuniform LUTs map [x_k,x_{k+1}]->R so we don't have to change x */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::NONUNIFORM,bool>::type = true>
   inline std::pair<unsigned int, TIN> hash(TIN x) const {
-    // perform interval search in 6 FLOPs and 4 IOPs (but the data are contiguous so is it 1 IOP?)
+    // perform interval search in 6 FLOPs and 4 std::array<TIN,4> accesses
     unsigned int x0 = static_cast<unsigned int>(m_transferFunction.inverse(x));
-    return std::make_pair(x0, x); // don't subtract dx by x0 because every polynomial must be rescaled accordingly
+    return std::make_pair(x0, x); // don't subtract dx by x0 because every polynomial was already rescaled accordingly
   }
 
   /* TODO Pade & LinearRawInterpTable must override this operator. The vtable MIGHT be optimized out,
@@ -267,8 +256,6 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut)
 
   // things that are important for nonuniform tables:
   jsonStats["transfer_function_coefs"] = lut.transfer_function_coefs();
-  //for(unsigned int i=0; i<lut.m_numTableEntries; i++)
-  //  jsonStats["grid"][std::to_string(i)] = lut.m_grid[i];
 
   // save the polynomial coefs of each lookup table
   // Note: m_order is used as the number of polynomial coefs
@@ -307,11 +294,6 @@ void from_json(const nlohmann::json& jsonStats, MetaTable<N,TIN,TOUT,GT>& lut)
   jsonStats.at("numIntervals").get_to(lut.m_numIntervals);
   jsonStats.at("numTableEntries").get_to(lut.m_numTableEntries);
   jsonStats.at("tableMaxArg").get_to(lut.m_tableMaxArg);
-
-  // read array of points used
-  //lut.m_grid.reset(new TIN[lut.m_numTableEntries]);
-  //for(unsigned int i=0; i<lut.m_numTableEntries; i++)
-  //  jsonStats.at("grid").at(std::to_string(i)).get_to(lut.m_grid[i]);
 
   // Recompute m_table (the array of polynomials) and the transfer function
   lut.m_table.reset(new polynomial<TOUT,N>[lut.m_numTableEntries]);
