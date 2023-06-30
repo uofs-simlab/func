@@ -46,11 +46,10 @@
 
 namespace func {
 
-
 #ifdef FUNC_USE_BOOST
 /* Taken from boost/math/tools/roots.hpp but specialized for LookupTableGenerator.
- * This is the exact same function as provided by Boost; however, we cannot call f(0)!
- * so the first two lines are removed and we provide a theoretical value for f(0) instead */
+ * This is the exact same function as provided by Boost; however, our application cannot call f(0)!!!
+ * so the first two lines are removed and we provide a "theoretical" value for f(0) in fmin instead */
 template <class F, class T, class Tol>
 std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol, boost::uintmax_t& max_iter) {
   /* check for special cases & errors */
@@ -62,7 +61,7 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
 
   /* bisection iteration */
   boost::uintmax_t count = max_iter;
-  while (count && (0 == tol(min, max))){
+  while (count && (0 == tol(min, max))) {
     T mid = (min + max) / 2.0;
     T fmid = f(mid);
     --count;
@@ -83,7 +82,7 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
   }
 
   /* special case for when we don't use toms748. If we got here then min never changed!
-   * TODO that is problematic because it means we never actually bracketed the root!!! */
+   * that is problematic because it means we never _actually_ bracketed the root!!! */
   max_iter -= count;
   return std::make_pair(max, max);
 }
@@ -168,7 +167,7 @@ public:
   /* Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename = "");
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN desiredErr, std::string filename = ""){
-    return generate_by_tol(tableKey,desiredErr,desiredErr,filename);
+    return generate_by_tol(tableKey, desiredErr, desiredErr, filename);
   }
 
   /* Generate a table takes up desiredSize bytes */
@@ -253,7 +252,8 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_subintervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->bounds_of_subinterval(ii);
-      /* TODO does this restrict TERR? We're worried that casting to TERR might round outside the LUT's domain.
+      /* TODO does this restrict the possible values of TIN?
+       * We're worried that casting to TERR might round outside the LUT's domain.
        * Is this possible????? */
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
@@ -465,7 +465,7 @@ long double LookupTableGenerator<TIN,TOUT,TERR>::error_at_step_size(std::string 
 #else
   /* Use brent_find_minima to compute the max error over [min,max] */
   OptimalStepSizeFunctor f(*this,tableKey,static_cast<TERR>(relTol),0.0);
-  return f(stepSize);
+  return static_cast<long double>(f(stepSize));
 #endif
 }
 
@@ -478,7 +478,7 @@ long double LookupTableGenerator<TIN,TOUT,TERR>::error_of_table(const LookupTabl
 #else
   /* Use brent_find_minima to compute the max error over [min,max] */
   OptimalStepSizeFunctor f(*this,"",static_cast<TERR>(relTol),0.0);
-  return f.error_of_table(&table);
+  return static_cast<long double>(f.error_of_table(&table));
 #endif
 }
 
