@@ -66,7 +66,7 @@ public:
   TransferFunction() = default;
 
   /* Build the coefficients in g_inv 
-   * TODO can we use SFINAE to check if sqrt(TOUT) is defined? (ie TOUT cannot be LookupTable<...>) */
+   * TODO can we use SFINAE to check if sqrt(TOUT) -> TIN is defined? */
   template<typename TOUT>
   TransferFunction(const FunctionContainer<TIN,TOUT>& fc, TIN minArg, TIN tableMaxArg, TIN stepSize) : 
     m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) {
@@ -114,8 +114,7 @@ public:
 
     /* Compute the Hermite interpolating polynomial p for g_inv satisfying
      * p(a)=a, p(b)=b, p'(a)=m0, p'(b)=m1
-     * (this symbolic expression was computed by Matlab)
-     * TODO maybe we can use this to get equations for the slopes m0 and m1? */
+     * (this symbolic expression was computed by Matlab) */
     m_inverse_coefs[0] = (a*b*(a + b - a*m1 - b*m0))/(a - b)/(a - b);
     m_inverse_coefs[1] = (a*a*m1 - 6*a*b + b*b*m0 + 2*a*b*m0 + 2*a*b*m1)/(a - b)/(a - b);
     m_inverse_coefs[2] = -(a*m0 - 3*b - 3*a + 2*a*m1 + 2*b*m0 + b*m1)/(a - b)/(a - b);

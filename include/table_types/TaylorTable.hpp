@@ -65,17 +65,17 @@ public:
       /* Taylor expansion of f over the basis: (xh+0.5h)^k for k=0,1,...,N */
       auto const derivs = boost_fun(make_fvar<TIN,N>(x + 0.5*h));
       for(unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = derivs.derivative(k)*pow(h,k)/boost::math::factorial<double>(k);
+        m_table[ii].coefs[k] = derivs.derivative(k)*static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
 
       /* Taylor expansion of the above polynomial over the basis: x^k */
       auto p = m_table[ii];
       for(unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = polynomial_diff(p,-0.5,k)/boost::math::factorial<double>(k);
+        m_table[ii].coefs[k] = polynomial_diff(p,-0.5,k)/static_cast<TIN>(factorial(k));
 
       FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
         for(unsigned int k=0; k<N+1; k++)
-          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/pow(h,k)/boost::math::factorial<double>(k);
+          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
       }
     }
     // special case to make lut(tableMaxArg) work

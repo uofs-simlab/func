@@ -63,7 +63,12 @@ struct polynomial {
 };
 
 
-/* convenient methods for differentiating a polynomial */
+/* methods for computing with polynomials */
+constexpr unsigned int factorial(unsigned int n){
+  if(n == 0u) return 1u;
+  return n*factorial(n-1u);
+}
+
 constexpr unsigned int permutation(unsigned int n, unsigned int k){
   if(k == 0u) return 1u;
   return n*permutation(n-1u,k-1u);
