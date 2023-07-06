@@ -14,6 +14,8 @@
 
 namespace func {
 
+static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,16,16,16};
+
 template <typename TOUT, unsigned int N, bool B> struct polynomial_helper;
 
 template <typename TOUT, unsigned int N>
@@ -30,7 +32,6 @@ struct polynomial_helper<TOUT,N,false> {
 
 template <typename TOUT, unsigned int N>
 using polynomial = polynomial_helper<TOUT,N,std::is_floating_point<TOUT>::value>;
-
 
 
 /* methods for computing with polynomials */
@@ -54,26 +55,27 @@ TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
 
 /* convenient debugging method for printing a polynomial */
 template <unsigned int N, typename TOUT>
-std::string polynomial_print(polynomial<TOUT,N> p){
+std::string polynomial_print(const polynomial<TOUT,N>& p){
   std::string sum = "";
   for(unsigned int k=N; k>0; k--)
     sum = sum + std::to_string(p.coefs[k-1]) + "x^" + std::to_string(k);
   return sum;
 }
 
-/* print basic info about a LookupTable */
-template <typename TIN, typename TOUT = TIN>
-std::ostream& operator<<(std::ostream& out, const LookupTable<TIN,TOUT>& L){
-  out << L.name() << " " << L.min_arg() << " " << L.max_arg() << " "
-  << L.step_size() << " " << L.num_subintervals() << " ";
+/* print basic info about a polynomials */
+template <unsigned int N, typename TOUT>
+std::ostream& operator<<(std::ostream& out, const polynomial<TOUT,N>& p){
+  for(unsigned int k=N; k>1; k--)
+    out << p.coefs[k-1] << "x^" << k << " + ";
+  out << p.coefs[0] << "\n";
   return out;
 }
 
 /* wraps operator<< */
-template <typename TIN, typename TOUT = TIN>
-inline std::string to_string(const LookupTable<TIN,TOUT>& L) {
+template <unsigned int N, typename TOUT>
+inline std::string to_string(const polynomial<TOUT,N>& p) {
   std::ostringstream ss;
-  ss << L;
+  ss << p;
   return ss.str();
 }
 

@@ -24,9 +24,7 @@ public:
   // build the LUT from scratch or look in filename for an existing LUT
   EqSpaceInterpTable(const FunctionContainer<TIN,TOUT>& fun_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
-    MetaTable<N+1,TIN,TOUT,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
-      std::move(MetaTable<N+1,TIN,TOUT,GT>(fun_container, par)) :
-      std::move(MetaTable<N+1,TIN,TOUT,GT>(jsonStats)))
+    MetaTable<N+1,TIN,TOUT,GT>(fun_container, par, jsonStats)
   {
     if(!jsonStats.empty())
       return; // all our work is already done
@@ -71,8 +69,8 @@ public:
           const TOUT y1 = fun(x+h/2);
           const TOUT y2 = fun(x+h);
           m_table[ii].coefs[0] = y0;
-          a = -3, b = 4, c = -1; m_table[ii].coefs[1] = a*y0+b*y1+c*y2;
-          a = 2, b = -4, c = 2;  m_table[ii].coefs[2] = a*y0+b*y1+c*y2;
+          a = -3, b = 4,  c = -1; m_table[ii].coefs[1] = a*y0+b*y1+c*y2;
+          a = 2,  b = -4, c = 2;  m_table[ii].coefs[2] = a*y0+b*y1+c*y2;
           break;
           }
         case 3:
@@ -83,9 +81,9 @@ public:
           const TOUT y2 = fun(x+2*h/3);
           const TOUT y3 = fun(x+h);
           m_table[ii].coefs[0] = y0;
-          a = -11/2.0, b = 9, c = -9/2.0, d = 1.0;        m_table[ii].coefs[1] = a*y0+b*y1+c*y2+y3;
-          a = 9, b = -45/2.0, c = 18, d = -9/2.0;         m_table[ii].coefs[2] = a*y0+b*y1+c*y2+d*y3;
-          a = -9/2.0, b = 27/2.0, c = -27/2.0, d = 9/2.0; m_table[ii].coefs[3] = a*y0+b*y1+c*y2+d*y3;
+          a = -11/2.0, b = 9,       c = -9/2.0,  d = 1.0;    m_table[ii].coefs[1] = a*y0+b*y1+c*y2+  y3;
+          a = 9,       b = -45/2.0, c = 18,      d = -9/2.0; m_table[ii].coefs[2] = a*y0+b*y1+c*y2+d*y3;
+          a = -9/2.0,  b = 27/2.0,  c = -27/2.0, d = 9/2.0;  m_table[ii].coefs[3] = a*y0+b*y1+c*y2+d*y3;
           break;
           }
         default: { throw std::invalid_argument(std::string("EqSpaceInterpTables<N> only support N=0,1,2,3 but given N=") + std::to_string(N)); }

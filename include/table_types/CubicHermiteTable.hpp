@@ -26,9 +26,7 @@ public:
   // build the LUT from scratch or look in filename for an existing LUT
   CubicHermiteTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
-    MetaTable<4,TIN,TOUT,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
-      std::move(MetaTable<4,TIN,TOUT,GT>(func_container, par)) :
-      std::move(MetaTable<4,TIN,TOUT,GT>(jsonStats)))
+    MetaTable<4,TIN,TOUT,GT>(func_container, par, jsonStats)
   {
 #ifndef FUNC_USE_BOOST
     /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */

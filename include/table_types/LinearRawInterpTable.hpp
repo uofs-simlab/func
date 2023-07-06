@@ -24,9 +24,7 @@ public:
   // build the LUT from scratch or look in jsonStats for an existing LUT
   LinearRawInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
-    MetaTable<1,TIN,TOUT,GT>(jsonStats.empty() ? // use the default move constructor for MetaTable (probably not elided...)
-      std::move(MetaTable<1,TIN,TOUT,GT>(func_container, par)) :
-      std::move(MetaTable<1,TIN,TOUT,GT>(jsonStats)))
+    MetaTable<1,TIN,TOUT,GT>(func_container, par, jsonStats)
   {
     if(!jsonStats.empty())
       return; // all our work is already done

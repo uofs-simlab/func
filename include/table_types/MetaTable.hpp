@@ -47,8 +47,6 @@
 
 namespace func {
 
-static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,16,16,16};
-
 enum class GridTypes {UNIFORM, NONUNIFORM};
 
 template <GridTypes GT>
@@ -70,7 +68,7 @@ protected:
   TIN m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
   unsigned int m_order;           // order of accuracy of implementation
-  std::size_t m_dataSize;        // size of relevant data for impl evaluation
+  std::size_t  m_dataSize;        // size of relevant data for impl evaluation
   unsigned int m_numIntervals;    // = (m_tableMaxArg - m_minArg)/m_stepSize;
   unsigned int m_numTableEntries; // length of m_table (usually = m_numIntervals + 1)
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; // holds polynomials coefficients
@@ -83,8 +81,14 @@ public:
   MetaTable() = default;
 
   /* Set every generic member variable from a json file */
-  MetaTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par) :
+  MetaTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par, const nlohmann::json& jsonStats) :
     m_minArg(par.minArg), m_maxArg(par.maxArg), m_stepSize(par.stepSize) {
+    /* build this table from a json file */
+    if(!jsonStats.empty()){
+      from_json(jsonStats, *this);
+      return;
+    }
+
     /* If the step size does not exactly divide the arg domain, the max arg of the table is set
      * to the nearest value above such that it does. */
     if(m_stepSize <= static_cast<TIN>(0.0))
@@ -102,13 +106,6 @@ public:
      * TODO could make transfer function coefficients a field in LookupTableParameters */
     FUNC_IF_CONSTEXPR(GT != GridTypes::UNIFORM)
       m_transferFunction = TransferFunction<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
-  }
-
-  /* build this table from a json file */
-  MetaTable(const nlohmann::json& jsonStats) {
-    if(jsonStats.empty())
-      throw std::invalid_argument("Error in func::MetaTable: The provided nlohmann::json is empty");
-    from_json(jsonStats, *this);
   }
 
   /* public access to protected member vars */
