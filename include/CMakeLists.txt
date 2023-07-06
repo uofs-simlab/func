@@ -22,7 +22,7 @@ endif()
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
 FunctionContainer.hpp;LookupTable.hpp;config.hpp;func.hpp;json.hpp;\
 table_types/func_tables.hpp;utils/func_utils.hpp;\
-table_types/MetaTable.hpp;table_types/TransferFunction.hpp;\
+table_types/TransferFunction.hpp;table_types/Polynomial.hpp;table_types/MetaTable.hpp;\
 table_types/ChebyInterpTable.hpp;\
 table_types/CubicHermiteTable.hpp;\
 table_types/EqSpaceInterpTable.hpp;\

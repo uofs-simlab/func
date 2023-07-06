@@ -19,6 +19,7 @@
 #pragma once
 #include "LookupTable.hpp"
 #include "TransferFunction.hpp"
+#include "Polynomial.hpp"
 
 #include <array>
 #include <stdexcept>
@@ -41,66 +42,21 @@
   using MetaTable<N,TIN,TOUT,GT>::m_transferFunction
 
 /* Parallelization macro. Notes:
- * - m_table is aligned to sizeof(TOUT) so that might give some speedup.
- * */
+ * - we could align m_table to sizeof(TOUT) to get some more speedup? */
 #define FUNC_BUILDPAR _Pragma("omp parallel for schedule(dynamic)")
 
 namespace func {
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,16,16,16};
 
-/* Our convention for writing polynomials is:
- *  p(x) = m_table[x0].coefs[0] + m_table[x0].coefs[1]*x + ... + m_table[x0].coefs[N-1]*x^(N-1)
- * operator() does a Horner's style evaluation>
- *
- * Note: LUTs can have other things in their polynomial struct
- * (2D LUTs may have coefs for x & y dimensions of each subsquare,
- * and LUTs could have that polynomial's derivative's coefs, etc). */
-template <typename TOUT, unsigned int N>
-struct polynomial {
-  static const unsigned int ncoefs_per_entry = N;
-  TOUT coefs[N];
-};
-
-
-/* methods for computing with polynomials */
-constexpr unsigned int factorial(unsigned int n){
-  if(n == 0u) return 1u;
-  return n*factorial(n-1u);
-}
-
-constexpr unsigned int permutation(unsigned int n, unsigned int k){
-  if(k == 0u) return 1u;
-  return n*permutation(n-1u,k-1u);
-}
-
-template <unsigned int N, typename TOUT, typename TIN = TOUT>
-TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
-  TOUT sum = static_cast<TOUT>(0);
-  for(unsigned int k=N; k>s; k--)
-    sum = p.coefs[k-1]*permutation(k-1,s) + sum*x;
-  return sum;
-}
-
-/* convenient debugging method for printing a polynomial */
-//template <unsigned int N, typename TOUT, typename TIN = TOUT>
-//std::string polynomial_print(polynomial<TOUT,N> p){
-//  std::string sum = "";
-//  for(unsigned int k=N; k>0; k--)
-//    sum = sum + std::to_string(p.coefs[k-1]) + "x^" + std::to_string(k);
-//  return sum;
-//}
-
 enum class GridTypes {UNIFORM, NONUNIFORM};
 
 template <GridTypes GT>
 inline std::string grid_type_to_string() {
-  switch(GT){
-    case GridTypes::UNIFORM:
-      return "Uniform";
-    case GridTypes::NONUNIFORM:
-      return "NonUniform";
-    default: { throw std::logic_error("Broken switch case in func::MetaTable"); }
+  FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM){
+    return "Uniform";
+  }else{
+    return "NonUniform";
   } 
 }
 
@@ -128,8 +84,7 @@ public:
 
   /* Set every generic member variable from a json file */
   MetaTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par) :
-    m_minArg(par.minArg), m_maxArg(par.maxArg), m_stepSize(par.stepSize)
-  {
+    m_minArg(par.minArg), m_maxArg(par.maxArg), m_stepSize(par.stepSize) {
     /* If the step size does not exactly divide the arg domain, the max arg of the table is set
      * to the nearest value above such that it does. */
     if(m_stepSize <= static_cast<TIN>(0.0))
@@ -165,8 +120,7 @@ public:
   std::size_t size() const final { return m_dataSize; }
   unsigned int num_subintervals() const final { return m_numIntervals; };
   TIN step_size() const final { return m_stepSize; };
-  std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final
-  {
+  std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final {
     FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
       return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
     else
@@ -215,8 +169,7 @@ public:
    * but if each implementation provides their own operator() and diff() then we can be sure a
    * vtable isn't slowing a LUT down. */
   //#pragma omp declare simd // warning: GCC does not currently support mixed size types for 'simd' functions
-  TOUT operator()(TIN x) const override
-  {
+  TOUT operator()(TIN x) const override {
     unsigned int x0; TIN dx;
     std::tie(x0,dx) = hash<GT>(x);
     
@@ -246,8 +199,7 @@ public:
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 
                                  std::is_constructible<nlohmann::json,TOUT>::value, bool>::type = true>
-void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut)
-{
+void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut) {
   jsonStats["_comment"] = "FunC lookup table data";
   jsonStats["name"] = lut.name();
   jsonStats["minArg"] = lut.min_arg();
@@ -272,8 +224,7 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut)
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT,
          typename std::enable_if<!(std::is_constructible<nlohmann::json,TIN >::value && 
                                    std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
-void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut)
-{
+void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut) {
   (void) jsonStats;
   (void) lut;
   throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not have an implementation of nlohmann's to_json");
@@ -284,8 +235,7 @@ void to_json(nlohmann::json& jsonStats, const MetaTable<N,TIN,TOUT,GT>& lut)
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 
                                  std::is_constructible<nlohmann::json,TOUT>::value, bool>::type = true>
-void from_json(const nlohmann::json& jsonStats, MetaTable<N,TIN,TOUT,GT>& lut)
-{
+void from_json(const nlohmann::json& jsonStats, MetaTable<N,TIN,TOUT,GT>& lut) {
   // name checking happens in MetaTable's constructor
   jsonStats.at("name").get_to(lut.m_name);
   jsonStats.at("minArg").get_to(lut.m_minArg);
@@ -313,8 +263,7 @@ void from_json(const nlohmann::json& jsonStats, MetaTable<N,TIN,TOUT,GT>& lut)
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT,
          typename std::enable_if<!(std::is_constructible<nlohmann::json,TIN >::value && 
                                    std::is_constructible<nlohmann::json,TOUT>::value), bool>::type = true>
-void from_json(const nlohmann::json& jsonStats, MetaTable<N,TIN,TOUT,GT>& lut)
-{
+void from_json(const nlohmann::json& jsonStats, MetaTable<N,TIN,TOUT,GT>& lut) {
   (void) jsonStats;
   (void) lut;
   throw std::invalid_argument(std::string(typeid(TIN).name()) + " or " + std::string(typeid(TOUT).name()) + " does not implement nlohmann's to_json");
