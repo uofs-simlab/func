@@ -74,11 +74,46 @@ protected:
   __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; // holds polynomials coefficients
   TransferFunction<TIN> m_transferFunction; // used to make nonuniform grids (default constructable)
 
+  /* postcondition: the data belonging to this* is moved to L */
+  void swap(MetaTable<N,TIN,TOUT,GT>& L) noexcept {
+    L.m_name = m_name;
+    L.m_minArg = m_minArg;
+    L.m_maxArg = m_maxArg;
+    L.m_order = m_order;
+    L.m_dataSize = m_dataSize;
+    L.m_numIntervals = m_numIntervals;
+    L.m_numTableEntries = m_numTableEntries;
+    L.m_stepSize = m_stepSize;
+    L.m_stepSize_inv = m_stepSize_inv;
+    L.m_tableMaxArg = m_tableMaxArg;
+    L.m_transferFunction = m_transferFunction;
+    L.m_table = std::move(m_table);
+    return;
+  }
+
 public:
   /* using a std::unique_ptr member variables implicitly deletes the default
    * move ctor so we must explicitly ask for the default move ctor */
-  MetaTable(MetaTable&&) = default;
+  //MetaTable(MetaTable&&) = default;
   MetaTable() = default;
+
+  /* deepcopy constructor */
+  MetaTable(const MetaTable<N,TIN,TOUT,GT>& L) : m_name(L.m_name), m_minArg(L.m_minArg), m_maxArg(L.m_maxArg),
+    m_order(L.m_order), m_dataSize(L.m_dataSize), m_numIntervals(L.m_numIntervals), m_numTableEntries(L.m_numTableEntries),
+    m_stepSize(L.m_stepSize), m_stepSize_inv(L.m_stepSize_inv), m_tableMaxArg(L.m_tableMaxArg)
+  {
+    m_table.reset(new polynomial<TOUT,N>[m_numTableEntries]);
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] = L.m_table[ii].coefs[jj];
+  }
+
+  /* copy swap pattern for assignment operator */
+  MetaTable<N,TIN,TOUT,GT>& operator=(MetaTable<N,TIN,TOUT,GT> L){
+    L.swap(*this);
+    return *this;
+  }
 
   /* Set every generic member variable from a json file */
   MetaTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par, const nlohmann::json& jsonStats) :
@@ -142,6 +177,48 @@ public:
                                  std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void from_json(const nlohmann::json& jsonStats, MetaTable<N1,TIN1,TOUT1,GT1>& lut);
 
+  /* LUTs form a vector space over TIN if TOUT forms a vector space over TIN
+   * Note these operations could be heavily optimized with template expressions
+   * but that doesn't work with the auto keyword (see operator()(...)) and that'd be a lot of work... 
+   *
+   * Maybe we could implement polynomial using an existing linear algebra library with fast
+   * (possibly template expression based) operator+ and operator*? */
+  MetaTable<N,TIN,TOUT,GT>& operator+=(const MetaTable<N,TIN,TOUT,GT>& other) {
+    if((m_numTableEntries != other.m_numTableEntries) || (m_minArg != other.m_minArg) || (m_maxArg != other.m_maxArg))
+      throw std::invalid_argument("Error in func::MetaTable: cannot add two LUTs with different subintervals");
+
+    /* TODO try building nonuniform LUTs of LUTs by lerping transfer functions? */
+
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] += other.m_table[ii].coefs[jj];
+    return *this;
+  }
+  MetaTable<N,TIN,TOUT,GT>& operator-=(const MetaTable<N,TIN,TOUT,GT>& other) {
+    if((m_numTableEntries != other.m_numTableEntries) || (m_minArg != other.m_minArg) || (m_maxArg != other.m_maxArg))
+      throw std::invalid_argument("Error in func::MetaTable: cannot subtract two LUTs with different subintervals");
+
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] -= other.m_table[ii].coefs[jj];
+    return *this;
+  }
+  MetaTable<N,TIN,TOUT,GT>& operator*=(const TIN& a) {
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] *= a;
+    return *this;
+  }
+  MetaTable<N,TIN,TOUT,GT>& operator/=(const TIN& a) {
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] /= a;
+    return *this;
+  }
 
   /* find which polynomial p_k to evaluate. Also, each p_k:[0,1]->R so we must set dx=(x-x_k)/(x_{k+1}-x_k) */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::UNIFORM,bool>::type = true>
@@ -171,14 +248,55 @@ public:
     std::tie(x0,dx) = hash<GT>(x);
     
     // general degree horners method, evaluated from the inside out.
-    TOUT sum = static_cast<TOUT>(0); // must initialize sum with a nonzero value to make LUT addition easy
-    for(unsigned int k=N-1; k>0; k--)
-      sum = (m_table[x0].coefs[k] + sum)*dx;
-    return m_table[x0].coefs[0]+sum;
+    TOUT sum = m_table[x0].coefs[N-1];
+    for(unsigned int k=N-1; k>0; k--){
+      sum *= dx;
+      sum += m_table[x0].coefs[k-1];
+    }
+    return sum;
   }
+
+  /* Eager evaluation if LUT coefficients are callable.
+   * auto return type is used because there's no straightforward way to deduce the return type here.
+   * This gets very problematic with template expressions (so use the other operator() in that case).
+   * The template also means that this cannot be in the LUT interface */
+  template<typename... TIN2>
+  inline auto operator()(TIN x, TIN2 ... args) const {
+    unsigned int x0; TIN dx;
+    std::tie(x0,dx) = hash<GT>(x);
+
+    auto sum = m_table[x0].coefs[N-1](args...);
+    for(unsigned int k=N-1; k>0; k--){
+      sum *= dx;
+      sum += m_table[x0].coefs[k-1](args...);
+    }
+    return sum;
+  }
+
   //TOUT diff(unsigned int N, TIN x) final {}
 };
 
+/* LUTs form a vector space over TIN if TOUT forms a vector space over TIN */
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator+(MetaTable<N,TIN,TOUT,GT> lhs, const MetaTable<N,TIN,TOUT,GT>& rhs){
+    return lhs += rhs;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator-(MetaTable<N,TIN,TOUT,GT> lhs, const MetaTable<N,TIN,TOUT,GT>& rhs){
+    return lhs -= rhs;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator*(MetaTable<N,TIN,TOUT,GT> lhs, const TIN& scalar){
+    return lhs *= scalar;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator*(const TIN& scalar, MetaTable<N,TIN,TOUT,GT> lhs){
+    return lhs *= scalar;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator/(MetaTable<N,TIN,TOUT,GT> lhs, const TIN& scalar){
+    return lhs /= scalar;
+}
 
 
 /* Reading & writing functions for any LUT derived from MetaTable.

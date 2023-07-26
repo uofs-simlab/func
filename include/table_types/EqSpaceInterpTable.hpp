@@ -21,6 +21,9 @@ class EqSpaceInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
   INHERIT_META(N+1,TIN,TOUT,GT);
 public:
+  EqSpaceInterpTable() = default;
+  EqSpaceInterpTable(const MetaTable<N+1,TIN,TOUT,GT>& L): MetaTable<N+1,TIN,TOUT,GT>(L) {}
+
   // build the LUT from scratch or look in filename for an existing LUT
   EqSpaceInterpTable(const FunctionContainer<TIN,TOUT>& fun_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :

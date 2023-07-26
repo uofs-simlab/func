@@ -60,8 +60,19 @@ class TransferFunction
    * The identity transfer function is {-m_minArg/m_stepSize,1/m_stepSize,0,0} */
   __attribute__((aligned)) std::array<TIN,4> m_inverse_coefs = {{0,0,0,0}};
 public:
-  /* Set m_inverse_coefs equal to a vector that is (presumably) either the identity or came from a json file */
+  /* Set m_inverse_coefs equal to a vector that came from a json file (or TODO from a LookupTableParameters object) */
   TransferFunction(const std::array<TIN,4>& inv_coefs) { m_inverse_coefs = inv_coefs; }
+  //TransferFunction(const TransferFunction<TIN>& transferFunction) :
+  //  m_inverse_coefs(transferFunction.m_inverse_coefs), m_minArg(transferFunction.m_minArg),
+  //  m_tableMaxArg(transferFunction.m_tableMaxArg), m_stepSize(transferFunction.m_stepSize) {}
+  //
+  //TransferFunction<TIN>& operator=(TransferFunction<TIN> transferFunction){
+  //  m_inverse_coefs = transferFunction.m_inverse_coefs;
+  //  m_minArg = transferFunction.m_minArg;
+  //  m_tableMaxArg = transferFunction.m_tableMaxArg;
+  //  m_stepSize = transferFunction.m_stepSize;
+  //  return *this;
+  //}
 
   TransferFunction() = default;
 
@@ -71,8 +82,7 @@ public:
   TransferFunction(const FunctionContainer<TIN,TOUT>& fc, TIN minArg, TIN tableMaxArg, TIN stepSize) : 
     m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) {
 #ifndef FUNC_USE_BOOST
-    /* cause a compile time error because this constructor should never be called without Boost available */
-    static_assert(sizeof(TIN) != sizeof(TIN), "Cannot generate a nonuniform grid without Boost verion 1.71.0 or higher");
+    throw std::invalid_argument("func::TransferFunction cannot generate a transfer function without boost installed.");
 #else
     using boost::math::quadrature::gauss_kronrod;
     using boost::math::differentiation::make_fvar;

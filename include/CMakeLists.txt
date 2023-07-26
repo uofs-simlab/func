@@ -32,6 +32,7 @@ table_types/TaylorTable.hpp;\
 utils/DirectEvaluation.hpp;utils/ArgumentRecord.hpp;\
 LookupTableFactory.hpp;utils/LookupTableGenerator.hpp;\
 utils/FailureProofTable.hpp;utils/CompositeLookupTable.hpp;\
+utils/cxx17utils.hpp;\
 utils/RngInterface.hpp;utils/StdRng.hpp;\
 utils/LookupTableComparator.hpp;\
 utils/Timer.hpp;\
