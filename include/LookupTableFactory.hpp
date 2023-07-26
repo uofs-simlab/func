@@ -132,6 +132,7 @@ void LookupTableFactory<TIN, TOUT>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformChebyInterpTable,6);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformChebyInterpTable,7);
 
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,0);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,1);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,2);
   FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,3);

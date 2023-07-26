@@ -33,6 +33,8 @@ template <typename TIN, typename TOUT = TIN>
 class LookupTable
 {
 public:
+  using input_type = TIN;
+  using output_type = TOUT;
   /* any implementation will have a constructor that looks like this:
    * LookupTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par) {} */
   LookupTable() = default;

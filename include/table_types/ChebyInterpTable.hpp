@@ -40,7 +40,7 @@ public:
   ChebyInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<N+1,TIN,TOUT,GT>(func_container, par, jsonStats) {
-#if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
+#ifndef FUNC_USE_ARMADILLO
     /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::ChebyTable: Chebyshev LUTs need Armadillo to be generated but Armadillo is not available");
@@ -58,16 +58,19 @@ public:
 
     /* Thoughts:
      * - Vandermonde system for cheby nodes over [0,1] has condition number about 1000 times larger than [-1,1]
-     *  but we don't do that because shifting polynomials is too poorly conditioned.
-     * - Yes using inv here is sinful; however, Armadillo (and (every?) other high performance numeric linear algebra library)
-     *   does not have a solver for general vector spaces. That is, most libraries cannot solve Ax=b where the entries of A
-     *   are not float or double and the entries of b don't have the same type as the entries of A.
-     * */
+     *   but we don't do that because the formula we currently use for shifting polynomials is too poorly conditioned.
+     * - Using inv here produces objectively worse results! however, Armadillo (and every other high performance numeric
+     *   linear algebra library Shawn has looked into) does not have a solver for general vector spaces.
+     *   That is, most libraries cannot solve Ax=b where the entries of A are not float or double and the entries of
+     *   b aren't the same type as the entries of A.
+     * - Directly solve the system when using a type supported by armadillo */
     arma::mat Van = arma::ones(N+1, N+1);
     Van.col(1) = (1 + arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1))))/2;
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
-    Van = arma::inv(Van);
+
+    FUNC_IF_CONSTEXPR(!std::is_floating_point<TOUT>::value)
+      Van = arma::inv(Van);
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
@@ -83,19 +86,29 @@ public:
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
 
-      //m_grid[ii] = x;
       // build the vector of coefficients from function values
       auto a = static_cast<double>(x);
       auto b = static_cast<double>(x+h);
       arma::vec xvec = (a+b)/2 + (b-a)*arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)))/2;
-      std::array<TOUT,N+1> y;
-      for (unsigned int k=0; k<N+1; k++)
-        y[k] = fun(static_cast<TIN>(xvec[k]));
 
-      for(unsigned int k=0; k<N+1; k++){
-        m_table[ii].coefs[k] = static_cast<TIN>(Van(k,0))*y[0];
-        for(unsigned int s=1; s<N+1; s++){
-          m_table[ii].coefs[k] += static_cast<TIN>(Van(k,s))*y[s];
+      FUNC_IF_CONSTEXPR(std::is_floating_point<TOUT>::value){
+        arma::vec y(N+1);
+        for (unsigned int k=0; k<N+1; k++)
+          y[k] = fun(static_cast<TIN>(xvec[k]));
+
+        y = arma::solve(Van, y);
+        for(unsigned int k=0; k<N+1; k++)
+          m_table[ii].coefs[k] = y[k];
+      }else{
+        std::vector<TOUT> y(N+1);
+        for (unsigned int k=0; k<N+1; k++)
+          y[k] = fun(static_cast<TIN>(xvec[k]));
+
+        for(unsigned int k=0; k<N+1; k++){
+          m_table[ii].coefs[k] = static_cast<TIN>(Van(k,0))*y[0];
+          for(unsigned int s=1; s<N+1; s++){
+            m_table[ii].coefs[k] += static_cast<TIN>(Van(k,s))*y[s];
+          }
         }
       }
 
@@ -107,7 +120,6 @@ public:
       }
     }
     // special case to make lut(tableMaxArg) work
-    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
       m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
