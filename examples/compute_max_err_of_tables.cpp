@@ -7,14 +7,15 @@
 #include <iostream>
 
 /*
-  Simple program that uses the UniformLookupTableGenerator class to
+  Simple program that uses the LookupTableGenerator class to
   compute errors for varying table step sizes
 */
 int main()
 {
   using namespace std;
+  using namespace func;
 
-  MyFunction func;
+  FunctionContainer<double> func_container{FUNC_SET_F(MyFunction,double)};
 
   /* Which implementations to use */
   std::vector<std::string> implNames {"UniformLinearInterpolationTable",
@@ -24,7 +25,7 @@ int main()
       "UniformQuadraticTaylorTable",
       "UniformCubicTaylorTable"};
 
-  UniformLookupTableGenerator gen(&func, MIN_ARG, MAX_ARG);
+  LookupTableGenerator<double> gen(&func_container, MIN_ARG, MAX_ARG);
 
   cout << "# Function: " << FUNCNAME << endl;
   cout << "# h ";
