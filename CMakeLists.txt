@@ -61,7 +61,6 @@ find_package(OpenMP)
 if(OpenMP_FOUND)
   message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
 else()
-  # TODO maybe use std::lib instead? Actually, pretty much everyone has openmp.....
   option(FUNC_USE_OPENMP OFF)
 endif()
 
@@ -106,8 +105,12 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/config.hpp.cmake ${PROJECT_SOURCE_DIR
 # Primary source subdirectory
 add_subdirectory("include")
 
-# Examples subdirectory
-add_subdirectory("examples")
+# Examples subdirectory, if enabled
+option(BUILD_EXAMPLES "Build the example codes" ON)
+if(BUILD_EXAMPLES)
+  add_subdirectory("examples")
+endif()
+
 
 # Summarize compilation flags for quick review on configuration
 macro(print_variable var)
@@ -136,3 +139,4 @@ endif()
 #endforeach()
 
 message(STATUS "---------------------------------------------")
+
