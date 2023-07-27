@@ -1,22 +1,24 @@
 FunC
 ====
 
-`FunC` (Function Comparator) is a C++ tool for quickly profiling the performance of various different abstracted implementations of mathematical function evaluations for given:
-- computing environment
-- mathematical function
-- evaluation tolerance
+`FunC` (Function Comparator) is a C++ tool for approximating any single variable, real valued function $f:\mathbb{R}\to\mathbb{R}$ with a lookup table (LUT). This tool aims to streamline the process of finding a good LUT of $f$ for a given program. This includes factors such as
+- error tolerance
+- domain usage (ie the inputs to $f$ during runtime)
+- evaluation frequency (ie how much work is being done in between calls to $f$)
 
-Currently, only uniform LUTs (interpolation, Taylor, and Hermite) and direct evaluations are supported.
+`FunC` can build LUTs using interpolation (up to degree 7), Taylor polynomials, Pade approximants, or Hermite interpolation over a uniform or automatically generated nonuniform mesh.
 
 
 Requirements
 ------------
 
-- C++11 compliant compiler
-- Boost (tested with 1.58-1.65)
-- quadmath (for tolerance-based table generation capabilities)
+- C++11 compliant compiler (tested with gcc and clang)
+- Boost 1.71.0 or newer*
+- Armadillo (tested with 9.1-10.1)*
 
-Build:
+\*These libraries are only required for _table generation_. They are _not_ required if every table is being read from a json file (which is an optimization that most production level code will make).
+
+### Build:
 
 - CMake version >= 3.1
 ```
@@ -28,17 +30,13 @@ make install
 After make install, linking to the library (outside of cmake build) requires:
 - `<install-dir>/lib` is in your `LD_LIBRARY_PATH` environment variable,
 - `<install-dir>/include/func` is in your include flags, and
-- `-lfunc -lfunc_impls` are in your link flags
+- `-lfunc` is in your link flags
 
 Notes
 -----
+- `FunC` can be used as a header only library; however, files that take a long time to compile (eg. LookupTableFactory.hpp) can be compiled for various user provided types. As such, linking with `libfunc.so` is not necessary, but will greatly speed up the compile time of user code.
 
-This tool is split up into two separate libraries:
-- `func_impls` provides the implementation types used in the library (does not require quadmath to build/use)
-- `func` combines the implementation types with
-  - `UniformLookupTableGenerator` for generating LUTs according to various criteria (requires quadmath)
-  - `ImplementationComparator` for comparing the performance of various implementations
-
+TODO show off the process of compiling LUTFactory for other types
 
 References
 ----------

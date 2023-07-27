@@ -1,5 +1,5 @@
 /*
-  Main program for using ImplementationComparator to compare LookUpTable and Direct
+  Main program for using LookupTableComparator to compare LookUpTable and Direct
   Evaluation performance.
 
   Usage:
@@ -18,6 +18,7 @@
 */
 
 #include <iostream>
+#define TYPE double
 
 void print_usage()
 {
@@ -31,6 +32,7 @@ int main(int argc, char* argv[])
 {
 
   using namespace std;
+  using namespace func;
 
   if (argc < 7) {
       print_usage();
@@ -44,72 +46,106 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  FunctionContainer<double> func_container{SET_F(MyFunction,double)};
-
-  LookupTableFactory<double> factory;
+  FunctionContainer<TYPE> func_container{FUNC_SET_F(MyFunction,TYPE)};
+  LookupTableFactory<TYPE> factory;
 
   /* Check which implementations are available */
-  std::cout << "# Registered uniform tables: \n#  ";
+  std::cout << "# Registered tables: \n#  ";
   for (auto it : factory.get_registered_keys() ) {
     std::cout << it << "\n#  ";
   }
   std::cout << "\n";
 
   /* Fill in the implementations */
-  std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
+  std::vector<unique_ptr<LookupTable<TYPE>>> impls;
 
   /* Which LUT implementations to use */
-  std::vector<std::string> implNames {
-    "UniformArmadilloPrecomputedInterpolationTable<4>",
-    "UniformArmadilloPrecomputedInterpolationTable<5>",
-    "UniformArmadilloPrecomputedInterpolationTable<6>",
-    "UniformArmadilloPrecomputedInterpolationTable<7>",
-    // "UniformConstantTaylorTable",
-    "UniformCubicHermiteTable",
-    "UniformCubicPrecomputedInterpolationTable",
-    "UniformCubicTaylorTable",
-    "UniformLinearInterpolationTable",
-    "UniformLinearPrecomputedInterpolationTable",
-    "UniformLinearTaylorTable",
-    "UniformQuadraticPrecomputedInterpolationTable",
-    "UniformQuadraticTaylorTable",
+  std::vector<std::string> uniformNames {
+    "UniformChebyInterpTable<1>",
+    "UniformChebyInterpTable<2>",
+    "UniformChebyInterpTable<3>",
+    "UniformChebyInterpTable<4>",
+    "UniformChebyInterpTable<5>",
+    "UniformChebyInterpTable<6>",
+    "UniformChebyInterpTable<7>",
+    //"UniformCubicHermiteTable",
+    //"UniformEqSpaceInterpTable<1>",
+    //"UniformEqSpaceInterpTable<2>",
+    //"UniformEqSpaceInterpTable<3>",
+    //"UniformLinearRawInterpTable",
+    //"UniformTaylorTable<1>",
+    //"UniformTaylorTable<2>",
+    //"UniformTaylorTable<3>",
+    //"UniformTaylorTable<4>",
+    //"UniformTaylorTable<5>",
+    //"UniformTaylorTable<6>",
+    //"UniformTaylorTable<7>",
   };
+
+  std::vector<std::string> nonuniformNames {
+    "NonUniformChebyInterpTable<1>",
+    "NonUniformChebyInterpTable<2>",
+    "NonUniformChebyInterpTable<3>",
+    "NonUniformChebyInterpTable<4>",
+    "NonUniformChebyInterpTable<5>",
+    //"NonUniformChebyInterpTable<6>",
+    //"NonUniformChebyInterpTable<7>",
+    //"NonUniformCubicHermiteTable",
+    //"NonUniformEqSpaceInterpTable<1>",
+    //"NonUniformEqSpaceInterpTable<2>",
+    //"NonUniformEqSpaceInterpTable<3>",
+    //"NonUniformTaylorTable<1>",
+    //"NonUniformTaylorTable<2>",
+    //"NonUniformTaylorTable<3>",
+    //"NonUniformTaylorTable<4>",
+    //"NonUniformTaylorTable<5>",
+    //"NonUniformTaylorTable<6>",
+    //"NonUniformTaylorTable<7>",
+  };
+
 
   std::vector<std::string> padeNames {
-    "UniformPadeTable<1,1>",
-    "UniformPadeTable<2,1>",
-    "UniformPadeTable<3,1>",
-    "UniformPadeTable<4,1>",
-    "UniformPadeTable<5,1>",
-    "UniformPadeTable<6,1>",
-    "UniformPadeTable<2,2>",
-    "UniformPadeTable<3,2>",
-    "UniformPadeTable<4,2>",
-    "UniformPadeTable<5,2>",
-    "UniformPadeTable<3,3>",
-    "UniformPadeTable<4,3>",
+    //"UniformPadeTable<1,1>",
+    //"UniformPadeTable<2,1>",
+    //"UniformPadeTable<3,1>",
+    //"UniformPadeTable<4,1>",
+    //"UniformPadeTable<5,1>",
+    //"UniformPadeTable<6,1>",
+    //"UniformPadeTable<2,2>",
+    //"UniformPadeTable<3,2>",
+    //"UniformPadeTable<4,2>",
+    //"UniformPadeTable<5,2>",
+    //"UniformPadeTable<3,3>",
+    //"UniformPadeTable<4,3>",
   };
 
-  UniformLookupTableGenerator<double> gen(&func_container, tableMin, tableMax);
+  LookupTableGenerator<TYPE> gen(func_container, tableMin, tableMax);
 
-  impls.emplace_back(unique_ptr<EvaluationImplementation<double>>(new DirectEvaluation<double>(&func_container,tableMin,tableMax)));
-  for (auto itName : implNames) {
-    cerr << "Building " << itName << " ..." << endl;
+  impls.emplace_back(unique_ptr<LookupTable<TYPE>>(new DirectEvaluation<TYPE>(func_container,tableMin,tableMax)));
+  for (auto itName : uniformNames) {
+    std::cerr << "Building " << itName << " ..." << std::endl;
+    impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+  }
+  for (auto itName : nonuniformNames) {
+    std::cerr << "Building " << itName << " ..." << std::endl;
+    impls.emplace_back(gen.generate_by_tol(itName,tableTol));
+  }
+  for (auto itName : padeNames) {
+    std::cerr << "Building " << itName << " ..." << std::endl;
     impls.emplace_back(gen.generate_by_tol(itName,tableTol));
   }
 
-  cout << "Running timings ..." << endl;
 
-  ImplementationComparator<double> implCompare(impls, nEvals, seed);
+  std::cout << "Running timings ..." << std::endl;
+
+  LookupTableComparator<TYPE> implCompare(impls, tableMin, tableMax, nEvals, seed);
   implCompare.run_timings(nExperiments);
 
   /* Summarize the results */
-  cout << "# Function:  " << FUNCNAME << endl;
-  cout << "# Range:      (" << tableMin << "," << tableMax << ")" << endl;
+  cout << "# Function:  " << FUNCNAME << std::endl;
+  cout << "# Domain:      (" << tableMin << "," << tableMax << ")" << std::endl;
 
-  implCompare.compute_timing_statistics();
-  implCompare.sort_timings("max");
+  implCompare.compute_statistics();
+  implCompare.sort_timings(Sorter::WORST);
   implCompare.print_summary(std::cout);
-
-  return 0;
 }

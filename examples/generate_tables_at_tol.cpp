@@ -11,14 +11,15 @@
 #include <iomanip>
 
 /*
-  Simple program that uses the UniformLookupTableGenerator class to
+  Simple program that uses the LookupTableGenerator class to
   generate various table implementations at a desired tolerance
 */
 int main()
 {
   using namespace std;
+  using namespace func;
 
-  FunctionContainer<double> func_container{SET_F(MyFunction,double)};
+  FunctionContainer<double> func_container{FUNC_SET_F(MyFunction,double)};
 
   cout << "# Function: " << FUNCNAME << "\n";
   cout << "# Tol:      " << TOL << "\n";
@@ -34,7 +35,7 @@ int main()
       "UniformCubicTaylorTable"};
 
 
-  UniformLookupTableGenerator<double> gen(&func_container, MIN_ARG, MAX_ARG);
+  LookupTableGenerator<double> gen(&func_container, MIN_ARG, MAX_ARG);
 
   for (auto itName : implNames) {
     std::cout << "\nGenerating " << itName << ":" << std::endl;

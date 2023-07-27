@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
 {
 
   using namespace std;
+  using namespace func;
 
   if (argc < 5) {
       print_usage();
@@ -36,19 +37,20 @@ int main(int argc, char* argv[])
   int    nEvals       = std::stoi(argv[3]);
   int    seed         = std::stoi(argv[4]);
 
-  FunctionContainer<double> func_container {SET_F(ZeroFunction,double)};
+  FunctionContainer<double> func_container {FUNC_SET_F(ZeroFunction,double)};
 
   // double stepSize;
 
   /* Which LUT implementations to use */
   std::vector<std::string> implNames {
-    // "UniformLinearInterpolationTable",
-      "UniformLinearPrecomputedInterpolationTable",
-      "UniformQuadraticPrecomputedInterpolationTable",
-      "UniformCubicPrecomputedInterpolationTable",
-      "UniformLinearTaylorTable",
-      "UniformQuadraticTaylorTable",
-      "UniformCubicTaylorTable"};
+    "UniformLinearRawInterpTable",
+    "UniformInterpTable<1>",
+    "UniformInterpTable<2>",
+    "UniformInterpTable<3>",
+    "UniformTaylorTable<1>",
+    "UniformTaylorTable<2>",
+    "UniformTaylorTable<3>",
+  };
 
   /* get cache sizes running something like `lscpu | grep cache` */
   // const unsigned long cacheSize = (3072u+256u+32u)*1024u;
@@ -63,10 +65,10 @@ int main(int argc, char* argv[])
   std::cout << "\n# impls using ~ " << percentRam <<"% of RAM\n";
   cout << "# Function:  " << FUNCNAME << endl << endl;
 
-  UniformLookupTableGenerator<double> gen(&func_container, 0, 1);
+  LookupTableGenerator<double> gen(func_container, 0, 1);
 
   /* Fill in the implementations */
-  std::vector<unique_ptr<EvaluationImplementation<double>>> impls;
+  std::vector<unique_ptr<LookupTable<double>>> impls;
 
 
   /* Run the best case */
@@ -77,17 +79,17 @@ int main(int argc, char* argv[])
   }
 
   /* Run comparator */
-  ImplementationComparator<double> implCompare_best(impls, nEvals, seed);
+  LookupTableComparator<double> implCompare_best(impls, 0.0, 1.0, nEvals, seed);
   implCompare_best.run_timings(nExperiments);
 
   /* Summarize the results */
-  implCompare_best.compute_timing_statistics();
+  implCompare_best.compute_statistics();
   std::ofstream jsonfs;
   jsonfs.open("best_case.json");
-  implCompare_best.print_statistics_json(jsonfs);
+  implCompare_best.print_json(jsonfs);
   jsonfs.close();
 
-  implCompare_best.sort_timings("min");
+  implCompare_best.sort_timings(Sorter::BEST);
   implCompare_best.print_summary(std::cout);
 
 
@@ -103,16 +105,16 @@ int main(int argc, char* argv[])
   }
 
   /* Run comparator */
-  ImplementationComparator<double> implCompare_worst(impls, nEvals, seed);
+  LookupTableComparator<double> implCompare_worst(impls, 0.0, 1.0, nEvals, seed);
   implCompare_worst.run_timings(nExperiments);
 
   /* Summarize the results */
-  implCompare_worst.compute_timing_statistics();
+  implCompare_worst.compute_statistics();
   jsonfs.open("worst_case.json");
-  implCompare_worst.print_statistics_json(jsonfs);
+  implCompare_worst.print_json(jsonfs);
   jsonfs.close();
 
-  implCompare_worst.sort_timings("min");
+  implCompare_worst.sort_timings(Sorter::BEST);
   implCompare_worst.print_summary(std::cout);
 
   return 0;
