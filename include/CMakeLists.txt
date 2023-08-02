@@ -21,16 +21,16 @@ endif()
 # explicitly declare which headers we're distributing
 set_target_properties(func PROPERTIES PUBLIC_HEADER "\
 FunctionContainer.hpp;LookupTable.hpp;config.hpp;func.hpp;json.hpp;\
-table_types/func_tables.hpp;utils/func_utils.hpp;\
-table_types/TransferFunction.hpp;table_types/Polynomial.hpp;table_types/MetaTable.hpp;\
-table_types/ChebyInterpTable.hpp;\
-table_types/CubicHermiteTable.hpp;\
-table_types/EqSpaceInterpTable.hpp;\
-table_types/LinearRawInterpTable.hpp;\
-table_types/PadeTable.hpp;\
-table_types/TaylorTable.hpp;\
+tables/tables.hpp;utils/utils.hpp;\
+tables/TransferFunction.hpp;tables/Polynomial.hpp;tables/MetaTable.hpp;\
+tables/ChebyInterpTable.hpp;\
+tables/CubicHermiteTable.hpp;\
+tables/EqSpaceInterpTable.hpp;\
+tables/LinearRawInterpTable.hpp;\
+tables/PadeTable.hpp;\
+tables/TaylorTable.hpp;\
 utils/DirectEvaluation.hpp;utils/ArgumentRecord.hpp;\
-LookupTableFactory.hpp;utils/LookupTableGenerator.hpp;\
+utils/LookupTableFactory.hpp;utils/LookupTableGenerator.hpp;\
 utils/FailureProofTable.hpp;utils/CompositeLookupTable.hpp;\
 utils/RngInterface.hpp;utils/StdRng.hpp;\
 utils/LookupTableComparator.hpp;\
@@ -38,17 +38,11 @@ utils/Timer.hpp;\
 ")
 
 target_include_directories(func ${FUNC_PUBLIC}
-  $<INSTALL_INTERFACE:.> $<INSTALL_INTERFACE:table_types> $<INSTALL_INTERFACE:utils>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/table_types> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils>
-  )
+  $<INSTALL_INTERFACE:include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tables> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils>
+)
 
-
-#target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost)
-target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} Boost::boost OpenMP::OpenMP_CXX)
-#target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${QUADMATH_LIBRARIES} ${Boost_LIBRARIES} ${OpenMP_CXX_LIBRARIES})
-
-# TODO add more required compile features (it's nice to have cmake determine the minimal standard on its own)
-target_compile_features(func ${FUNC_PRIVATE} cxx_range_for)
+target_link_libraries(func ${FUNC_PUBLIC} ${ARMADILLO_LIBRARIES} ${Boost_HEADERS_LIBRARY} ${OPENMP_CXX_LIBRARIES})
 
 # Enable compiler warnings, error on warnings
 if (MSVC) # Microsoft
@@ -117,3 +111,11 @@ export(EXPORT func-targets
 
 # Register package in the User Package Registry (TODO is that helpful?)
 export(PACKAGE FunC)
+
+# print every cmake variable
+#get_cmake_property(_variableNames VARIABLES)
+#list (SORT _variableNames)
+#foreach (_variableName ${_variableNames})
+#    message(STATUS "${_variableName}=${${_variableName}}")
+#endforeach()
+

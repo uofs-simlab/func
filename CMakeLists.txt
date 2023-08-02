@@ -46,6 +46,7 @@ find_package(Armadillo)
 
 if(FUNC_USE_ARMADILLO)
   if(ARMADILLO_FOUND)
+    message(STATUS "Armadillo includes: ${ARMADILLO_INCLUDE_DIRS}")
     message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
   else()
     set(FUNC_USE_ARMADILLO OFF)
@@ -60,8 +61,9 @@ find_package(OpenMP)
 
 if(OpenMP_FOUND)
   message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
+  set(OPENMP_CXX_LIBRARIES OpenMP::OpenMP_CXX)
 else()
-  # TODO maybe use std::lib instead? Actually, pretty much everyone has openmp.....
+  # maybe use std::lib instead? Probably not worth it because everyone has openmp
   option(FUNC_USE_OPENMP OFF)
 endif()
 
@@ -80,6 +82,7 @@ endif()
 # This is the only file that showed material speedup
 set(CLASSNAMES
   LookupTableFactory # .hpp file must contain a line with FUNC_DECLARE_TEMPLATE_AS_EXTERN(classname)
+  LookupTableComparator
 )
 
 # cleanup any source-code that may have been generated in previous cmake runs

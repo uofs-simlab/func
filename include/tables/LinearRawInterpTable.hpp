@@ -53,7 +53,7 @@ public:
    * TODO is there a way to make this work with nonuniform grids in a way that works with our model? */
   TOUT operator()(TIN x) const override
   {
-    unsigned int x0; TOUT dx;
+    unsigned int x0; TIN dx;
     std::tie(x0,dx) = MetaTable<1,TIN,TOUT,GT>::template hash<GT>(x);
 
     // linear interpolation

@@ -180,7 +180,6 @@ public:
 };
 
 
-
 /* Reading & writing functions for any LUT derived from MetaTable.
  * Enables the convenient "get" syntax from nlohmann::json for specific implementations.
    eg:

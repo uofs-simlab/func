@@ -5,7 +5,7 @@
 */
 #pragma once
 #include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO, FUNC_DECLARE_TEMPLATE_AS_EXTERN
-#include "func_tables.hpp"
+#include "tables.hpp"
 #include <memory>     // unique_ptr
 #include <map>
 #include <vector>
