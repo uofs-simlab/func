@@ -15,8 +15,8 @@
 /*
  * Two-stage string expansion macros
  */
-#define FUNC_STR_EXPAND(x...) #x
-#define FUNC_STR(x...) FUNC_STR_EXPAND(x)
+#define FUNC_STR_EXPAND(...) #__VA_ARGS__
+#define FUNC_STR(...) FUNC_STR_EXPAND(__VA_ARGS__)
 
 /*
  * Macros to easily add table types into the registry
@@ -27,10 +27,10 @@
                      return new classname<TIN, TOUT>(fc, args, jsonStats);                                                                              \
                    }})
 
-#define FUNC_REGISTER_TEMPLATE(classname, templates...)                                                                                                 \
+#define FUNC_REGISTER_TEMPLATE(classname, ...)                                                                                                 \
   registry.insert(                                                                                                                                      \
-       {FUNC_STR(classname<templates>), [](const FunctionContainer<TIN, TOUT>& fc, const LookupTableParameters<TIN>& args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
-         return new classname<templates, TIN, TOUT>(fc, args, jsonStats);                                                                               \
+       {FUNC_STR(classname<__VA_ARGS__>), [](const FunctionContainer<TIN, TOUT>& fc, const LookupTableParameters<TIN>& args, const nlohmann::json& jsonStats) -> LookupTable<TIN, TOUT> * { \
+         return new classname<__VA_ARGS__, TIN, TOUT>(fc, args, jsonStats);                                                                               \
        }})
 
 // This will have to change slightly depending on the maximum number of template arguments,

@@ -6,15 +6,6 @@ find_dependency(Boost)
 find_dependency(Armadillo)
 find_dependency(OpenMP)
 
-#if(Boost_FOUND)
-#  find_dependency(Boost)
-#endif()
-#if(ARMADILLO_FOUND)
-#  find_dependency(Armadillo)
-#endif()
-#if(OpenMP_FOUND)
-#  find_dependency(OpenMP)
-#endif()
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
 
 if(NOT TARGET FunC::FunC)
@@ -22,5 +13,5 @@ if(NOT TARGET FunC::FunC)
 endif()
 
 set(FUNC_LIBRARIES FunC::FunC)
-set(FunC_INCLUDE_DIR ${CMAKE_INSTALL_FULL_INCLUDEDIR})
+set(FunC_INCLUDE_DIR "@CMAKE_INSTALL_FULL_INCLUDEDIR@")
 

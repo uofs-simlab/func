@@ -54,10 +54,10 @@ else() # GCC and Clang
     target_compile_options(func ${FUNC_PRIVATE} -Wno-variadic-macros)
 endif()
 
-# Enable alignment of `new` operator
-# TODO does MSVC support this?
-target_compile_options(func ${FUNC_PRIVATE} -faligned-new)
-
+# Enable C++17 alignment in `new` operator for sizes larger than  without actually enabling C++17
+# 
+# TODO does MSVC support this? Also, 
+target_compile_options(func ${FUNC_PUBLIC} -faligned-new)
 
 # ==== Install Target func ====
 include(GNUInstallDirs) # defines CMAKE_INSTALL_XXX
@@ -111,11 +111,3 @@ export(EXPORT func-targets
 
 # Register package in the User Package Registry (TODO is that helpful?)
 export(PACKAGE FunC)
-
-# print every cmake variable
-#get_cmake_property(_variableNames VARIABLES)
-#list (SORT _variableNames)
-#foreach (_variableName ${_variableNames})
-#    message(STATUS "${_variableName}=${${_variableName}}")
-#endforeach()
-

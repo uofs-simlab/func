@@ -1,4 +1,4 @@
-/* TODO JUST USE BOOST HISTOGRAM INSTEAD
+/* TODO USE BOOST HISTOGRAM INSTEAD
  *
  *
  *
@@ -159,7 +159,10 @@ class ArgumentRecord
         FuncScopedLock lock(mv_histogram_mutex[x_index]);
         mv_histogram[x_index]++;
 
-        #pragma omp critical
+        /* TODO using critical sections is problematic design because only one
+         * ArgumentRecord instance can access some specific critical section code at a time.
+         * Use a scoped lock instead */
+        #pragma omp critical(func_argrecord1)
         {
           if(mv_histogram[x_index] > mv_histogram[m_peak_index]){
             m_peak_index = x_index;
@@ -168,17 +171,17 @@ class ArgumentRecord
 
       }else{
         // x is out of bounds
-        #pragma omp critical
+        #pragma omp critical(func_argrecord2)
         m_num_out_of_bounds++;
       }
 
-      #pragma omp critical
+      #pragma omp critical(func_argrecord3)
       {
         if(m_max_recorded < x)
           m_max_recorded = x;
       }
 
-      #pragma omp critical
+      #pragma omp critical(func_argrecord4)
       {
         if(x < m_min_recorded)
           m_min_recorded = x;
