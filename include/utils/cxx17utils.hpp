@@ -15,7 +15,8 @@ TERR metric(LUT L, F f){
   TERR max_err = 0;
   if constexpr (N == 0) {
     using std::abs;
-    max_err = -abs(L - f())/(static_cast<TERR>(1.0) + abs(f()));
+    auto fval = f();
+    max_err = -abs(L - fval)/(static_cast<TERR>(1.0) + abs(fval));
   } else {
     using namespace boost::math::tools;
     /* get number of binary bits in mantissa */
@@ -59,7 +60,7 @@ struct curriedLUT<0,TIN,TOUT,classname> {
 /* TODO:
  * - Is not compatible with function derivatives (needed for nonuniform partition & Taylor tables). Is that impossible to support anyways???
  * - classname should be variadic! Is this possible?????
- * Call as func::ndimLUT<ndim,type1,type2>(f, params) */
+ * Call as func::ndimLUT<ndim,type1,type2,luttype>(f, params) */
 template<unsigned int N, typename TIN, typename TOUT, template <typename...> class classname, class F, typename... TIN2>
 constexpr typename curriedLUT<N-1,TIN,TOUT,classname>::type ndimLUT(F f, const std::vector<LookupTableParameters<TIN>>& params, TIN2... other) {
   auto H = sizeof...(other);
