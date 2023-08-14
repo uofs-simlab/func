@@ -36,6 +36,8 @@ public:
     m_dataSize = sizeof(m_table[0]) * m_numTableEntries;
 
     auto fun = func_container.standard_fun;
+    if(fun == nullptr)
+      throw std::invalid_argument("Error in func::LinearRawInterpTable: Given an invalid FunctionContainer");
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);

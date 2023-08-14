@@ -55,6 +55,8 @@ public:
     m_dataSize = sizeof(m_table[0]) * m_numTableEntries;
 
     auto fun = func_container.standard_fun;
+    if(fun == nullptr)
+      throw std::invalid_argument("Error in func::ChebyInterpTable: Given an invalid FunctionContainer");
 
     /* Thoughts:
      * - Vandermonde system for cheby nodes over [0,1] has condition number about 1000 times larger than [-1,1]
