@@ -28,13 +28,11 @@ void print_usage()
 }
 
 //---------------------------------------------------------------------------->>
-int main(int argc, char* argv[])
-{
-
+int main(int argc, char* argv[]){
   using namespace std;
   using namespace func;
 
-  if (argc < 7) {
+  if(argc < 7){
       print_usage();
       exit(0);
   }

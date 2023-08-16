@@ -9,6 +9,9 @@
 #define MIN_ARG 0.1
 #define MAX_ARG 30
 #define STEP 0.1
+#define NEVALS 10000
+#define SEED 5
+#define NEXPERIMENTS 10
 
 int main()
 {
@@ -40,4 +43,17 @@ int main()
   LookupTableGenerator<TYPE> gen(func_container, MIN_ARG, MAX_ARG);
   std::cout << gen.error_of_table(F) << std::endl;
   std::cout << gen.error_of_table(C) << std::endl;
+
+  // TODO
+  ///* copy the above objects into unique_ptrs so we can use a LookupTableComparator */
+  //std::vector<std::unique_ptr<LookupTable<TYPE>>> impls;
+  //impls.emplace_back(std::unique_ptr<LookupTable<TYPE>>(new FailureProofTable<UniformEqSpaceInterpTable<3,double>,double>(F)));
+  //impls.emplace_back(std::unique_ptr<LookupTable<TYPE>>(new CompositeLookupTable<TYPE>(C)));
+
+  ///* Time how long it takes to apply the LUTs to large random vectors a couple times and summarize the statistics */
+  //LookupTableComparator<TYPE> implCompare(impls, MIN_ARG, MAX_ARG, NEVALS, SEED);
+  //implCompare.run_timings(NEXPERIMENTS);
+  //implCompare.compute_statistics();
+  //implCompare.sort_timings(Sorter::WORST);
+  //implCompare.print_summary(std::cout);
 }
