@@ -23,6 +23,9 @@ add_executable(test_interfaces test_interfaces.cpp)
 target_link_libraries(test_interfaces PUBLIC func)
 target_compile_options(test_interfaces PRIVATE -O3 -Wall -Wextra -pedantic)
 
+add_test(NAME BuildTables COMMAND experiment 0.001 30.0 1e-2 10 1000000 19)
+add_test(NAME TestUtils COMMAND test_interfaces)
+
 #add_executable(best-worst best-worst.cpp)
 #target_link_libraries(best-worst PUBLIC func)
 #target_compile_options(best-worst PRIVATE -O3 -Wall -Wextra -pedantic)

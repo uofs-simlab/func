@@ -110,7 +110,8 @@ add_subdirectory("include")
 
 # Examples subdirectory, if enabled
 option(BUILD_EXAMPLES "Build the example codes" ON)
-if(BUILD_EXAMPLES)
+if(BUILD_EXAMPLES AND CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  include(CTest)
   add_subdirectory("examples")
 endif()
 
