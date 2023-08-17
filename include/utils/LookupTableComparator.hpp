@@ -126,9 +126,6 @@ public:
     }
   }
 
-  /* Obtain a const reference to the current array of evaluation points */
-  const std::unique_ptr<TIN> sample_points(){ return mp_randomEvaluations; }
-
   /* Compute fastest and slowest times */
   void compute_statistics()
   {

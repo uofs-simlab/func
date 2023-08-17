@@ -77,7 +77,6 @@ protected:
 public:
   /* using a std::unique_ptr member variables implicitly deletes the default
    * move ctor so we must explicitly ask for the default move ctor */
-  MetaTable(MetaTable&&) = default;
   MetaTable() = default;
 
   /* Set every generic member variable from a json file */
@@ -162,9 +161,9 @@ public:
     return std::make_pair(x0, x); // don't subtract dx by x0 because every polynomial was already rescaled accordingly
   }
 
-  /* TODO Pade & LinearRawInterpTable must override this operator. The vtable MIGHT be optimized out,
-   * but if each implementation provides their own operator() and diff() then we can be sure a
-   * vtable isn't slowing a LUT down. */
+  /* TODO Pade & LinearRawInterpTable must override this operator. Maybe operator() will be faster if each
+   * implementation provides their own operator() and diff(). Perchance that will remove the overhead from
+   * using a vtable */
   //#pragma omp declare simd // warning: GCC does not currently support mixed size types for 'simd' functions
   TOUT operator()(TIN x) const override {
     unsigned int x0; TIN dx;
@@ -180,7 +179,6 @@ public:
 };
 
 
-
 /* Reading & writing functions for any LUT derived from MetaTable.
  * Enables the convenient "get" syntax from nlohmann::json for specific implementations.
    eg:
@@ -190,6 +188,7 @@ public:
   auto lut = jsonStats.get<func::UniformLinearInterpolationTable<TIN,TOUT>>();
   ```
  * Uses SFINAE to automatically disable these functions if TIN or TOUT do not support nlohmann's json
+ * (then users can use their abstract types without having to implement to/from json)
  *
  * TODO can we just edit the json library to make the compile time errors into runtime errors? SFINAE takes forever to compile...
  * */

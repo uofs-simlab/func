@@ -1,4 +1,5 @@
 #pragma once
+#include "LookupTableFactory.hpp"
 #include "ArgumentRecord.hpp"
 #include "CompositeLookupTable.hpp"
 #include "DirectEvaluation.hpp"

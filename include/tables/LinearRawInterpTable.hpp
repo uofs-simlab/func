@@ -36,6 +36,8 @@ public:
     m_dataSize = sizeof(m_table[0]) * m_numTableEntries;
 
     auto fun = func_container.standard_fun;
+    if(fun == nullptr)
+      throw std::invalid_argument("Error in func::LinearRawInterpTable: Given an invalid FunctionContainer");
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,1>[m_numTableEntries]);
@@ -53,7 +55,7 @@ public:
    * TODO is there a way to make this work with nonuniform grids in a way that works with our model? */
   TOUT operator()(TIN x) const override
   {
-    unsigned int x0; TOUT dx;
+    unsigned int x0; TIN dx;
     std::tie(x0,dx) = MetaTable<1,TIN,TOUT,GT>::template hash<GT>(x);
 
     // linear interpolation

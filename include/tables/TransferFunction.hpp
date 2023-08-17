@@ -129,7 +129,7 @@ public:
   }
 
   /* Horner's method */
-  inline TIN inverse(TIN x) const {
+  TIN inverse(TIN x) const {
     TIN sum = static_cast<TIN>(0);
     for (int k=3; k>0; k--)
       sum = x*(m_inverse_coefs[k] + sum);
@@ -137,7 +137,7 @@ public:
   }
   
   /* Horner's method */
-  inline TIN inverse_diff(TIN x) const {
+  TIN inverse_diff(TIN x) const {
     TIN sum = static_cast<TIN>(0);
     for (int k=3; k>1; k--)
       sum = x*(k*m_inverse_coefs[k] + sum);

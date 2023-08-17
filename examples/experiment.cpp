@@ -20,23 +20,20 @@
 #include <iostream>
 #define TYPE double
 
-void print_usage()
-{
+void print_usage(){
   std::cout << "Usage:" << std::endl
 	    << "    ./experiment <tableMin> <tableMax> <tableTol> <nExperiments> <nEvals> <seed>"
 	    << std::endl;
 }
 
 //---------------------------------------------------------------------------->>
-int main(int argc, char* argv[])
-{
-
+int main(int argc, char* argv[]){
   using namespace std;
   using namespace func;
 
-  if (argc < 7) {
+  if(argc < 7){
       print_usage();
-      exit(0);
+      return 1;
   }
 
   double tableMin     = std::stod(argv[1]);
@@ -148,4 +145,5 @@ int main(int argc, char* argv[])
   implCompare.compute_statistics();
   implCompare.sort_timings(Sorter::WORST);
   implCompare.print_summary(std::cout);
+  return 0;
 }

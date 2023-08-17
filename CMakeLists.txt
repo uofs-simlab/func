@@ -46,6 +46,7 @@ find_package(Armadillo)
 
 if(FUNC_USE_ARMADILLO)
   if(ARMADILLO_FOUND)
+    message(STATUS "Armadillo includes: ${ARMADILLO_INCLUDE_DIRS}")
     message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
   else()
     set(FUNC_USE_ARMADILLO OFF)
@@ -60,6 +61,7 @@ find_package(OpenMP)
 
 if(OpenMP_FOUND)
   message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
+  set(OPENMP_CXX_LIBRARIES OpenMP::OpenMP_CXX)
 else()
   option(FUNC_USE_OPENMP OFF)
 endif()
@@ -79,6 +81,7 @@ endif()
 # This is the only file that showed material speedup
 set(CLASSNAMES
   LookupTableFactory # .hpp file must contain a line with FUNC_DECLARE_TEMPLATE_AS_EXTERN(classname)
+  LookupTableComparator
 )
 
 # cleanup any source-code that may have been generated in previous cmake runs
@@ -107,7 +110,8 @@ add_subdirectory("include")
 
 # Examples subdirectory, if enabled
 option(BUILD_EXAMPLES "Build the example codes" ON)
-if(BUILD_EXAMPLES)
+if(BUILD_EXAMPLES AND CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  include(CTest)
   add_subdirectory("examples")
 endif()
 
