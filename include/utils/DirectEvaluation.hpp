@@ -104,6 +104,7 @@ public:
   }
 
   void print_hist(std::ostream& out) const {
+    (void) out;
 #ifdef FUNC_DEBUG
     out << *mp_recorder;
 #endif
