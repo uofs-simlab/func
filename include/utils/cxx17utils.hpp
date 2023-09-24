@@ -10,7 +10,7 @@
 
 namespace func {
 
-template <typename TERR, unsigned int N, class LUT, typename F>
+template <unsigned int N, typename TERR, class LUT, typename F>
 TERR metric(LUT L, F f){
   TERR max_err = 0;
   if constexpr (N == 0) {
