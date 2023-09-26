@@ -73,7 +73,7 @@ class FuncScopedLock
   void operator=(const FuncScopedLock&);
   FuncScopedLock(const FuncScopedLock&);
 public:
-  explicit FuncScopedLock(FuncMutex& mutex){}
+  explicit FuncScopedLock(FuncMutex& mutex){(void)mutex;}
   ~FuncScopedLock(){}
 };
 #endif // _OPENMP

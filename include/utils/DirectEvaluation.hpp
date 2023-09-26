@@ -104,12 +104,14 @@ public:
   }
 
   void print_hist(std::ostream& out) const {
+    (void) out;
 #ifdef FUNC_DEBUG
     out << *mp_recorder;
 #endif
   }
 
   void set_destructor_print(std::ostream& out){
+    (void) out;
 #ifdef FUNC_DEBUG
     print_on_destruct = true;
     streamer = out;

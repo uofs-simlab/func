@@ -135,7 +135,7 @@ public:
       sum = x*(m_inverse_coefs[k] + sum);
     return sum + m_inverse_coefs[0];
   }
-  
+
   /* Horner's method */
   TIN inverse_diff(TIN x) const {
     TIN sum = static_cast<TIN>(0);
