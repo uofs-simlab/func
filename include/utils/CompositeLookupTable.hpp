@@ -62,7 +62,7 @@ public:
       m_lutmap.insert({right, std::move(gen.generate_by_step(name, (right-left)/N))});
     }
     /* initialize the cached LUT */
-    recentLUT = m_lutmap.begin()->second;
+    recentLUT = m_lutmap.cbegin()->second;
   }
 
   CompositeLookupTable(const FunctionContainer<TIN,TOUT>& func_container, const std::vector<std::tuple<std::string,TIN,TIN,TIN,TIN>>& name_l_r_atol_rtols) :
@@ -81,23 +81,31 @@ public:
       m_lutmap.insert({right, std::move(gen.generate_by_step(name, (right-left)/static_cast<double>(N) ))});
     }
     /* initialize the cached LUT */
-    recentLUT = m_lutmap.begin()->second;
+    recentLUT = m_lutmap.cbegin()->second;
   }
 
   ~CompositeLookupTable(){}
 
   TOUT operator()(TIN x) const final
   {
-    /* check if x is within the bounds of the most recently used LUT */
-    if((recentLUT->min_arg() < x) && (x < recentLUT->max_arg())) return (*recentLUT)(x);
+    /* check if x is within the bounds of the most recently used LUT (in a threadsafe way) */
+    std::shared_ptr<LookupTable<TIN,TOUT>> localrecentLUT;
+    #pragma omp critical(diedie)
+    {
+    localrecentLUT = recentLUT;
+    }
+    if((localrecentLUT->min_arg() < x) && (x < localrecentLUT->max_arg())) return (*localrecentLUT)(x);
 
     /* Find the LUT whose right endpoint is strictly greater than x
      * TODO is this problematic for the max arg of the compositeLUT? */
     auto iter = m_lutmap.upper_bound(x);
-    if(iter != m_lutmap.end()){
+    if(iter != m_lutmap.cend()){
       auto lut = iter->second;
       if(lut->min_arg() < x){
-        recentLUT = lut;
+        #pragma omp critical(diedie)
+        {
+          recentLUT = lut;
+        }
         return (*lut)(x);
       }
     }
@@ -105,38 +113,39 @@ public:
   }
 
   std::string name() const final { return "CompositeLookupTable"; }
-  TIN min_arg() const final { return m_lutmap.begin()->second->min_arg(); }
-  TIN max_arg() const final { return m_lutmap.rbegin()->first; }
+  TIN min_arg() const final { return m_lutmap.cbegin()->second->min_arg(); }
+  TIN max_arg() const final { return m_lutmap.crbegin()->first; }
   unsigned int order() const final { return 0u; } // TODO maybe return min order?
 
   /* sum the sizes of each LookupTable */
   std::size_t size() const final {
-    return std::accumulate(m_lutmap.begin(), m_lutmap.end(), std::size_t{0},
+    return std::accumulate(m_lutmap.cbegin(), m_lutmap.cend(), std::size_t{0},
       [](std::size_t total, const typename lookup_map_t::value_type& L)
       { return total + L.second->size(); });
   }
 
   unsigned int num_subintervals() const final {
-    return std::accumulate(m_lutmap.begin(), m_lutmap.end(), 0u,
+    return std::accumulate(m_lutmap.cbegin(), m_lutmap.cend(), 0u,
       [](unsigned int total, const typename lookup_map_t::value_type& L)
       { return total + L.second->num_subintervals(); });
   }
 
   /* return the min step size of each LookupTable */
   TIN step_size() const final {
-    return std::min_element(m_lutmap.begin(), m_lutmap.end(),
+    return std::min_element(m_lutmap.cbegin(), m_lutmap.cend(),
       [](const typename lookup_map_t::value_type& L1, const typename lookup_map_t::value_type& L2)
       { return L1.second->step_size() <= L2.second->step_size(); })->second->step_size(); }
 
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final {
     long int N = intervalNumber; // need a signed integer to safely do subtraction
-    auto it = m_lutmap.begin();
-    for(; it != m_lutmap.end(); ++it){
-      if(N - it->second->num_subintervals() < 0)
+    auto it = m_lutmap.cbegin();
+    for(; it != m_lutmap.cend(); ++it){
+      auto it_nsubs = it->second->num_subintervals();
+      if(N - it_nsubs < 0)
         break;
-      N -= it->second->num_subintervals();
+      N -= it_nsubs;
     }
-    if(it == m_lutmap.end())
+    if(it == m_lutmap.cend())
       throw std::invalid_argument(std::string("Error in func::CompositeLookupTable: requested intervalNumber is ") + std::to_string(N) +
           " which is greater than num_subintervals = " + std::to_string(num_subintervals()));
     return it->second->bounds_of_subinterval(N);

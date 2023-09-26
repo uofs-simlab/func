@@ -258,7 +258,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl,m_parent.m_fc.standard_fun,m_relTol),x,xtop,bits,max_it);
 
-      #pragma omp critical
+      #pragma omp critical(FUNC_LUT_GENERATOR_MUTEX)
       {
         max_err = std::min(max_err, r.second);
         //std::cerr << -r.second << " error at x=" << r.first << "\n";
