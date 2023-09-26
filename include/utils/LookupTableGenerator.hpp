@@ -238,7 +238,6 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     /* get number of binary bits in mantissa */
     int bits = std::numeric_limits<TERR>::digits/2; // effective maximum for brent_find_minima
     boost::uintmax_t max_it = 20;
-
     TERR max_err = 0;
 
     /* Want a small bracket for brent's method so for each interval in the table,
@@ -246,22 +245,16 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
      * - Must be careful about the last interval b/c tableMaxArg >= maxArg
      *   (and we don't care about error outside of table bounds)
      * - TODO This scales well, but is this the best pragma possible?
-     * - TODO brent's method occasionally has stragglers
+     * - TODO brent's method occasionally spends much more time on single intervals (stragglers)
      * - TODO can be slow for high order tables with very few subintervals
      *   */
     #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_subintervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->bounds_of_subinterval(ii);
       /* TODO does this restrict the possible values of TIN?
-       * We're worried that casting to TERR might round outside the LUT's domain.
-       * Is this possible????? */
+       * Is it possible for x or xtop to be rounded outside the LUT's domain after casting to TERR? */
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
-
-      /* tableMaxArg >= max. We don't care about any error outside [min,max]
-       * so ignore any points between (max,tableMax] */
-      if(static_cast<TIN>(xtop) > m_parent.max_arg())
-        xtop = static_cast<TERR>(m_parent.max_arg());
 
       std::pair<TERR, TERR> r = brent_find_minima(LookupTableErrorFunctor(impl,m_parent.m_fc.standard_fun,m_relTol),x,xtop,bits,max_it);
 

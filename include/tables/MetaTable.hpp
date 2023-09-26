@@ -94,7 +94,7 @@ public:
       throw std::invalid_argument("func::MetaTable was given a nonpositive stepSize. stepSize must be positive.");
 
     m_stepSize_inv = static_cast<TIN>(1.0)/m_stepSize;
-    m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
+    m_numIntervals = static_cast<unsigned>(std::ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
     m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // always >= m_maxArg
 
     // We need a valid FunctionContainer to generate any LUT
@@ -114,21 +114,26 @@ public:
   TIN tablemax_arg() const { return m_tableMaxArg; }
   unsigned int order() const final { return m_order; }
   std::size_t size() const final { return m_dataSize; }
-  unsigned int num_subintervals() const final { return m_numIntervals; };
-  TIN step_size() const final { return m_stepSize; };
+  unsigned int num_subintervals() const final { return m_numIntervals; }
+  TIN step_size() const final { return m_stepSize; }
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final {
-    FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
-      return std::make_pair(m_minArg + intervalNumber*m_stepSize,m_minArg + (intervalNumber+1)*m_stepSize);
-    else
-      return std::make_pair(m_transferFunction(m_minArg + intervalNumber*m_stepSize),
-          m_transferFunction(m_minArg + (intervalNumber+1)*m_stepSize));
+    // initialize to bounds of uniform LUT and adjust if LUT is nonuniform
+    TIN intervalMin = m_minArg + intervalNumber*m_stepSize;
+    TIN intervalMax = m_minArg + (intervalNumber+1)*m_stepSize;
+    FUNC_IF_CONSTEXPR(GT != GridTypes::UNIFORM){
+      intervalMin = m_transferFunction(intervalMin);
+      intervalMax = m_transferFunction(intervalMax);
+    }
+    // m_tableMaxArg can be greater than m_maxArg
+    if(intervalMax > m_maxArg) intervalMax = m_maxArg;
+    return std::make_pair(intervalMin,intervalMax);
   }
   void print_json(std::ostream& out) const final {
     nlohmann::json jsonStats = *this; // call to_json(jsonStats, this)
     out << jsonStats.dump(2) << std::endl;
-  };
+  }
 
-  unsigned int num_table_entries() const { return m_numTableEntries; };
+  unsigned int num_table_entries() const { return m_numTableEntries; }
   unsigned int ncoefs_per_entry() const { return N; }
   TOUT table_entry(unsigned int i, unsigned int j) const { return m_table[i].coefs[j]; }
   std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
