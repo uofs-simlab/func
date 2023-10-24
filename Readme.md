@@ -39,18 +39,25 @@ cmake -DCMAKE_INSTALL_PREFIX=<install-dir> ..
 make install
 ```
 
-After make install, linking to the library (outside of cmake build) requires:
+After `make install`, linking to the library (outside of cmake build) requires:
 - `<install-dir>/lib` is in your `LD_LIBRARY_PATH` environment variable,
 - `<install-dir>/include/func` is in your include flags, and
 - `-lfunc` is used when linking
 
-Example usage
--------------
-The following code shows an MWE of building a DirectEvaluation and a LUT of an elliptic function.
-A DirectEvaluation can record every argument passed to its operator() in a histogram which is useful for determining useful bounds $a,b$ for a LUT. Furthermore, a DirectEvaluation can perturb its arguments 
 
+FunC classes and examples
+-------------
+The following code shows an MWE building various FunC objects out of an elliptic function. Each of FunC's LUTs are threadsafe.
+A DirectEvaluation's operator() directly calls the function it was constructed with. It can
+1. Record every argument passed to its operator() in a histogram. This is useful for determining useful bounds $a,b$ for a LUT of f.
+2. Randomly perturb its outputs to simulate error.
+
+Each of FunC's LUTs uses some piecewise function to approximate the user's function. LUTs are all constructed with a
+FunctionContainer<TIN,TOUT> and a LookupTableParameters<TIN>. See the example below.
+
+By default, LUTs do not perform bounds checking. To perform bounds checking, call a 
 ```c++
-/* user's function here. To use automatic differentiation, then the definition of f must be templated, and any function f
+/* user's function here. To use automatic differentiation, the definition of f must be templated, and any function that f
  * calls must have overloads for Boost's autodiff_fvar */
 #include <boost/math/special_functions/jacobi_elliptic.hpp>
 template <typename T> T f(T x){ return boost::math::jacobi_cn(0.5, x); }
@@ -63,24 +70,46 @@ template <typename T> T f(T x){ return boost::math::jacobi_cn(0.5, x); }
 int main(){
     /* FUNC_SET_F is a macro required to take advantage of Boost's automatic differentiation.
      * - If f is templated on two types, call as FUNC_SET_F(f,TIN,TOUT)
-     * - If f cannot be templated as shown  FunctionContainer could be constructed with f<double>, but */
+     * - If f cannot be templated as shown  FunctionContainer could be constructed with f<double>, but then any LUT that requires derivative information cannot be built */
     func::FunctionContainer<double> fc {FUNC_SET_F(f,double)};
 
-    /* Arguments to a DirectEvaluation are (FunctionContainer fc, TIN min=0, TIN max=1, uint nbins=10, TOUT aerr=0, TIN rerr=0)
-     * where min,max are used as bounds for the histogram */
+    /* DirectEvaluation's constructor takes arguments (FunctionContainer fc, TIN min=0, TIN max=1, uint nbins=10, TOUT aerr=0, TIN rerr=0)
+     * - min, max, nbins, aerr, rerr are only used if the preprocessor macro FUNC_DEBUG is defined. 
+     * - if FUNC_DEBUG is defined then min and max are used as bounds for the histogram. nbins is the number of buckets used
+     * - if FUNC_DEBUG is defined then the DirectEvaluation returns f(x)(1+R*rerr)+A*aerr instead of f(x) where R,A are
+     *   sampled from a uniformly distributed random variable over [0,1] */
     func::DirectEvaluation<double> de {fc,0,2,10,1,1};
-    /* Call the function on line 7 with T=double and x=1.011. If FUNC_DEBUG is defined then f(x)(1+R*rerr)+A*aerr is returned
-     * instead where A,R are random numbers sampled from a uniformly distributed random variable over [0,1] */
+
+    /* Call the function on line 7 with T=double and x=1.011.  */
     std::cout << de(1.011) << "\n"; 
-    std::cout << de << std::endl; // print histogram to stdout if FUNC_DEBUG is defined
+    std::cout << de << std::endl; // print histogram of arguments to stdout if FUNC_DEBUG is defined
 
     /* build a LUT of f over [0,2] with a step size of h=0.1. Each subinterval will use degree 3 Chebyshev interpolating polynomials */
-    func::UniformChebyInterpTable<3,double> lut {fc, {0.0,2.0,0.1}};
-    std::cout << lut(1.011) << "\n"; // return an approximation of f(1.011) with a piecewise cubic polynomial
+    func::UniformChebyInterpTable<3,double> cheb3 {fc, {0.0, 2.0, 0.1}};
+    std::cout << cheb3(1.011) << "\n"; // return an approximation of f(1.011) with a piecewise cubic polynomial
+    std::cout << cheb3 << "\n"; // print info about cheb3
 
-    std::cout << lut << "\n"; // print info about lut
+    /* FunC can also build fast LUTs over nonuniform partitions of [a,b] with the following. These LUTs perform interval search
+     * in 6 FLOPs and 4 IOPs which is far better than an O(logn) binary search. Due to a quirk of this optimization, FunC's
+     * nonuniform LUTs have lower absolute error only if |f'(a)| or |f'(b)| are large. Nonuniform LUTs use the same interface as
+     * uniform LUTs because the user has no control over the constructed partition. */
+    func::NonUniformChebyInterpTable<3,double> nonunif {fc, {0.0, 2.0, 0.1}};
+    std::cout << nonunif(1.011) << "\n"; // return an approximation of f(1.011) with a piecewise cubic polynomial
+    std::cout << nonunif << "\n"; // print info about nonunif
+
+    /* By default, a LUT does not perform bounds checking, so calling cheb3(2.5) is undefined (likely a segfault).
+     * If the user wishes to perform bounds checking every time they call operator() then they can build a
+     * FailureProofTable. The constructor takes arguments (FunctionContainer fc, LookupTableParameters<TIN>, min=1, max=-1, nbins=10). */
+    func::FailureProofTable<func::UniformChebyInterpTable<3,double>,double> F(fc, {0.0, 2.0, 0.1});
+    std::cout << F(2.5) << "\n";
+
+    /* the following line prints a histogram of out-of-bounds arguments to stdout if FUNC_DEBUG is defined. If max<min then just the largest
+     * and smallest arguments are displayed */
+    std::cout << F << "\n";
 }
 ```
+Running `examples/experiment.cpp` will show each of FunC's currently supported LUT types. Users can easily benchmark each LUT with
+their own required bounds & step size by modifying examples/experiment.cpp to use their own function.
 
 
 Notes
