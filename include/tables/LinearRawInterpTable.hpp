@@ -1,6 +1,6 @@
 /*
   Linear Interpolation LUT. Coefficients are computed at lookup time.
-  Approx 50% less memory usage compared to EqSpaceInterpTable<1> but the hash involves an additional subtraction.
+  Approx 50% less memory usage compared to UniformEqSpaceInterpTable<1> but the hash involves an additional subtraction.
 
   Usage example:
     LinearRawInterpTable look(&function,0,10,0.0001);
@@ -21,6 +21,10 @@ class LinearRawInterpTable final : public MetaTable<1,TIN,TOUT,GT>
 {
   INHERIT_META(1,TIN,TOUT,GT);
 public:
+  LinearRawInterpTable() = default;
+  // This LUT cannot be interpreted as a MetaTable
+  //LinearRawInterpTable(const MetaTable<N+1,TIN,TOUT,GT>& L): MetaTable<N+1,TIN,TOUT,GT>(L) {}
+
   // build the LUT from scratch or look in jsonStats for an existing LUT
   LinearRawInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :

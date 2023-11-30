@@ -1,4 +1,4 @@
-/* - polynomial is essentially a typedef for std::array<TOUT,N>
+/* - polynomial is essentially a typedef for std::array<TOUT,N> but polynomials are sometimes aligned
  * - Our convention for writing polynomials is:
  *     p(x) = m_table[x0].coefs[0] + m_table[x0].coefs[1]*x + ... + m_table[x0].coefs[N-1]*x^(N-1)
  * Users should perform Horner's style evaluations

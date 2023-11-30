@@ -21,13 +21,15 @@ class TaylorTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
   INHERIT_META(N+1,TIN,TOUT,GT);
 public:
+  TaylorTable() = default;
+  TaylorTable(const MetaTable<N+1,TIN,TOUT,GT>& L): MetaTable<N+1,TIN,TOUT,GT>(L) {}
+
   // build the LUT from scratch or look in filename for an existing LUT
   TaylorTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<N+1,TIN,TOUT,GT>(func_container, par, jsonStats)
   {
 #ifndef FUNC_USE_BOOST
-    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::TaylorTable: Boost version 1.71.0 or newer is not available but FunC must use Boost's automatic differentiation to compute Taylor sums");
 #else

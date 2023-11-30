@@ -36,12 +36,14 @@ class ChebyInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
   INHERIT_META(N+1,TIN,TOUT,GT);
 public:
+  ChebyInterpTable() = default;
+  ChebyInterpTable(const MetaTable<N+1,TIN,TOUT,GT>& L): MetaTable<N+1,TIN,TOUT,GT>(L) {}
+
   // build the LUT from scratch or look in filename for an existing LUT
   ChebyInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<N+1,TIN,TOUT,GT>(func_container, par, jsonStats) {
 #ifndef FUNC_USE_ARMADILLO
-    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::ChebyTable: Chebyshev LUTs need Armadillo to be generated but Armadillo is not available");
 #else
@@ -70,6 +72,7 @@ public:
     Van.col(1) = (1 + arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1))))/2;
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
+
 
     FUNC_IF_CONSTEXPR(!std::is_floating_point<TOUT>::value)
       Van = arma::inv(Van);

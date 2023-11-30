@@ -40,13 +40,15 @@ class PadeTable final : public MetaTable<M+N+1,TIN,TOUT,GT>
 {
   INHERIT_META(M+N+1,TIN,TOUT,GT);
 public:
+  PadeTable() = default;
+  PadeTable(const MetaTable<M+N+1,TIN,TOUT,GT>& L): MetaTable<M+N+1,TIN,TOUT,GT>(L) {}
+
   // build the LUT from scratch or look in filename for an existing LUT
   PadeTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<M+N+1,TIN,TOUT,GT>(func_container, par, jsonStats)
   {
 #if !defined(FUNC_USE_BOOST) || !defined(FUNC_USE_ARMADILLO)
-    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::PadeTable: Pade LUTs need both Armadillo and Boost to be generated");
 #else
