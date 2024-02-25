@@ -11,7 +11,7 @@ project(
   DESCRIPTION "Build better lookup tables"
   LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 macro(print_variable var)
   message(STATUS "${var}: ${${var}}")

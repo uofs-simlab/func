@@ -45,6 +45,7 @@ constexpr unsigned int permutation(unsigned int n, unsigned int k){
   return n*permutation(n-1u,k-1u);
 }
 
+/* compute p^(s)(x), the sth derivative of p at x */
 template <unsigned int N, typename TOUT, typename TIN = TOUT>
 TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
   TOUT sum = static_cast<TOUT>(0);
@@ -52,6 +53,15 @@ TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
     sum = p.coefs[k-1]*permutation(k-1,s) + sum*x;
   return sum;
 }
+
+template <unsigned int N, typename TOUT, typename TIN = TOUT>
+TOUT eval(polynomial<TOUT,N> p, TIN x){
+  TOUT sum = static_cast<TOUT>(0);
+  for(unsigned int k=N; k>0; k--)
+    sum = p.coefs[k-1] + sum*x;
+  return sum;
+}
+
 
 /* convenient debugging method for printing a polynomial */
 template <unsigned int N, typename TOUT>

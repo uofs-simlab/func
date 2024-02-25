@@ -9,8 +9,10 @@
 
   Info on template parameters:
 
-  N = number of coefficients used in underlying piecewise polynomials
-  Provided Horner's method which is the most common table evaluation method in FunC
+  N = number of coefficients used in underlying piecewise polynomials.
+  - This represents a degree N-1 polynomial
+  operator() uses Horner's method to eval the polynomial. This is the most common
+  LUT evaluation method in FunC
 
   UNIFORM: Every subinterval is the same length so the hash is super fast; however,
   many more subintervals might be needed
@@ -98,8 +100,8 @@ public:
 
   /* deepcopy constructor */
   MetaTable(const MetaTable<N,TIN,TOUT,GT>& L) : m_name(L.m_name), m_minArg(L.m_minArg), m_maxArg(L.m_maxArg),
-    m_order(L.m_order), m_dataSize(L.m_dataSize), m_numIntervals(L.m_numIntervals), m_numTableEntries(L.m_numTableEntries),
-    m_stepSize(L.m_stepSize), m_stepSize_inv(L.m_stepSize_inv), m_tableMaxArg(L.m_tableMaxArg)
+    m_stepSize(L.m_stepSize), m_stepSize_inv(L.m_stepSize_inv), m_tableMaxArg(L.m_tableMaxArg),
+    m_order(L.m_order), m_dataSize(L.m_dataSize), m_numIntervals(L.m_numIntervals), m_numTableEntries(L.m_numTableEntries)
   {
     m_table.reset(new polynomial<TOUT,N>[m_numTableEntries]);
     #pragma omp simd collapse(2)
@@ -191,7 +193,8 @@ public:
     if((m_numTableEntries != other.m_numTableEntries) || (m_minArg != other.m_minArg) || (m_maxArg != other.m_maxArg))
       throw std::invalid_argument("Error in func::MetaTable: cannot add two LUTs with different subintervals");
 
-    /* TODO try building nonuniform LUTs of LUTs by lerping transfer functions? */
+    /* TODO Transfer functions don't work with LUTs of LUTs yet I think...
+     * Try building nonuniform LUTs of LUTs by lerping transfer functions? */
 
     #pragma omp simd collapse(2)
     for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
@@ -223,6 +226,7 @@ public:
         m_table[ii].coefs[jj] /= a;
     return *this;
   }
+
 
   /* find which polynomial p_k to evaluate. Also, each p_k:[0,1]->R so we must set dx=(x-x_k)/(x_{k+1}-x_k) */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::UNIFORM,bool>::type = true>
@@ -277,7 +281,32 @@ public:
     return sum;
   }
 
-  //TOUT diff(unsigned int N, TIN x) final {}
+  // TODO make virtual and override in Pade and linear raw tables
+  TOUT diff(int s, TIN x) const {
+    unsigned int x0; TIN dx;
+    std::tie(x0,dx) = hash<GT>(x);
+
+    auto sum = static_cast<TIN>(permutation(N-1,s))*m_table[x0].coefs[N-1];
+    for(int k=N-1; k>s; k--){
+      sum *= dx;
+      sum += static_cast<TIN>(permutation(k-1,s))*m_table[x0].coefs[k-1];
+    }
+    return static_cast<TIN>(pow(m_stepSize_inv,s))*sum;
+  }
+
+  // TODO kills at least one of the input dimensions somehow >:/
+  template<typename... TIN2>
+  inline auto diff(int s, TIN x, TIN2... args) const {
+    unsigned int x0; TIN dx;
+    std::tie(x0,dx) = hash<GT>(x);
+
+    auto sum = static_cast<TIN>(permutation(N-1,s))*(m_table[x0].coefs[N-1]).diff(args...);
+    for(int k=N-1; k>s; k--){
+      sum *= dx;
+      sum += static_cast<TIN>(permutation(k-1,s))*(m_table[x0].coefs[k-1]).diff(args...);
+    }
+    return static_cast<TIN>(pow(m_stepSize_inv,s))*sum;
+  }
 };
 
 /* LUTs form a vector space over TIN if TOUT forms a vector space over TIN */

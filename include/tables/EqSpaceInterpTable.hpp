@@ -101,10 +101,13 @@ public:
           m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
       }
     }
-    // special case to make lut(tableMaxArg) work
+    /* special case to make lut(tableMaxArg) work. All other coefs are copied
+     * from the previous subinterval to get diff() to work predictably */
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
-    for(unsigned int k=1; k<N+1; k++)
-      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
+    for(unsigned int k=1; k<N+1; k++){
+      m_table[m_numTableEntries-1].coefs[k] = m_table[m_numTableEntries-2].coefs[k];
+      //m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-2].coefs[k];
+    }
   }
 
   // operator() is in MetaTable
