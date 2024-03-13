@@ -24,6 +24,7 @@
 #include "MetaTable.hpp"
 #include "config.hpp"
 #include <stdexcept>
+#include <boost/math/special_functions/binomial.hpp>
 
 #ifdef FUNC_USE_ARMADILLO
 #include <armadillo>
@@ -31,9 +32,55 @@
 
 namespace func {
 
+
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class ChebyInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
+  // evaluate a polynomial with the first barycentric form of the interpolating polynomial
+  // because evaluting that form is backward stable (but maayyyyybe scale invariance is nice to have?)
+  template <typename AD_TIN, typename AD_TOUT = AD_TIN>
+  AD_TOUT bary(AD_TIN x, std::array<TIN,N+1> xvec, std::array<TOUT,N+1> yvec){
+    // TODO double check this is the best way to autodiff the conditional...
+    // return (sum_k w[k]/(x-xvec[k])*yvec[k]) / (sum_k w[k]/(x-xvec[k]))
+    //AD_TOUT num = 0; AD_TIN den = 0;
+    //for(unsigned int j = 0; j < N+1; j++){
+    //  // check for _exact_ equality of a node
+    //  if (x == xvec[j]) return yvec[j];
+    //  
+    //  // compute the weight wj
+    //  TIN wj = 1.0;
+    //  for(unsigned int k = 0; k < N+1; k++)
+    //    if (j != k) wj *= xvec[j] - xvec[k];
+    //  num += yvec[j] / wj / (x-xvec[j]);
+    //  den += static_cast<TIN>(1.0) / wj / (x-xvec[j]);
+    //}
+    //return num/den;
+
+    //AD_TOUT sum = 0; AD_TIN lx = 1;
+    //for(unsigned int j = 0; j < N+1; j++){
+    //  // check for _exact_ equality of a node
+    //  if (x == xvec[j]) return yvec[j];
+    //  
+    //  // compute the weight wj
+    //  TIN wj = 1.0;
+    //  for(unsigned int k = 0; k < N+1; k++)
+    //    if (j != k) wj *= xvec[j] - xvec[k];
+    //  lx *= x - xvec[j];
+    //  sum += yvec[j] / wj / (x-xvec[j]);
+    //}
+    //return lx*sum;
+    
+    AD_TOUT sum = 0;
+    for(unsigned int j = 0; j < N+1; j++){
+      AD_TIN ljx = 1.0;
+      for(unsigned int k = 0; k < N+1; k++){
+        if (j != k) { ljx *= (x - xvec[k]) / (xvec[j] - xvec[k]); }
+      }
+      sum += yvec[j]*ljx;
+    }
+    return sum;
+  }
+
   INHERIT_META(N+1,TIN,TOUT,GT);
 public:
   ChebyInterpTable() = default;
@@ -63,16 +110,15 @@ public:
     /* Thoughts:
      * - Vandermonde system for cheby nodes over [0,1] has condition number about 1000 times larger than [-1,1]
      *   but we don't do that because the formula we currently use for shifting polynomials is too poorly conditioned.
-     * - Using inv here produces objectively worse results! however, Armadillo (and every other high performance numeric
+     * - Using inv here produces objectively worse results! however, Armadillo (and every other high performance
      *   linear algebra library Shawn has looked into) does not have a solver for general vector spaces.
      *   That is, most libraries cannot solve Ax=b where the entries of A are not float or double and the entries of
      *   b aren't the same type as the entries of A.
      * - Directly solve the system when using a type supported by armadillo */
     arma::mat Van = arma::ones(N+1, N+1);
-    Van.col(1) = (1 + arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1))))/2;
+    Van.col(1) = arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1)));
     for(unsigned int i=2; i<N+1; i++)
       Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
-
 
     FUNC_IF_CONSTEXPR(!std::is_floating_point<TOUT>::value)
       Van = arma::inv(Van);
@@ -96,15 +142,22 @@ public:
       auto b = static_cast<double>(x+h);
       arma::vec xvec = (a+b)/2 + (b-a)*arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)))/2;
 
+      // might have to find nearest point & make a custom vandermonde system
+      // for this subinterval to minimize relative error quickly. Spacing will
+      // be roughly Chebyshev, and error bounds should still apply roughly
+
       FUNC_IF_CONSTEXPR(std::is_floating_point<TOUT>::value){
         arma::vec y(N+1);
         for (unsigned int k=0; k<N+1; k++)
           y[k] = fun(static_cast<TIN>(xvec[k]));
 
+        // preconditioning and iterative refinement rarely makes a difference for Vandermonde matrices over Cheby nodes
         y = arma::solve(Van, y);
         for(unsigned int k=0; k<N+1; k++)
           m_table[ii].coefs[k] = y[k];
       }else{
+        // This method of evaluating the inverse is not great for large n. It might not be worth supporting. :/
+        // throw std::invalid_argument("Error in func::ChebyInterpTable: Cannot build a Cheby table with given TOUT");
         std::vector<TOUT> y(N+1);
         for (unsigned int k=0; k<N+1; k++)
           y[k] = fun(static_cast<TIN>(xvec[k]));
@@ -117,19 +170,81 @@ public:
         }
       }
 
+      auto p = m_table[ii];
+      for(unsigned int k=0; k<N+1; k++)
+        m_table[ii].coefs[k] = polynomial_diff(p,-0.5,k)*static_cast<TIN>(pow(2,k))/static_cast<TIN>(factorial(k));
+
       /* TODO This formula is too unstable for this table type as given in this form when N>2 and h is small. */
       FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
-        for(unsigned int k=0; k<N+1; k++)
-          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
-      }
+        for(unsigned int s=0; s<N+1; s++){
+          m_table[ii].coefs[s] = polynomial_diff(p,-x/h,s)/static_cast<TIN>(pow(h,s))/static_cast<TIN>(factorial(s));
+
+          //TOUT sum = static_cast<TOUT>(0);
+          //for(unsigned int k=N+1; k>s; k--)
+          //  sum = p.coefs[k-1]*boost::math::binomial_coefficient<double>(k-1, s) - sum*x/h;
+          //m_table[ii].coefs[s] = sum/pow(h,s);
+          }
+        }
     }
+
+    ///* Allocate and set table */
+    //m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
+    //FUNC_BUILDPAR
+    //for(unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
+    //  TIN x;
+    //  TIN h = m_stepSize;
+    //  // (possibly) transform the uniform grid into a nonuniform grid
+    //  FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
+    //    x = m_minArg + ii*m_stepSize;
+    //  else{
+    //    x = m_transferFunction(m_minArg + ii*m_stepSize);
+    //    h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
+    //  }
+
+    //  // TODO swap out these points to preserve properties of f
+    //  std::array<TIN,N+1> xvec;
+    //  for (unsigned int k=0; k<N+1; k++)
+    //    xvec[k] = 1/2.0 + std::cos(boost::math::constants::pi<TIN>()*(2*(k+1)-1) / (2.0*(N+1)) )/2.0;
+
+    //  std::array<TOUT,N+1> yvec;
+    //  for (unsigned int k=0; k<N+1; k++)
+    //    yvec[k] = fun(x + h*xvec[k]);
+
+    //  FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM)
+    //    for (unsigned int k=0; k<N+1; k++)
+    //      xvec[k] = x + h*xvec[k];
+
+    //  // Boost autodiff the first form of barycentric interpolation to compute the coefs
+    //  using boost::math::differentiation::make_fvar;
+    //  auto const derivs = bary(make_fvar<TIN,N>(0),xvec,yvec);
+    //  for(unsigned int k=0; k<N+1; k++)
+    //    m_table[ii].coefs[k] = derivs.derivative(k)/static_cast<TIN>(factorial(k));
+    //}
+
     // special case to make lut(tableMaxArg) work
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
     for (unsigned int k=1; k<N+1; k++)
       m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
 #endif
   }
+
+
+  //TOUT operator()(TIN x) const override {
+  //  unsigned int x0;
+  //  FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
+  //    x0 = static_cast<unsigned int>(m_stepSize_inv*(x-m_minArg));
+  //  else
+  //    x0 = static_cast<unsigned int>(m_transferFunction.inverse(x));
+
+  //  // general degree horners method, evaluated from the inside out.
+  //  TOUT sum = m_table[x0].coefs[N];
+  //  for(unsigned int k=N; k>0; k--){
+  //    sum *= x;
+  //    sum += m_table[x0].coefs[k-1];
+  //  }
+  //  return sum;
+  //}
 };
 
 // define friendlier names
