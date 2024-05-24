@@ -1,16 +1,3 @@
-/*
-  Cubic Interpolation LUT with precomputed polynomial coefficients
-
-  Usage example:
-    CubicHermiteTable look(&function,0,10,0.0001);
-    double val = look(0.87354);
-
-  Notes:
-  - table precomputes and stores the linear coefficient so it doesn't have to
-    perform that operation every lookup (but does have to look it up)
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-*/
 #pragma once
 #include "MetaTable.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
@@ -18,18 +5,35 @@
 
 namespace func {
 
+/** \brief A LUT using cubic splines on each subinterval
+ * \ingroup MetaTable
+ *
+ * \code{.cpp}
+ * // CubicHermiteTable requires the user's mathematical function is templated
+ * template <typename T>
+ * T foo(T x){ return x; }
+ *
+ * int main(){
+ *   double min = 0.0, max = 10.0, step = 0.0001;
+ *   UniformCubicHermiteTable<double>    L({FUNC_SET_F(foo,double)}, {min, max, step}); // uniform partition
+ *   NonUniformCubicHermiteTable<double> L({FUNC_SET_F(foo,double)}, {min, max, step}); // nonuniform partition
+ *   auto val = L(0.87354);
+ * }
+ * \endcode */
 template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class CubicHermiteTable final : public MetaTable<4,TIN,TOUT,GT>
 {
   INHERIT_META(4,TIN,TOUT,GT);
 public:
-  // build the LUT from scratch or look in filename for an existing LUT
+  CubicHermiteTable() = default;
+  CubicHermiteTable(const MetaTable<4,TIN,TOUT,GT>& L): MetaTable<4,TIN,TOUT,GT>(L) {}
+
+  // Either build the LUT from scratch or read data from json
   CubicHermiteTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<4,TIN,TOUT,GT>(func_container, par, jsonStats)
   {
 #ifndef FUNC_USE_BOOST
-    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::CubicHermiteTable: CubicHermite LUTs need Armadillo to be generated");
 #else
@@ -49,7 +53,6 @@ public:
       throw std::invalid_argument("Error in func::CubicHermiteTable: 1st derivative of given function is not provided");
 
     /* Allocate and set table */
-    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,4>[m_numTableEntries]);
     FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
@@ -82,7 +85,6 @@ public:
       }
     }
     // special case to make lut(tableMaxArg) work
-    //m_grid[m_numTableEntries-1] = m_tableMaxArg;
     m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
     for (unsigned int k=1; k<4; k++)
       m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];

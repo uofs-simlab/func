@@ -1,6 +1,13 @@
-/*
-  Linear Interpolation LUT. Coefficients are computed at lookup time.
-  Approx 50% less memory usage compared to EqSpaceInterpTable<1> but the hash involves an additional subtraction.
+#pragma once
+#include "MetaTable.hpp"
+
+namespace func {
+
+/**
+  \brief Linear Interpolation LUT where coefficients are computed when calling operator().
+  Uses approx 50% less memory than an equivalent UniformEqSpaceInterpTable<1>
+  but the hash involves an additional subtraction.
+  \ingroup MetaTable
 
   Usage example:
     LinearRawInterpTable look(&function,0,10,0.0001);
@@ -9,19 +16,21 @@
   Notes:
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
-  - Does not have a nonuniform variant and it's not obvious how to make one unless we make the operator() far slower (lookup data from m_grid?)
+  - Does not have a nonuniform variant and it's not obvious how to make
+    this LookupTable implementation nonuniform unless we make the operator()
+    far slower (basically defeating the purpose of this LUT type e.g. lookup
+    breakpoints from m_grid?)
 */
-#pragma once
-#include "MetaTable.hpp"
-
-namespace func {
-
 template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class LinearRawInterpTable final : public MetaTable<1,TIN,TOUT,GT>
 {
   INHERIT_META(1,TIN,TOUT,GT);
 public:
-  // build the LUT from scratch or look in jsonStats for an existing LUT
+  LinearRawInterpTable() = default;
+  // This LUT _must_ use a different operator() than the base class MetaTable
+  //LinearRawInterpTable(const MetaTable<N+1,TIN,TOUT,GT>& L): MetaTable<N+1,TIN,TOUT,GT>(L) {}
+
+  // Either build the LUT from scratch or read data from json
   LinearRawInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<1,TIN,TOUT,GT>(func_container, par, jsonStats)

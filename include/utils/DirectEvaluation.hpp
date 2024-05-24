@@ -76,7 +76,7 @@ public:
   //#endif
   //}
 
-  /* Evaluate the underlying std::function and optionally record the arg */
+  /** \brief Evaluate the underlying std::function and optionally record the argument x */
   TOUT operator()(TIN x) const final
   {
     #ifdef FUNC_DEBUG

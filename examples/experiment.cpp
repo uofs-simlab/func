@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  FunctionContainer<TYPE> func_container{FUNC_SET_F(MyFunction,TYPE)};
+  FunctionContainer<TYPE> func_container {FUNC_SET_F(MyFunction,TYPE)};
   LookupTableFactory<TYPE> factory;
 
   /* Check which implementations are available */
@@ -116,7 +116,10 @@ int main(int argc, char* argv[]){
     //"UniformPadeTable<4,3>",
   };
 
-  LookupTableGenerator<TYPE> gen(func_container, tableMin, tableMax);
+  //LookupTableGenerator<TYPE> gen(func_container, tableMin, tableMax);
+  LookupTableParameters<TYPE> par {tableMin, tableMax, 0.0};
+  par.special_points = {{std::exp(7.7/13.0287), 0, 0.0}};
+  LookupTableGenerator<TYPE> gen(func_container, par);
 
   impls.emplace_back(unique_ptr<LookupTable<TYPE>>(new DirectEvaluation<TYPE>(func_container,tableMin,tableMax)));
   for (auto itName : uniformNames) {

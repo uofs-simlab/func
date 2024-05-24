@@ -1,5 +1,5 @@
-/*
- * Test if FunC can build and evaluate LUT containers
+/**
+ * \file Test if FunC can build and evaluate LUT containers (FailureProofTable, and CompositeLookupTable)
  */
 
 #include "func.hpp"
@@ -44,7 +44,7 @@ int main()
   std::cout << gen.error_of_table(F) << std::endl;
   std::cout << gen.error_of_table(C) << std::endl;
 
-  // TODO
+  // TODO 
   ///* copy the above objects into unique_ptrs so we can use a LookupTableComparator */
   //std::vector<std::unique_ptr<LookupTable<TYPE>>> impls;
   //impls.emplace_back(std::unique_ptr<LookupTable<TYPE>>(new FailureProofTable<UniformEqSpaceInterpTable<3,double>,double>(F)));

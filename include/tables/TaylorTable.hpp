@@ -1,13 +1,3 @@
-/*
-  Truncated Taylor LUT of degree N
-
-  Usage example:
-    TaylorTable look(&function,0,10,0.0001);
-    double val = look(0.87354);
-  Notes:
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-*/
 #pragma once
 #include "MetaTable.hpp"
 #include "FunctionContainer.hpp"
@@ -16,18 +6,30 @@
 
 namespace func {
 
+/** \brief LUT using degree 1 to 7 truncated Taylor series 
+    \ingroup MetaTable
+
+  Usage example:
+    TaylorTable look(&function,0,10,0.0001);
+    double val = look(0.87354);
+  Notes:
+  - static data after constructor has been called
+  - evaluate by using parentheses, just like a function
+*/
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class TaylorTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
   INHERIT_META(N+1,TIN,TOUT,GT);
 public:
+  TaylorTable() = default;
+  TaylorTable(const MetaTable<N+1,TIN,TOUT,GT>& L): MetaTable<N+1,TIN,TOUT,GT>(L) {}
+
   // build the LUT from scratch or look in filename for an existing LUT
   TaylorTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<N+1,TIN,TOUT,GT>(func_container, par, jsonStats)
   {
 #ifndef FUNC_USE_BOOST
-    /* This could theoretically be a compile time error; however, that will only stop us from registering this table (which is not useful!) */
     if(jsonStats.empty())
       throw std::invalid_argument("Error in func::TaylorTable: Boost version 1.71.0 or newer is not available but FunC must use Boost's automatic differentiation to compute Taylor sums");
 #else
@@ -47,7 +49,6 @@ public:
       throw std::invalid_argument(m_name+" needs the " + std::to_string(N) + "th derivative but this is not defined");
 
     /* Allocate and set table */
-    //m_grid.reset(new TIN[m_numTableEntries]);
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
@@ -58,7 +59,6 @@ public:
         x = m_transferFunction(x);
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
-      //m_grid[ii] = x;
 
       /* Taylor expansion of f over the basis: (xh+0.5h)^k for k=0,1,...,N */
       auto const derivs = boost_fun(make_fvar<TIN,N>(x + 0.5*h));
