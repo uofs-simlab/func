@@ -1,4 +1,23 @@
-/*
+#pragma once
+#include "config.hpp" // FUNC_USE_BOOST
+#include <cmath> // sqrt
+#include <limits> // std::numeric_limits<T>::digits
+#include <array> // std::array
+#include <utility> // std::pair
+#include <type_traits>
+
+#include "FunctionContainer.hpp"
+
+#ifdef FUNC_USE_BOOST
+#define BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND
+#include <boost/math/quadrature/gauss_kronrod.hpp> // gauss_kronrod::integrate
+#include <boost/math/tools/roots.hpp> // newton_raphson_iterate
+#endif
+
+namespace func {
+
+
+/**
   A TransferFunction transforms a uniformly spaced partition of $[a,b]$ into a nonuniform partition of $[a,b]$.
   For efficiency, we require a Transfer function is simply an increasing cubic polynomial such that p(a)=0, p(b)=b/stepSize.
   To help compete against uniform lookup tables, part of the operator() must be baked into those coefficients (hence the appearance of stepsize).
@@ -33,25 +52,6 @@ Notes:
     p(a) = a, p(b) = b, and a_2^2 < 3a_1a_3.
   That would be a much better general purpose solution.
  */
-
-#pragma once
-#include "config.hpp" // FUNC_USE_BOOST
-#include <cmath> // sqrt
-#include <limits> // std::numeric_limits<T>::digits
-#include <array> // std::array
-#include <utility> // std::pair
-#include <type_traits>
-
-#include "FunctionContainer.hpp"
-
-#ifdef FUNC_USE_BOOST
-#define BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND
-#include <boost/math/quadrature/gauss_kronrod.hpp> // gauss_kronrod::integrate
-#include <boost/math/tools/roots.hpp> // newton_raphson_iterate
-#endif
-
-namespace func {
-
 template <typename TIN>
 class TransferFunction
 {

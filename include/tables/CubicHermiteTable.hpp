@@ -1,16 +1,3 @@
-/*
-  Cubic Interpolation LUT with precomputed polynomial coefficients
-
-  Usage example:
-    CubicHermiteTable look(&function,0,10,0.0001);
-    double val = look(0.87354);
-
-  Notes:
-  - table precomputes and stores the linear coefficient so it doesn't have to
-    perform that operation every lookup (but does have to look it up)
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-*/
 #pragma once
 #include "MetaTable.hpp"
 #include "config.hpp" // FUNC_USE_BOOST
@@ -18,6 +5,21 @@
 
 namespace func {
 
+/** \brief A LUT using cubic splines on each subinterval
+ * \ingroup MetaTable
+ *
+ * \code{.cpp}
+ * // CubicHermiteTable requires the user's mathematical function is templated
+ * template <typename T>
+ * T foo(T x){ return x; }
+ *
+ * int main(){
+ *   double min = 0.0, max = 10.0, step = 0.0001;
+ *   UniformCubicHermiteTable<double>    L({FUNC_SET_F(foo,double)}, {min, max, step}); // uniform partition
+ *   NonUniformCubicHermiteTable<double> L({FUNC_SET_F(foo,double)}, {min, max, step}); // nonuniform partition
+ *   auto val = L(0.87354);
+ * }
+ * \endcode */
 template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class CubicHermiteTable final : public MetaTable<4,TIN,TOUT,GT>
 {
@@ -26,7 +28,7 @@ public:
   CubicHermiteTable() = default;
   CubicHermiteTable(const MetaTable<4,TIN,TOUT,GT>& L): MetaTable<4,TIN,TOUT,GT>(L) {}
 
-  // build the LUT from scratch or look in filename for an existing LUT
+  // Either build the LUT from scratch or read data from json
   CubicHermiteTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<4,TIN,TOUT,GT>(func_container, par, jsonStats)

@@ -1,25 +1,3 @@
-/* 1st to 7th degree polynomial interpolation LUT over Chebyshev nodes (precomputed coefficients)
- *  t_s = (a+b)/2 + (b-a)\cos(\frac{2s-1}{2n}\pi)/2, \quad s=1,\dotsc,n.
- *
- * Usage example for a 4th degree interpolant:
- *   ChebyInterpTable<double,double,4> look(&function,LookupTableParameters<double>{0,10,0.0001});
- *   double val = look(0.87354);
- *
- *  Notes:
-  - This class only works if TOUT and TIN can both be cast to double. 
-    Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
-    with float or double (not even long double!) and arma::field is useless.
-    TODO use a symbolic linear algebra library instead...
-
-  - the template implementation is only registered for N=1,2,3,4,5,6,7
-    but users can manually construct this class with larger N
-
-    TODO
-    - take a continuity parameter (use 2 nodes for C0, clamped spline for C1)
-    - replace nearest points with user-provided roots of the function
- */
-
-
 #pragma once
 #include "MetaTable.hpp"
 #include "config.hpp"
@@ -32,55 +10,48 @@
 
 namespace func {
 
-
+/** \brief LUT using degree 1 to 7 polynomial interpolation over Chebyshev nodes on each subinterval (all coefficients are precomputed)
+ *  \ingroup MetaTable
+ *
+ *  \f[ t_s = (a+b)/2 + (b-a)\cos(\frac{2s-1}{2n}\pi)/2, \quad s=1,\dotsc,n. \f]
+ *
+ * \code{.cpp}
+ * // ChebyInterpTable does not require Boost's autodiff? TODO it might in the future?
+ * template <typename T>
+ * T foo(T x){ return x; }
+ *
+ * int main(){
+ *   auto min = 0.0; auto max = 10.0; auto step = 0.0001;
+ *   UniformChebyInterpTable<1,double> L1({FUNC_SET_F(foo,double)}, {min, max, step}); // degree 1
+ *   UniformChebyInterpTable<2,double> L2({FUNC_SET_F(foo,double)}, {min, max, step}); // degree 2
+ *   UniformChebyInterpTable<3,double> L3({FUNC_SET_F(foo,double)}, {min, max, step});
+ *   UniformChebyInterpTable<4,double> L4({FUNC_SET_F(foo,double)}, {min, max, step});
+ *   UniformChebyInterpTable<5,double> L5({FUNC_SET_F(foo,double)}, {min, max, step});
+ *   UniformChebyInterpTable<6,double> L6({FUNC_SET_F(foo,double)}, {min, max, step});
+ *   UniformChebyInterpTable<7,double> L7({FUNC_SET_F(foo,double)}, {min, max, step});
+ *   double val = look(0.87354);
+ * }
+ * \endcode
+ *
+ *
+ * \note
+ * - This is currently the only LookupTableImplementation using the
+ *   special_points field in LookupTableParameters. special_points is a vector of 3-tuples:
+ *   {(x_1,s_1,f^{(s_1)}(x_1)),...,(x_n,s_n,f^{(s_n)}(x_n))}.
+ *   n Cheby nodes are replaced with the nearest nodes {x_k} in this list, and
+ *   f (or its derivate) is exact at those nodes. Doing this can drastically
+ *   reduce the relative error in f and/or its derivatives. Surely the error in
+ *   the resulting LUT is somehow related to the Chebyshev polynomial of the 1st kind.
+ * - ChebyTable only works if we can cast both TOUT and TIN to double. This requirement
+ *   exists because Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
+ *   with float or double (not even long double!). You might think "generic types
+ *   is what arma::field" is made for but that class does nothing.
+ * - the template implementation is only registered for N=1,2,3,4,5,6,7
+ *   but users can manually construct this class with larger N if they wish (but we make no promises on convergence/error).
+ */
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class ChebyInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
-  // evaluate a polynomial with the first barycentric form of the interpolating polynomial
-  // because evaluting that form is backward stable (but maayyyyybe scale invariance is nice to have?)
-  template <typename AD_TIN, typename AD_TOUT = AD_TIN>
-  AD_TOUT bary(AD_TIN x, std::array<TIN,N+1> xvec, std::array<TOUT,N+1> yvec){
-    // TODO double check this is the best way to autodiff the conditional...
-    // return (sum_k w[k]/(x-xvec[k])*yvec[k]) / (sum_k w[k]/(x-xvec[k]))
-    //AD_TOUT num = 0; AD_TIN den = 0;
-    //for(unsigned int j = 0; j < N+1; j++){
-    //  // check for _exact_ equality of a node
-    //  if (x == xvec[j]) return yvec[j];
-    //  
-    //  // compute the weight wj
-    //  TIN wj = 1.0;
-    //  for(unsigned int k = 0; k < N+1; k++)
-    //    if (j != k) wj *= xvec[j] - xvec[k];
-    //  num += yvec[j] / wj / (x-xvec[j]);
-    //  den += static_cast<TIN>(1.0) / wj / (x-xvec[j]);
-    //}
-    //return num/den;
-
-    //AD_TOUT sum = 0; AD_TIN lx = 1;
-    //for(unsigned int j = 0; j < N+1; j++){
-    //  // check for _exact_ equality of a node
-    //  if (x == xvec[j]) return yvec[j];
-    //  
-    //  // compute the weight wj
-    //  TIN wj = 1.0;
-    //  for(unsigned int k = 0; k < N+1; k++)
-    //    if (j != k) wj *= xvec[j] - xvec[k];
-    //  lx *= x - xvec[j];
-    //  sum += yvec[j] / wj / (x-xvec[j]);
-    //}
-    //return lx*sum;
-    
-    AD_TOUT sum = 0;
-    for(unsigned int j = 0; j < N+1; j++){
-      AD_TIN ljx = 1.0;
-      for(unsigned int k = 0; k < N+1; k++){
-        if (j != k) { ljx *= (x - xvec[k]) / (xvec[j] - xvec[k]); }
-      }
-      sum += yvec[j]*ljx;
-    }
-    return sum;
-  }
-
   INHERIT_META(N+1,TIN,TOUT,GT);
 public:
   ChebyInterpTable() = default;
@@ -107,21 +78,26 @@ public:
     if(fun == nullptr)
       throw std::invalid_argument("Error in func::ChebyInterpTable: Given an invalid FunctionContainer");
 
-    /* Thoughts:
-     * - Vandermonde system for cheby nodes over [0,1] has condition number about 1000 times larger than [-1,1]
-     *   but we don't do that because the formula we currently use for shifting polynomials is too poorly conditioned.
-     * - Using inv here produces objectively worse results! however, Armadillo (and every other high performance
-     *   linear algebra library Shawn has looked into) does not have a solver for general vector spaces.
-     *   That is, most libraries cannot solve Ax=b where the entries of A are not float or double and the entries of
-     *   b aren't the same type as the entries of A.
-     * - Directly solve the system when using a type supported by armadillo */
-    arma::mat Van = arma::ones(N+1, N+1);
-    Van.col(1) = arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1)));
+    // build the default Vandermonde matrix (make this a function?)
+    arma::mat Van = arma::ones(N+1,N+1);
+    Van.col(1) = (1 + arma::cos( arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1) / (2*(N+1)) ))/2.0;
     for(unsigned int i=2; i<N+1; i++)
-      Van.col(i) = Van.col(i-1) % Van.col(1); // the % does elementwise multiplication
+      Van.col(i) = Van.col(i-1) % Van.col(1); // % does elementwise multiplication
 
-    FUNC_IF_CONSTEXPR(!std::is_floating_point<TOUT>::value)
-      Van = arma::inv(Van);
+    /* special_points is a vector of 3-tuples:
+     * {(x_1,s_1,f^{(s_1)}(x_1)),...,(x_n,s_n,f^{(s_n)}(x_n))}. Organize points in a dictionary
+     * where each key (unsigned int) is the subinterval that point belongs to */
+    std::map<unsigned,std::vector<std::tuple<TIN,unsigned,TOUT>>> d_intervals;
+    for (std::tuple<TIN,unsigned,TOUT> tup : par.special_points){
+      if(std::get<1>(tup) > N){
+        std::cerr << "Warning: Given f^{(" << std::get<1>(tup) << ")}(" << std::get<0>(tup) <<
+          ") = " << std::get<2>(tup) << " but a ChebyTable<" << N << ">" <<
+          " can only accommodate derivatives of order at most " << N+1 << ".";
+        continue;
+      }
+      unsigned int x0 = MetaTable<N+1,TIN,TOUT,GT>::template hash<GT>(std::get<0>(tup)).first;
+      d_intervals[x0].emplace_back(tup);
+    }
 
     /* Allocate and set table */
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
@@ -137,90 +113,72 @@ public:
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
 
-      // build the vector of coefficients from function values
-      auto a = static_cast<double>(x);
-      auto b = static_cast<double>(x+h);
-      arma::vec xvec = (a+b)/2 + (b-a)*arma::cos(arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)))/2;
+      // Chebyshev nodes over [x,x+h]:
+      arma::vec xvec = x + h*(1 + arma::cos( arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)) ))/2.0;
+      // y will contain our desired coefficients after the following if statement
+      arma::vec y(N+1);
 
-      // might have to find nearest point & make a custom vandermonde system
-      // for this subinterval to minimize relative error quickly. Spacing will
-      // be roughly Chebyshev, and error bounds should still apply roughly
-
-      FUNC_IF_CONSTEXPR(std::is_floating_point<TOUT>::value){
-        arma::vec y(N+1);
+      /* check if this subinterval contain any points the user wants _exact_ */
+      auto iter = d_intervals.find(ii);
+      if(iter == d_intervals.end()){
         for (unsigned int k=0; k<N+1; k++)
           y[k] = fun(static_cast<TIN>(xvec[k]));
-
-        // preconditioning and iterative refinement rarely makes a difference for Vandermonde matrices over Cheby nodes
-        y = arma::solve(Van, y);
-        for(unsigned int k=0; k<N+1; k++)
-          m_table[ii].coefs[k] = y[k];
+        y = arma::solve(Van,y); /* solve_opts strictly waste time with cheby nodes */
       }else{
-        // This method of evaluating the inverse is not great for large n. It might not be worth supporting. :/
-        // throw std::invalid_argument("Error in func::ChebyInterpTable: Cannot build a Cheby table with given TOUT");
-        std::vector<TOUT> y(N+1);
-        for (unsigned int k=0; k<N+1; k++)
-          y[k] = fun(static_cast<TIN>(xvec[k]));
-
-        for(unsigned int k=0; k<N+1; k++){
-          m_table[ii].coefs[k] = static_cast<TIN>(Van(k,0))*y[0];
-          for(unsigned int s=1; s<N+1; s++){
-            m_table[ii].coefs[k] += static_cast<TIN>(Van(k,s))*y[s];
-          }
+        /* replace each nearest chebyshev node in this interval with the user's nodes.*/
+        arma::vec  xvec2 = xvec;
+        arma::Col<unsigned> svec(N+1);
+        for(unsigned int k=0; k < std::min(N+1,static_cast<unsigned>(iter->second.size())); k++){
+          auto tup = iter->second[k];
+          TIN t_k = std::get<0>(tup);
+          svec[k] = std::get<1>(tup);
+          arma::uword i = arma::index_min(abs(xvec2 - t_k));
+          xvec(i) = t_k;
+          y[i] = std::get<2>(tup);
+          xvec2[i] = std::numeric_limits<TIN>::quiet_NaN();
         }
+
+        /* compute f(x) for every point that wasn't provided */
+        for(unsigned int k=0; k<N+1; k++){
+          if(!std::isnan(xvec2[k]))
+            y[k] = fun(static_cast<TIN>(xvec2[k]));
+        }
+
+        arma::mat Van2 = arma::ones(N+1,N+1);
+        Van2.col(1) = (xvec-x)/h;
+        for(unsigned int i=2; i<N+1; i++)
+          Van2.col(i) = Van2.col(i-1) % Van2.col(1);
+
+        /* differentiate rows of Van2. This row will not be entirely 0 because N+1>s */
+        for(unsigned int k=0; k<N+1; k++){
+          auto s = svec[k];
+          if(s == 0) continue;
+
+          arma::vec D(N+1, arma::fill::zeros);
+          for(unsigned int r=0; r<N+1-s; r++)
+            D[r] = permutation(s+r,s);
+          Van2.row(k) = D % Van2.row(k);
+        }
+
+        /* reorder so the data is in increasing order to improve the conditioning of V */
+        arma::uvec idxvec = arma::sort_index(xvec, "ascend");
+        //xvec = xvec(idxvec);
+        y = y(idxvec);
+        Van2 = Van2.rows(idxvec);
+
+        /* TODO solve_opts? Any good ones for a very poorly conditioned matrix? */
+        y = arma::solve(Van2,y);
       }
 
-      auto p = m_table[ii];
       for(unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = polynomial_diff(p,-0.5,k)*static_cast<TIN>(pow(2,k))/static_cast<TIN>(factorial(k));
+        m_table[ii].coefs[k] = y[k];
 
-      /* TODO This formula is too unstable for this table type as given in this form when N>2 and h is small. */
       FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
         auto p = m_table[ii];
-        for(unsigned int s=0; s<N+1; s++){
+        for(unsigned int s=0; s<N+1; s++)
           m_table[ii].coefs[s] = polynomial_diff(p,-x/h,s)/static_cast<TIN>(pow(h,s))/static_cast<TIN>(factorial(s));
-
-          //TOUT sum = static_cast<TOUT>(0);
-          //for(unsigned int k=N+1; k>s; k--)
-          //  sum = p.coefs[k-1]*boost::math::binomial_coefficient<double>(k-1, s) - sum*x/h;
-          //m_table[ii].coefs[s] = sum/pow(h,s);
-          }
-        }
+      }
     }
-
-    ///* Allocate and set table */
-    //m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
-    //FUNC_BUILDPAR
-    //for(unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
-    //  TIN x;
-    //  TIN h = m_stepSize;
-    //  // (possibly) transform the uniform grid into a nonuniform grid
-    //  FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
-    //    x = m_minArg + ii*m_stepSize;
-    //  else{
-    //    x = m_transferFunction(m_minArg + ii*m_stepSize);
-    //    h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
-    //  }
-
-    //  // TODO swap out these points to preserve properties of f
-    //  std::array<TIN,N+1> xvec;
-    //  for (unsigned int k=0; k<N+1; k++)
-    //    xvec[k] = 1/2.0 + std::cos(boost::math::constants::pi<TIN>()*(2*(k+1)-1) / (2.0*(N+1)) )/2.0;
-
-    //  std::array<TOUT,N+1> yvec;
-    //  for (unsigned int k=0; k<N+1; k++)
-    //    yvec[k] = fun(x + h*xvec[k]);
-
-    //  FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM)
-    //    for (unsigned int k=0; k<N+1; k++)
-    //      xvec[k] = x + h*xvec[k];
-
-    //  // Boost autodiff the first form of barycentric interpolation to compute the coefs
-    //  using boost::math::differentiation::make_fvar;
-    //  auto const derivs = bary(make_fvar<TIN,N>(0),xvec,yvec);
-    //  for(unsigned int k=0; k<N+1; k++)
-    //    m_table[ii].coefs[k] = derivs.derivative(k)/static_cast<TIN>(factorial(k));
-    //}
 
     // special case to make lut(tableMaxArg) work
     m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
@@ -228,23 +186,6 @@ public:
       m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
 #endif
   }
-
-
-  //TOUT operator()(TIN x) const override {
-  //  unsigned int x0;
-  //  FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
-  //    x0 = static_cast<unsigned int>(m_stepSize_inv*(x-m_minArg));
-  //  else
-  //    x0 = static_cast<unsigned int>(m_transferFunction.inverse(x));
-
-  //  // general degree horners method, evaluated from the inside out.
-  //  TOUT sum = m_table[x0].coefs[N];
-  //  for(unsigned int k=N; k>0; k--){
-  //    sum *= x;
-  //    sum += m_table[x0].coefs[k-1];
-  //  }
-  //  return sum;
-  //}
 };
 
 // define friendlier names

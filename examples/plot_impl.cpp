@@ -4,7 +4,7 @@
 
 void print_usage(){
   std::cout << "Usage:\n"
-    << "    ./experiment <tableKey> <tableMin> <tableMax> <tableStep>"
+    << "    ./experiment <tableKey> <tableMin> <tableMax> <tableStep> <plotRefinement>"
     << std::endl;
   std::cout << "Acceptable values of tableKey are any of the following:"
     << std::endl;
@@ -19,11 +19,10 @@ void print_usage(){
 }
 
 /*
-  Simple program that uses the LookupTableGenerator class to
-  print x y values to std::cout
+  Use LookupTableGenerator to print x y values to std::cout
 */
 int main(int argc, char* argv[]){
-  if(argc != 5){
+  if(argc != 5 && argc != 6){
     print_usage();
     exit(1);
   }
@@ -32,8 +31,15 @@ int main(int argc, char* argv[]){
   double tableMin  = std::stod(argv[2]);
   double tableMax  = std::stod(argv[3]);
   double tableStep = std::stod(argv[4]);
+  double plotRefinement; // how many points sampled per subinterval
+  if (argc == 6)
+    plotRefinement = std::stod(argv[5]);
+  else
+    plotRefinement = 100;
 
   func::FunctionContainer<double> func_container{FUNC_SET_F(MyFunction,double)};
-  func::LookupTableGenerator<double> gen(func_container,tableMin,tableMax);
-  gen.plot_implementation_at_step_size(tableKey,tableStep);
+  func::LookupTableParameters<double> par {tableMin, tableMax, 0.0};
+  par.special_points = {{std::exp(7.7/13.0287), 0, 0.0}};
+  func::LookupTableGenerator<double> gen(func_container, par);
+  gen.plot_implementation_at_step_size(tableKey, tableStep, plotRefinement);
 }

@@ -7,16 +7,24 @@ set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build,
 
 project(
   FunC
-  VERSION 2.0
+  VERSION 2.1
   DESCRIPTION "Build better lookup tables"
   LANGUAGES CXX)
 
+
+include(CheckCXXCompilerFlag)
+unset(FUNC_USE_CXX17 CACHE)
+CHECK_CXX_COMPILER_FLAG(-std=c++17 FUNC_USE_CXX17)
+
+if(FUNC_USE_CXX17)
 set(CMAKE_CXX_STANDARD 17)
+else()
+set(CMAKE_CXX_STANDARD 14)
+endif()
 
 macro(print_variable var)
   message(STATUS "${var}: ${${var}}")
 endmacro()
-
 
 # cmake will look in our cmake directory for FindXXX.cmake files
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
@@ -25,15 +33,14 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 option(FUNC_USE_BOOST "Use Boost library" ON)
 set(MIN_BOOST_VERSION 1.71.0)
 # TODO the following line may cause the build to fail if Boost doesn't exist on the user's computer.
-# CMake's provided FindBoost should be the problem?
+# It seems like CMake's FindBoost is the problem?
 find_package(Boost ${MIN_BOOST_VERSION})
 
 if(FUNC_USE_BOOST)
   if(Boost_FOUND AND NOT (Boost_VERSION VERSION_LESS ${MIN_BOOST_VERSION}))
     message(STATUS "Found boost incl: ${Boost_INCLUDE_DIR}")
   else()
-    set(FUNC_USE_BOOST OFF)
-    message(WARNING "CMake either could not find Boost or Boost was found with version less than 1.71.0. FunC can still read LUT data from an existing json file, but table generation is severly limited. A newer version of Boost is recommended. Silence this warning by setting -DUSE_BOOST=OFF")
+    message(FATAL_ERROR "CMake either could not find Boost or Boost was found with version less than 1.71.0. Without Boost, FunC can't generate most LUT types unless they are read from an existing JSON file. Further, FunC cannot compute a LUT's error without Boost. To use FunC without Boost, run CMake with the option: -DFUNC_USE_BOOST=OFF")
   endif()
 else()
   message(STATUS "Not using Boost")
@@ -49,8 +56,7 @@ if(FUNC_USE_ARMADILLO)
     message(STATUS "Armadillo includes: ${ARMADILLO_INCLUDE_DIRS}")
     message(STATUS "Armadillo libs to link: ${ARMADILLO_LIBRARIES}")
   else()
-    set(FUNC_USE_ARMADILLO OFF)
-    message(WARNING "Armadillo was not found. You can read higher order tables or Pade tables from existing json files, but these table types cannot be generated. If you wish to generate higher order tables or pade tables then reconfigure with Armadillo installed. Silence this warning by setting -DUSE_ARMADILLO=OFF")
+    message(FATAL_ERROR "Armadillo was not found. Without Armadillo, FunC cannot generate ChebyInterpTables or PadeTable unless they are read from an existing JSON file. To use FunC without Armadillo, run CMake with the option: -DFUNC_USE_ARMADILLO=OFF")
   endif()
 else()
   message(STATUS "Not using Armadillo")
@@ -59,11 +65,15 @@ endif()
 option(FUNC_USE_OPENMP "Use OpenMP" ON)
 find_package(OpenMP)
 
-if(OpenMP_FOUND)
-  message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
-  set(OPENMP_CXX_LIBRARIES OpenMP::OpenMP_CXX)
+if(FUNC_USE_OPENMP)
+  if(OpenMP_FOUND)
+    message(STATUS "OpenMP lib to incl: ${OpenMP_CXX_LIBRARIES}")
+    set(OPENMP_CXX_LIBRARIES OpenMP::OpenMP_CXX)
+  else()
+    message(FATAL_ERROR "OpenMP was not found. Without OpenMP, FunC cannot parallelize the processes of building a LUT or checking its error. To use FunC without OpenMP, run CMake with the option: -DFUNC_USE_OPENMP=OFF")
+  endif()
 else()
-  option(FUNC_USE_OPENMP OFF)
+  message(STATUS "Not using OpenMP")
 endif()
 
 # Any conversions from json type should be done explicitly

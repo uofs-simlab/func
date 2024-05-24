@@ -1,6 +1,22 @@
-/*
-  LUT using [M/N] pade approximants with uniform sampling. Polynomial coefficients are calculated using
-  Armadillo.
+#pragma once
+#include "MetaTable.hpp"
+#include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO
+#include <stdexcept>
+#include <cmath> //isinfite
+
+#ifdef FUNC_USE_ARMADILLO
+#include <armadillo>
+#endif
+
+namespace func {
+
+static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
+
+/**
+  \brief LUT using [M/N] pade approximants with uniform sampling.
+  \ingroup MetaTable
+  
+  Polynomial coefficients are calculated using Armadillo.
 
   Usage example using [4/3] approximants:
     PadeTable<4,3> look(&function,0,10,0.0001);
@@ -21,20 +37,6 @@
   - Template values where M < N are not supported
   - Requires both Armadillo and Boost version 1.71.0 or newer to generate
 */
-#pragma once
-#include "MetaTable.hpp"
-#include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO
-#include <stdexcept>
-#include <cmath> //isinfite
-
-#ifdef FUNC_USE_ARMADILLO
-#include <armadillo>
-#endif
-
-namespace func {
-
-static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
-
 template <unsigned int M, unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class PadeTable final : public MetaTable<M+N+1,TIN,TOUT,GT>
 {
