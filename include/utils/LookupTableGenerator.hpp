@@ -36,8 +36,11 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
   if(min >= max) throw std::invalid_argument("func::LookupTableGenerator: bisect arguments in wrong order");
   else if(fmin * fmax >= 0) throw std::invalid_argument("func::LookupTableGenerator: function values do not alternate in sign");
   
-  unsigned int unpredictability = 0;
-  std::string warning_message = "Warning in func::LookupTableGenerator: Difficult to predict behaviour of requested LUT. FunC is unlikely to find the maximum step size satisfying the given tolerances. To silence this warning, build your LUT by step if one is found. Unpredictability = ";
+  // TODO warning is not helpful. Also, we need to account for how
+  // unpredictable any LUT's error is for early iterations. Maybe
+  // increment with something like: unpredictability = 1+0.5*unpredictability?
+  //unsigned int unpredictability = 0;
+  //std::string warning_message = "Warning in func::LookupTableGenerator: Difficult to predict behaviour of requested LUT. FunC is unlikely to find the maximum step size satisfying the given tolerances. To silence this warning, build your LUT by step if one is found. Unpredictability = ";
 
   /* bisection iteration */
   boost::uintmax_t count = max_iter;
@@ -50,15 +53,16 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
       min = max = mid;
       break;
     }else if (fmax < fmid){
+      // decreasing the step size did not decrease the error. Keep
+      // trying to decrease the step size anyways and hope for the best...
       max = mid;
-      unpredictability++;
+      //unpredictability++;
       //std::cerr << mid << "," << fmid << std::endl;
     }else if (boost::math::sign(fmid) * boost::math::sign(fmin) < 0){
       max = mid;
     }else{
       /* We have officially bracketed the root. Now finish with toms748 */
-      if(unpredictability > 4) std::cerr << warning_message << unpredictability << ".\n";
-      // TODO I think this message doesn't work if the LUTs are too good
+      //if(unpredictability > 4) std::cerr << warning_message << unpredictability << ".\n";
       max_iter -= count; // max_iter = number of iterations of bisection
       auto r = boost::math::tools::toms748_solve(f, mid, max, fmid, fmax, tol, count);
       max_iter += count; // add the number of iterations in toms748
@@ -112,7 +116,7 @@ class LookupTableGenerator
 private:
   FunctionContainer<TIN,TOUT> m_fc;
   LookupTableParameters<TIN> m_par;
-  TIN m_min, m_max; // min/max member variables are convenient but they should be removed in favour of m_par...
+  TIN m_min, m_max; // TODO min/max member variables are convenient but this data is already in m_par...
 
   LookupTableFactory<TIN,TOUT> factory;
 
@@ -133,6 +137,7 @@ private:
 
     std::ofstream out_file(filename);
     lut->print_json(out_file);
+    out_file.close();
     return;
   }
 
@@ -153,7 +158,8 @@ public:
       throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_file: filename is not a valid json file.");
 
     nlohmann::json jsonStats;
-    std::ifstream(filename) >> jsonStats;
+    std::ifstream ifs(filename); ifs >> jsonStats; ifs.close();
+    
     // get the tableKey from filename
     if(tableKey == ""){
       tableKey = jsonStats["name"].get<std::string>();
@@ -264,8 +270,10 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_subintervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->bounds_of_subinterval(ii);
-      /* TODO does this restrict the possible values of TIN?
-       * Is it possible for x or xtop to be rounded outside the LUT's domain after casting to TERR? */
+      /* TODO 
+       * - does float_next and float_prior restrict the possible values of TIN?
+       *   I think they might be the result of an old misdiagnosis
+       * - Is it possible for x or xtop to be rounded outside the LUT's domain after casting to TERR? */
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
 
