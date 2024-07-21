@@ -32,7 +32,7 @@ T f3(T x){
 using namespace func;
 
 int main(){
-  auto LUT = func::UniformEqSpaceInterpTable<3,TYPE>({f<TYPE>},{MIN,MAX,STEP});
+  auto LUT = func::UniformExactInterpTable<3,TYPE>({f<TYPE>},{MIN,MAX,STEP});
 
   //for(unsigned int i=0; i<=N; i++){
   //  auto x = MIN + (MAX-MIN)*i/N;
