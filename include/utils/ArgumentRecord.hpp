@@ -1,7 +1,6 @@
-/* TODO USE BOOST HISTOGRAM INSTEAD
- *
- *
- *
+/* TODO Look into using boost histogram? (would add an additional
+ * dependency)
+
   Helper class which acts as an extension to any existing
   EvaluationImplementation. Wraps a vector of unsigned
   int which acts as a histogram for recording the
@@ -91,6 +90,8 @@ class ArgumentRecord
   std::vector<FuncMutex>    mv_histogram_mutex;
   unsigned int              m_histSize;
 
+  std::ostream* mp_streamer;
+
   // Set table bounds. Can be altered to result in nicer output
   TIN m_minArg;
   TIN m_maxArg;
@@ -108,12 +109,13 @@ class ArgumentRecord
   TIN m_min_recorded;
 
   public:
-    ArgumentRecord(TIN min, TIN max, unsigned int histSize) :
-      m_minArg(min), m_maxArg(max), m_histSize(histSize)
+    ArgumentRecord(TIN min, TIN max, unsigned int histSize, std::ostream* streamer) :
+      m_minArg(min), m_maxArg(max), m_histSize(histSize), mp_streamer(streamer)
     {
-      /* variables needed for recording function arguments.
-         Init the entire histogram to 0 for easy incrementing */
+      /* Variables needed for recording function arguments.
+       * Init the entire histogram to 0 & increment later */
       mv_histogram = std::vector<unsigned int>(histSize, 0);
+      // make a mutex for each bucket in the histogram
       mv_histogram_mutex = std::vector<FuncMutex>(histSize);
 
       // naive initial member arg values
@@ -123,12 +125,9 @@ class ArgumentRecord
       m_min_recorded = std::numeric_limits<TIN>::max();
     }
 
-#ifdef FUNC_DEBUG
     /* make the specific stream printed to depend on a printing function */
-    ~ArgumentRecord(){ std::cerr << *this;}
-#else
-    ~ArgumentRecord(){}
-#endif
+    //std::cerr << *this;
+    ~ArgumentRecord(){ if(mp_streamer != nullptr) *mp_streamer << *this; }
 
     /* Rebuild our argument record
        Note: Assuming the encapsulating LookupTable gave us a valid json object */
@@ -140,7 +139,7 @@ class ArgumentRecord
       m_histSize = jsonStats["ArgumentRecord"]["histogramSize"].get<unsigned int>();
       for(unsigned int i=0; i<m_histSize; i++)
         mv_histogram[i] = jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)].get<unsigned int>();
-      // rebuild the histogram's thread safety
+      // reconstruct each of the histogram's mutexes
       mv_histogram_mutex = std::vector<FuncMutex>(m_histSize);
 
       m_peak_index   = jsonStats["ArgumentRecord"]["peak_index"].get<unsigned int>();
@@ -189,6 +188,7 @@ class ArgumentRecord
 
       // record more statistics here
     }
+
 
     /* std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from this SO post
      * https://stackoverflow.com/questions/16605967/set-precision-of-stdto-string-when-converting-floating-point-values
@@ -250,6 +250,7 @@ class ArgumentRecord
 
   TIN min_arg() const { return m_minArg; }
   TIN max_arg() const { return m_maxArg; }
+
   /* TODO use a standard algorithm */
   unsigned int total_recorded() const {
     unsigned int t = 0;
@@ -287,8 +288,8 @@ std::ostream& operator<<(std::ostream& out, const ArgumentRecord<TIN>& arg_recor
   out << "Recorded args were sampled the most often from the subinterval "
       << arg_record.ith_interval(arg_record.index_of_peak()) << " with " << arg_record.peak() << " evaluations ("
       << 100.0*arg_record.peak()/static_cast<double>(complete_total) << "% of the total evaluations).\n";
-  /* iostream rounds to like 6 digits by default but the rounding can make the min/max args too large/small 
-   * which is annoying so we'll just print every digit of the output and let users round on their own */
+  /* iostream rounds to like 6 digits by default but the rounding doesn't ensure the interval is large enough
+   * (which is horrible). We print every digit of the output and let users round on their own */
   out << "The largest argument recorded was x=" << arg_record.to_string_with_precision(arg_record.max_recorded()) << "\n";
   out << "The lowest argument recorded was x=" << arg_record.to_string_with_precision(arg_record.min_recorded()) << std::endl;
   return out;

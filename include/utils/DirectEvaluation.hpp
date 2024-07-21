@@ -24,7 +24,7 @@
 #include "json.hpp"
 #include "StdRng.hpp"
 
-#include <fstream> //ifstream
+#include <fstream> // ifstream, ostream
 
 #ifdef FUNC_DEBUG
   #include "ArgumentRecord.hpp"
@@ -39,8 +39,6 @@ class DirectEvaluation final : public LookupTable<TIN,TOUT>
 #ifdef FUNC_DEBUG
   mutable std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
   mutable StdRng<TIN> m_sampler{0,1}; // uniformly distrubuted random numbers in [0,1]
-  bool print_on_destruct = false;
-  std::ostream streamer = std::cout;
   // TODO save/load error to json?
   TIN  m_rerr;
   TOUT m_aerr;
@@ -49,19 +47,19 @@ public:
 
   /* Setup argument recording if FUNC_DEBUG is defined used at compile time */
   DirectEvaluation(const FunctionContainer<TIN,TOUT>& func_container,
-      TIN min = 0.0, TIN max = 1.0, unsigned int histSize = 10, TOUT aerr = 0.0, TIN rerr = 0.0) :
+      TIN min = 0.0, TIN max = 1.0, unsigned int histSize = 10, TOUT aerr = 0.0, TIN rerr = 0.0, std::ostream* streamer = nullptr) :
     m_func(func_container.standard_fun)
   {
     if(m_func == nullptr)
       throw std::invalid_argument("Error in func::DirectEvaluation: given a FunctionContainer with null function.");
 
     #ifdef FUNC_DEBUG
-      mp_recorder = std::unique_ptr<ArgumentRecord<TIN>>(new ArgumentRecord<TIN>(min, max, histSize));
+      mp_recorder = std::unique_ptr<ArgumentRecord<TIN>>(new ArgumentRecord<TIN>(min, max, histSize,streamer));
       m_rerr = rerr;
       m_aerr = aerr;
     #endif
     /* ignore debugging args if -DFUNC_DEBUG isn't specified */
-    (void) min; (void) max; (void) histSize; (void) rerr; (void) aerr;
+    (void) min; (void) max; (void) histSize; (void) rerr; (void) aerr; (void) streamer;
   }
 
   /* rebuild this class and it's arg record from a file */
@@ -95,35 +93,14 @@ public:
   TIN step_size() const final { return static_cast<TIN>(0); };
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final { (void) intervalNumber; return std::make_pair(min_arg(),max_arg()); };
 
-  /* TODO make to_json() */
   void print_json(std::ostream& out) const final {
-    out << name() << "\n";
+    (void) out;
     #ifdef FUNC_DEBUG
-      //out << mp_recorder->print_json(out);
+    out << mp_recorder->print_json(out);
     #endif
   }
 
-  void print_hist(std::ostream& out) const {
-    (void) out;
-#ifdef FUNC_DEBUG
-    out << *mp_recorder;
-#endif
-  }
-
-  void set_destructor_print(std::ostream& out){
-    (void) out;
-#ifdef FUNC_DEBUG
-    print_on_destruct = true;
-    streamer = out;
-#endif
-    return;
-  }
-
-  ~DirectEvaluation(){
-#ifdef FUNC_DEBUG
-    if(print_on_destruct) streamer << *this;
-#endif
-  };
+  ~DirectEvaluation(){};
 };
 
 template <typename TIN, typename TOUT = TIN>
