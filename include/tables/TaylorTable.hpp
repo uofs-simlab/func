@@ -52,34 +52,31 @@ public:
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
     for (unsigned int ii=0; ii<m_numTableEntries-1; ++ii) {
-      auto x = m_minArg + ii*m_stepSize;
-      auto h = m_stepSize;
+      TIN x = m_minArg + ii*m_stepSize;
+      TIN h = m_stepSize;
       // (possibly) transform the uniform grid into a nonuniform grid
       FUNC_IF_CONSTEXPR(GT != GridTypes::UNIFORM){
         x = m_transferFunction(x);
         h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
       }
 
-      /* Taylor expansion of f over the basis: (xh+0.5h)^k for k=0,1,...,N */
+      /* Taylor expansion of f over the basis: (x+0.5h)^k for k=0,1,...,N. Resulting polynomial maps [-0.5,0.5]->\R */
       auto const derivs = boost_fun(make_fvar<TIN,N>(x + 0.5*h));
       for(unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = derivs.derivative(k)*static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
+        m_table[ii].coefs[k] = derivs.derivative(k)/static_cast<TIN>(factorial(k));
+        //m_table[ii].coefs[k] = derivs.derivative(k)*static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
 
       /* Taylor expansion of the above polynomial over the basis: x^k */
-      auto p = m_table[ii];
-      for(unsigned int k=0; k<N+1; k++)
-        m_table[ii].coefs[k] = polynomial_diff(p,-0.5,k)/static_cast<TIN>(factorial(k));
-
-      FUNC_IF_CONSTEXPR(GT == GridTypes::NONUNIFORM){
-        auto p = m_table[ii];
-        for(unsigned int k=0; k<N+1; k++)
-          m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
-      }
+      FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
+        m_table[ii] = taylor_shift(m_table[ii], static_cast<TIN>(-0.5)*h, static_cast<TIN>(0.5)*h, static_cast<TIN>(0.0), static_cast<TIN>(1.0));
+      else
+        m_table[ii] = taylor_shift(m_table[ii], static_cast<TIN>(-0.5)*h, static_cast<TIN>(0.5)*h, x, x+h);
     }
-    // special case to make lut(tableMaxArg) work
-    m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
-    for (unsigned int k=1; k<N+1; k++)
-      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
+    /* special case to make lut(tableMaxArg) work. Move the second last polynomial into the last interval (shifting args) */
+    FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
+      m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
+    else
+      m_table[m_numTableEntries-1] = m_table[m_numTableEntries-2];
 #endif
   }
 };

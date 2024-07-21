@@ -5,7 +5,7 @@ namespace func {
 
 /**
   \brief Linear Interpolation LUT where coefficients are computed when calling operator().
-  Uses approx 50% less memory than an equivalent UniformEqSpaceInterpTable<1>
+  Uses approx 50% less memory than an equivalent UniformExactInterpTable<1>
   but the hash involves an additional subtraction.
   \ingroup MetaTable
 
@@ -56,8 +56,9 @@ public:
       TIN x = m_minArg + ii*m_stepSize;
       m_table[ii].coefs[0] = fun(x);
     }
-    // special case to make lut(tableMaxArg) work
-    m_table[m_numTableEntries-1].coefs[0] = m_table[m_numTableEntries-2].coefs[0];
+
+    /* special case to make lut(tableMaxArg) work */
+    m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
   }
 
   /* this operator() is slightly different from MetaTable's provided Horner's method

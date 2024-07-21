@@ -33,7 +33,7 @@ TERR metric(LUT L, F f){
       std::pair<TERR,TERR> r = brent_find_minima(
           [&L,&f](const TERR& z){ 
             auto z2 = static_cast<typename decltype(L)::input_type>(z);
-            return metric<TERR,N-1>(L(z2), [&z2,&f](auto... args){ return f(z2, args...); }); },
+            return metric<N-1,TERR>(L(z2), [&z2,&f](auto... args){ return f(z2, args...); }); },
           x, xtop, bits, max_it
       );
 

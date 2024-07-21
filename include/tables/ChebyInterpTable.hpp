@@ -16,12 +16,11 @@ namespace func {
  *  \f[ t_s = (a+b)/2 + (b-a)\cos(\frac{2s-1}{2n}\pi)/2, \quad s=1,\dotsc,n. \f]
  *
  * \code{.cpp}
- * // ChebyInterpTable does not require Boost's autodiff? TODO it might in the future?
  * template <typename T>
- * T foo(T x){ return x; }
+ * T foo(T x){ return (x*x*x)*(x*x*x)*(x*x*x); }
  *
  * int main(){
- *   auto min = 0.0; auto max = 10.0; auto step = 0.0001;
+ *   auto min = -1.0; auto max = 1.0; auto step = 0.001;
  *   UniformChebyInterpTable<1,double> L1({FUNC_SET_F(foo,double)}, {min, max, step}); // degree 1
  *   UniformChebyInterpTable<2,double> L2({FUNC_SET_F(foo,double)}, {min, max, step}); // degree 2
  *   UniformChebyInterpTable<3,double> L3({FUNC_SET_F(foo,double)}, {min, max, step});
@@ -30,6 +29,8 @@ namespace func {
  *   UniformChebyInterpTable<6,double> L6({FUNC_SET_F(foo,double)}, {min, max, step});
  *   UniformChebyInterpTable<7,double> L7({FUNC_SET_F(foo,double)}, {min, max, step});
  *   double val = look(0.87354);
+ *   // The following preserves the root of $f$ at $x=0$.
+ *   UniformChebyInterpTable<2,double> L2({FUNC_SET_F(foo,double)}, {min, max, step, {{0, 0, 0.0}}};
  * }
  * \endcode
  *
@@ -103,18 +104,18 @@ public:
     m_table.reset(new polynomial<TOUT,N+1>[m_numTableEntries]);
     FUNC_BUILDPAR
     for(unsigned int ii=0;ii<m_numTableEntries-1;++ii) {
-      TIN x;
-      TIN h = m_stepSize;
+      double x;
+      double h = static_cast<double>(m_stepSize);
       // (possibly) transform the uniform grid into a nonuniform grid
       FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
-        x = m_minArg + ii*m_stepSize;
+        x = static_cast<double>(m_minArg + ii*m_stepSize);
       else{
-        x = m_transferFunction(m_minArg + ii*m_stepSize);
-        h = m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x;
+        x = static_cast<double>(m_transferFunction(m_minArg + ii*m_stepSize));
+        h = static_cast<double>(m_transferFunction(m_minArg + (ii+1)*m_stepSize) - x);
       }
 
       // Chebyshev nodes over [x,x+h]:
-      arma::vec xvec = x + h*(1 + arma::cos( arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)) ))/2.0;
+      arma::vec xvec = x + h*(1.0 + arma::cos( arma::datum::pi*(2*arma::linspace(1,N+1,N+1)-1)/(2*(N+1)) ))/2.0;
       // y will contain our desired coefficients after the following if statement
       arma::vec y(N+1);
 
@@ -122,7 +123,7 @@ public:
       auto iter = d_intervals.find(ii);
       if(iter == d_intervals.end()){
         for (unsigned int k=0; k<N+1; k++)
-          y[k] = fun(static_cast<TIN>(xvec[k]));
+          y[k] = static_cast<double>(fun(static_cast<TIN>(xvec[k])));
         y = arma::solve(Van,y); /* solve_opts strictly waste time with cheby nodes */
       }else{
         /* replace each nearest chebyshev node in this interval with the user's nodes.*/
@@ -130,18 +131,18 @@ public:
         arma::Col<unsigned> svec(N+1);
         for(unsigned int k=0; k < std::min(N+1,static_cast<unsigned>(iter->second.size())); k++){
           auto tup = iter->second[k];
-          TIN t_k = std::get<0>(tup);
+          double t_k = static_cast<double>(std::get<0>(tup));
           svec[k] = std::get<1>(tup);
           arma::uword i = arma::index_min(abs(xvec2 - t_k));
           xvec(i) = t_k;
-          y[i] = std::get<2>(tup);
-          xvec2[i] = std::numeric_limits<TIN>::quiet_NaN();
+          y[i] = static_cast<double>(std::get<2>(tup));
+          xvec2[i] = std::numeric_limits<double>::quiet_NaN();
         }
 
         /* compute f(x) for every point that wasn't provided */
         for(unsigned int k=0; k<N+1; k++){
           if(!std::isnan(xvec2[k]))
-            y[k] = fun(static_cast<TIN>(xvec2[k]));
+            y[k] = static_cast<double>(fun(static_cast<TIN>(xvec2[k])));
         }
 
         arma::mat Van2 = arma::ones(N+1,N+1);
@@ -149,24 +150,26 @@ public:
         for(unsigned int i=2; i<N+1; i++)
           Van2.col(i) = Van2.col(i-1) % Van2.col(1);
 
-        /* differentiate rows of Van2. This row will not be entirely 0 because N+1>s */
+        /* differentiate rows of Van2. This row will not be entirely 0 because N+1 > s */
         for(unsigned int k=0; k<N+1; k++){
           auto s = svec[k];
           if(s == 0) continue;
 
-          arma::vec D(N+1, arma::fill::zeros);
+          arma::rowvec D(N+1, arma::fill::zeros);
           for(unsigned int r=0; r<N+1-s; r++)
-            D[r] = permutation(s+r,s);
-          Van2.row(k) = D % Van2.row(k);
+            D[s+r] = permutation(r+s,s)*Van2(k,r);
+            //D[s+r] = permutation(1+s+r,1+s)*Van2(k,r);
+          Van2.row(k) = D;
         }
 
         /* reorder so the data is in increasing order to improve the conditioning of V */
         arma::uvec idxvec = arma::sort_index(xvec, "ascend");
-        //xvec = xvec(idxvec);
         y = y(idxvec);
         Van2 = Van2.rows(idxvec);
 
-        /* TODO solve_opts? Any good ones for a very poorly conditioned matrix? */
+        //std::cout << Van2 << " " << y << std::endl;
+
+        /* TODO solve_opts? Any good ones for a probably poorly conditioned matrix? */
         y = arma::solve(Van2,y);
       }
 
@@ -179,11 +182,11 @@ public:
           m_table[ii].coefs[s] = polynomial_diff(p,-x/h,s)/static_cast<TIN>(pow(h,s))/static_cast<TIN>(factorial(s));
       }
     }
-
-    // special case to make lut(tableMaxArg) work
-    m_table[m_numTableEntries-1].coefs[0] = fun(m_tableMaxArg);
-    for (unsigned int k=1; k<N+1; k++)
-      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
+    /* special case to make lut(tableMaxArg) work. Move the second last polynomial into the last interval (shifting the domain for uniform LUTs) */
+    FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
+      m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
+    else
+      m_table[m_numTableEntries-1] = m_table[m_numTableEntries-2];
 #endif
   }
 };
