@@ -25,7 +25,7 @@ tables/tables.hpp;utils/utils.hpp;\
 tables/TransferFunction.hpp;tables/Polynomial.hpp;tables/MetaTable.hpp;\
 tables/ChebyInterpTable.hpp;\
 tables/CubicHermiteTable.hpp;\
-tables/EqSpaceInterpTable.hpp;\
+tables/ExactInterpTable.hpp;\
 tables/LinearRawInterpTable.hpp;\
 tables/PadeTable.hpp;\
 tables/TaylorTable.hpp;\

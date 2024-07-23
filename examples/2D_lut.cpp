@@ -29,7 +29,7 @@ T f11(T x, T y){
 using namespace func;
 
 template <class T1, class T2>
-using MyLUT = func::UniformEqSpaceInterpTable<3,T1,T2>;
+using MyLUT = func::UniformExactInterpTable<3,T1,T2>;
 
 int main(){
   std::vector<func::LookupTableParameters<TYPE>> params = {{MIN,MAX,STEP}, {MIN,MAX,STEP}};

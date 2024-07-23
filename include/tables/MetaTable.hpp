@@ -138,7 +138,8 @@ public:
     /* If the step size does not exactly divide the arg domain, the max arg of the table is set
      * to the nearest value above such that it does. */
     m_stepSize_inv = static_cast<TIN>(1.0)/m_stepSize;
-    m_numIntervals = static_cast<unsigned>(std::ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
+    using std::ceil;
+    m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
     m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // always >= m_maxArg
 
     // We need a valid FunctionContainer to generate any LUT
@@ -317,10 +318,10 @@ public:
     unsigned int x0; TIN dx;
     std::tie(x0,dx) = hash<GT>(x);
 
-    auto sum = static_cast<TIN>(permutation(N-1,s))*(m_table[x0].coefs[N-1]).diff(args...);
+    auto sum = static_cast<TIN>(permutation(N-1,s))*(m_table[x0].coefs[N-1].diff(args...));
     for(unsigned int k=N-1; k>s; k--){
       sum *= dx;
-      sum += static_cast<TIN>(permutation(k-1,s))*(m_table[x0].coefs[k-1]).diff(args...);
+      sum += static_cast<TIN>(permutation(k-1,s))*(m_table[x0].coefs[k-1].diff(args...));
     }
     return static_cast<TIN>(pow(m_stepSize_inv,s))*sum;
   }

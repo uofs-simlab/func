@@ -59,27 +59,62 @@ constexpr unsigned int permutation(unsigned int n, unsigned int k){
 
 /** \brief Compute p^(s)(x), the sth derivative of p at x.
  *
- * Currently using a compensated summation, but that might be pointless...
+ * \note p cannot be empty
  * */
 template <unsigned int N, typename TOUT, typename TIN = TOUT>
-TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
-    TOUT sum = static_cast<TOUT>(0.0);
-    TOUT com = static_cast<TOUT>(0.0);
-    for(unsigned int k=N; k>s; k--){
-      TOUT y = p.coefs[k-1]*permutation(k-1,s) - com;
-      TOUT t = y + sum*x;
-      com = (t - sum*x) - y;
-      sum = t;
-    }
-    //sum = p.coefs[k-1]*permutation(k-1,s) + sum*x;
+inline TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
+  //TOUT sum = static_cast<TOUT>(0.0);
+  //TOUT com = static_cast<TOUT>(0.0);
+  //for(unsigned int k=N; k>s; k--){
+  //  TOUT y = p.coefs[k-1]*permutation(k-1,s) - com;
+  //  TOUT t = y + sum*x;
+  //  com = (t - sum*x) - y;
+  //  sum = t;
+  //}
+  //return sum;
+  //for(unsigned int k=N; k>s; k--){
+  //  sum = p.coefs[k-1]*permutation(k-1,s) + sum*x;
+  //}
+
+  TOUT sum = static_cast<TIN>(permutation(N-1,s))*p.coefs[N-1];
+  for(unsigned int k=N-1; k>s; k--){
+    sum *= x;
+    sum += static_cast<TIN>(permutation(k-1,s))*p.coefs[k-1];
+  }
   return sum;
 }
 
+/** \brief Given a polynomial p:[a,b]->\R, compute the coefficients of
+ *   q:[c,d]->\R such that q(x) = p( [(b-a)x + (ad-bc)]/(d-c) ) by
+ *   expanding p in a Taylor series.
+ *   
+ *   This is used all over FunC (for example, special case for rightmost
+ *   interval, Nonuniform LUTs, and Taylor/Pade tables). Optimizations
+ *   are very welcome!
+ * */
 template <unsigned int N, typename TOUT, typename TIN = TOUT>
-TOUT eval(polynomial<TOUT,N> p, TIN x){
-  TOUT sum = static_cast<TOUT>(0);
-  for(unsigned int k=N; k>0; k--)
-    sum = p.coefs[k-1] + sum*x;
+inline polynomial<TOUT,N> taylor_shift(polynomial<TOUT,N> p, TIN a, TIN b, TIN c, TIN d){
+  polynomial<TOUT,N> q = p;
+  for(unsigned int k=0; k<N; k++)
+    q.coefs[k] = polynomial_diff(p, (a*d-b*c)/(d-c), k)*static_cast<TIN>(pow((b-a)/(d-c),k))/static_cast<TIN>(factorial(k));
+  return q;
+}
+
+/** \brief Compute p(x)
+ *
+ * \note p cannot be empty
+ * */
+template <unsigned int N, typename TOUT, typename TIN = TOUT>
+inline TOUT eval(polynomial<TOUT,N> p, TIN x){
+  //TOUT sum = static_cast<TOUT>(0);
+  //for(unsigned int k=N; k>0; k--)
+  //  sum = p.coefs[k-1] + sum*x;
+  //return sum;
+  TOUT sum = p.coefs[N-1];
+  for(unsigned int k=N-1; k>0; k--){
+    sum *= x;
+    sum += p.coefs[k-1];
+  }
   return sum;
 }
 

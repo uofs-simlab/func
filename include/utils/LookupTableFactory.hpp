@@ -132,15 +132,23 @@ void LookupTableFactory<TIN, TOUT>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformChebyInterpTable,6);
   FUNC_ADD_TABLE_TO_REGISTRY(NonUniformChebyInterpTable,7);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,0);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(UniformEqSpaceInterpTable,3);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformExactInterpTable,0);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformExactInterpTable,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformExactInterpTable,2);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformExactInterpTable,3);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformExactInterpTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformExactInterpTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(UniformExactInterpTable,6);
+
   FUNC_ADD_TABLE_TO_REGISTRY(UniformLinearRawInterpTable);
 
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformEqSpaceInterpTable,1);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformEqSpaceInterpTable,2);
-  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformEqSpaceInterpTable,3);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformExactInterpTable,1);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformExactInterpTable,2);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformExactInterpTable,3);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformExactInterpTable,4);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformExactInterpTable,5);
+  FUNC_ADD_TABLE_TO_REGISTRY(NonUniformExactInterpTable,6);
+
 }
 
 /*

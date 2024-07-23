@@ -84,10 +84,11 @@ public:
           m_table[ii].coefs[k] = polynomial_diff(p,-x/h,k)/static_cast<TIN>(pow(h,k))/static_cast<TIN>(factorial(k));
       }
     }
-    // special case to make lut(tableMaxArg) work
-    m_table[m_numTableEntries-1].coefs[0] = func_container.standard_fun(m_tableMaxArg);
-    for (unsigned int k=1; k<4; k++)
-      m_table[m_numTableEntries-1].coefs[k] = static_cast<TIN>(0)*m_table[m_numTableEntries-1].coefs[0];
+    /* special case to make lut(tableMaxArg) work. Move the second last polynomial into the last interval (shifting the domain for uniform LUTs) */
+    FUNC_IF_CONSTEXPR(GT == GridTypes::UNIFORM)
+      m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
+    else
+      m_table[m_numTableEntries-1] = m_table[m_numTableEntries-2];
 #endif
   }
 

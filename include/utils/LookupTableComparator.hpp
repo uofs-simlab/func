@@ -266,17 +266,17 @@ inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out, Sorter
   switch(type){
   case Sorter::BEST: {
     for (auto itImplTimer : m_implTimers)
-      out << itImplTimer.minTime << "s ";
+      out << std::scientific << itImplTimer.minTime << "s ";
     break;
   }
   case Sorter::MEAN: {
     for (auto itImplTimer : m_implTimers)
-      out << itImplTimer.meanTime << "s ";
+      out << std::scientific << itImplTimer.meanTime << "s ";
     break;
   }
   case Sorter::WORST: {
     for (auto itImplTimer : m_implTimers)
-      out << itImplTimer.maxTime << "s ";
+      out << std::scientific << itImplTimer.maxTime << "s ";
     break;
   }
   default: {
@@ -284,7 +284,7 @@ inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out, Sorter
     int numTimes = (m_implTimers[0].evaluationTimes).size();
     for (int i = 0; i<numTimes; ++i) {
       for (auto itImplTimer : m_implTimers) {
-        out << itImplTimer.evaluationTimes[i] << " ";
+        out << std::scientific << itImplTimer.evaluationTimes[i] << " ";
       }
       out << "\n";
     }
