@@ -9,30 +9,41 @@
 namespace func {
 
 /**
-  \brief Linear Interpolation LUT with uniform sampling (precomputed coefficients)
+  \brief Interpolation over Chebyshev nodes of the second kind. The
+  inverse Vandermonde matrix is hard-coded. Allows for full type
+  generality, but numerical output is not quite as good as
+  ChebyInterpTable because Armadillo can do iterative refinement.
   \ingroup MetaTable
 
-  Usage example:
-    UniformExactInterpTable<3,double> look(&function,0,10,0.0001);
-    double val = look(0.87354);
+  \code{.cpp}
+  // ExactInterpTable works with an untemplated function
+  double foo(double x){ return x; }
+ 
+  int main(){
+    double min = 0.0, max = 10.0, step = 0.0001;
+    UniformExactInterpTable<double>    L({foo}, {min, max, step}); // uniform partition
+    NonUniformExactInterpTable<double> L({foo}, {min, max, step}); // nonuniform partition
+    auto val = L(0.87354);
+  }
+  \endcode
+
 
   Notes:
-  - table precomputes and stores the linear coefficient so it doesn't have to
+  - this LUT precomputes and stores the linear coefficient so it doesn't have to
     perform that operation every lookup (but does have to look it up)
   - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
 */
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT=GridTypes::UNIFORM>
 class ExactInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
   INHERIT_META(N+1,TIN,TOUT,GT);
 
-  template <std::size_t K>
-  inline TOUT dot(std::array<TIN,K> x, std::array<TOUT,K> y){
-    TOUT sum = x[0]*y[0];
-    for(std::size_t k = 1; k<K; k++) sum += x[k]*y[k];
-    return sum;
-  }
+  //template <std::size_t K>
+  //inline TOUT dot(std::array<TIN,K> x, std::array<TOUT,K> y){
+  //  TOUT sum = x[0]*y[0];
+  //  for(std::size_t k = 1; k<K; k++) sum += x[k]*y[k];
+  //  return sum;
+  //}
 
 public:
   ExactInterpTable() = default;

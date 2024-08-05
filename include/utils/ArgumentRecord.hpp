@@ -1,19 +1,20 @@
-/* TODO Look into using boost histogram? (would add an additional
- * dependency)
-
-  Helper class which acts as an extension to any existing
+/*
+  \brief Helper class which acts as an extension to any existing
   EvaluationImplementation. Wraps a vector of unsigned
   int which acts as a histogram for recording the
   usage of a function's domain.
 
+  \ingroup Utils
+
   Notes:
-  - This class is only used in the current version 
-  of FunC if the -DFUNC_DEBUG flag is specified at compile time.
+  - Currently, code from this class is only included in FunC if
+  the -DFUNC_DEBUG flag is specified at compile time.
   - Argument recording is threadsafe
-  - See DirectEvaluation.hpp and FailureProofTable.hpp for example usage.
-  - This is designed to be a private member variable of some class
+  - Only used by DirectEvaluation.hpp and FailureProofTable.hpp.
+  - This is designed to be a private member variable.
 
   TODO this class should support to_json & from_json
+  TODO Look into using boost histogram? (would add an additional dependency)
 */
 #pragma once
 #include <string> // to_string()
@@ -147,7 +148,7 @@ class ArgumentRecord
       m_min_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<TIN>();
     }
 
-    /* place x in the histogram. Mimic pipeline parallelism for any statistics with only one instance */
+    /** place x in the histogram. Mimic pipeline parallelism for any statistics with only one instance */
     void record_arg(TIN x)
     {
       // Record x if it's within our histogram's limits
@@ -190,7 +191,7 @@ class ArgumentRecord
     }
 
 
-    /* std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from this SO post
+    /** std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from this SO post
      * https://stackoverflow.com/questions/16605967/set-precision-of-stdto-string-when-converting-floating-point-values
      * Default is the max possible precision by so users can choose how they'll round the answer on their own */
     template <typename T>
@@ -208,7 +209,7 @@ class ArgumentRecord
     }
 
 
-    // make a string representation of the histogram
+    /** make a string representation of the histogram */
     std::string to_string() const
     {
       // avoid division by zero by printing nothing if the histogram is empty
@@ -232,7 +233,7 @@ class ArgumentRecord
       return hist_str;
     }
 
-    // print each field in this class to the given ostream
+    /** print each field in this class to the given ostream */
     void print_json(nlohmann::json& jsonStats) const
     {
       jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
@@ -251,7 +252,6 @@ class ArgumentRecord
   TIN min_arg() const { return m_minArg; }
   TIN max_arg() const { return m_maxArg; }
 
-  /* TODO use a standard algorithm */
   unsigned int total_recorded() const {
     unsigned int t = 0;
     for(unsigned int i=0; i<m_histSize; i++)
@@ -259,14 +259,15 @@ class ArgumentRecord
     return t;
   }
   
-  /* the index of the bucket with the largest count */
+  /** return the index of the bucket with the largest count */
   unsigned int index_of_peak() const { return m_peak_index; }
+  /** return the count from the bucket with the largest count */
   unsigned int peak() const { return mv_histogram[m_peak_index]; }
 
-  /* the number of elements outside the histogram's range */
+  /** return the number of elements outside the histogram's range */
   unsigned int num_out_of_bounds() const { return m_num_out_of_bounds; }
 
-  /* Return the extreme args to help the user decide what bounds to use for their LUTs */
+  /** Return the extreme args to help the user decide what bounds to use for their LUTs */
   TIN max_recorded() const { return m_max_recorded; }
   TIN min_recorded() const { return m_min_recorded; }
 };

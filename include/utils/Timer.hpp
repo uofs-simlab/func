@@ -1,9 +1,8 @@
-/*
-  Timer class. Starts timer when created.
-  Stops when told (and computes duration).
+/**
+  \brief Timer class. Starts timer when created. Stops when `stop()` is called and returns the duration in seconds with `duration()`. 
 
   Notes:
-  - duration data is considered static after stop() has been called.
+  - duration data is static after stop() has been called.
   - time is measured in seconds
 */
 #pragma once

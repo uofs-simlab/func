@@ -1,20 +1,26 @@
-/*
+/**
   A wrapper for several FunC lookup tables. Good for approximating a single function with multiple LUTs.
   Can also be used as a naive non-uniform lookup table. The hash for this table is O(logn) where n is the number of LUTs.
   Each LUT is considered a single "subinterval"
 
   Usage example:
+  \code{.cpp}
+  std::vector<std::tuple<std::string,TYPE,TYPE,TYPE>> v{
+    // {tableKey, left, right, step},
+    {"UniformExactInterpTable<3>",MIN_ARG,std::exp(7.7/13.0287),STEP},
+    {"UniformExactInterpTable<3>",std::exp(7.7/13.0287),MAX_ARG,STEP}
+  };
+  FunctionContainer<TYPE> func_container{FUNC_SET_F(MyFunction,TYPE)};
+  CompositeLookupTable<TYPE> C(func_container, v);
+  std::cout << "C(0.01) = " << C(0.01) << std::endl;
+  \endcode
 
-    double val = comp_table(0.87354);
-
-  Notes:
+  \note:
   - Takes in a variable number of previously constructed lookup tables
   inside a std::initializer_list
   - static data after constructor has been called
   - evaluate by using parentheses, just like a function
   - operator() caches the most recently used LUT and skips the binary search when repeatedly evaluating from the same table's range
-  - 
-
 
   TODO this class should support to/from_json. We could use the unique_ptr<LookupTable> version of from_json in LookupTableFactory
   */

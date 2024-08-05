@@ -1,9 +1,10 @@
-/*
+#pragma once
+namespace func {
+
+/**
   Abstract interface for interfacing with classes
   that can generate random numbers
 */
-#pragma once
-namespace func {
 template <typename POINT_TYPE>
 class RngInterface {
   public:

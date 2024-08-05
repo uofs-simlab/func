@@ -1,8 +1,3 @@
-/*
-  Factory for Lookup Tables
-  - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
-  - Note: New implementations must be added to the registry by adding to the ::initialize() member function
-*/
 #pragma once
 #include "config.hpp" // FUNC_USE_BOOST, FUNC_USE_ARMADILLO, FUNC_DECLARE_TEMPLATE_AS_EXTERN
 #include "tables.hpp"
@@ -44,6 +39,11 @@
 
 namespace func {
 
+/*
+  Factory for Lookup Tables
+  - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
+  - Note: New implementations must be added to the registry by adding to the ::initialize() member function
+*/
 template <typename TIN, typename TOUT = TIN> class LookupTableFactory {
 public:
 
@@ -76,11 +76,14 @@ private:
   void initialize_registry();
 };
 
+
 /* --------------------------------------------------------------------------
  * --------------------------------------------------------------------------
  *      Implementation
  * --------------------------------------------------------------------------
- * -------------------------------------------------------------------------- */ /* *  Initialize the registry
+ * -------------------------------------------------------------------------- */
+
+/**  Initialize the registry
  *  - New implementations of table types must be added to the registry here
  */
 template <typename TIN, typename TOUT>
@@ -151,7 +154,7 @@ void LookupTableFactory<TIN, TOUT>::initialize_registry() {
 
 }
 
-/*
+/**
  *  Return a vector of the keys that have been registered
  */
 template <typename TIN, typename TOUT>
@@ -163,7 +166,7 @@ std::vector<std::string> LookupTableFactory<TIN, TOUT>::get_registered_keys() {
   return keys;
 }
 
-/*
+/**
  *  Create a new lookup table. Throw exception asking for an unregistered table.
  */
 template <typename TIN, typename TOUT>
@@ -185,7 +188,7 @@ LookupTableFactory<TIN, TOUT>::create(std::string name, const FunctionContainer<
 }
 
 
-/* from_json for unique_ptr<LookupTable> unlocks this fancy syntax:
+/** from_json for unique_ptr<LookupTable> unlocks this fancy syntax:
 ```c++
   nlohmann::json jsonStats;
   std::ifstream(filename) >> jsonStats;

@@ -1,9 +1,3 @@
-/*
-  Class for comparing any class implementing LookupTables
-  TODO LookupTableComparator's constructor should accept any callable type
-
-  - takes ownership of the vector of implementations passed to it
-*/
 #pragma once
 #include "Timer.hpp"
 #include "RngInterface.hpp"
@@ -26,7 +20,7 @@ using ImplContainer = std::vector<std::unique_ptr<LookupTable<TIN,TOUT>>>;
 
 enum class Sorter {NONE, BEST, MEAN, WORST};
 
-/*
+/**
   ImplTimer struct attaches additional data for timing an implementation
   to the implementation
 */
@@ -62,7 +56,13 @@ struct ImplTimer
   }
 };
 
-/* ------------------------------------------------------------------------ */
+/**
+  Class for comparing any class implementing LookupTables
+
+  - takes ownership of the vector of implementations passed to it
+
+  TODO LookupTableComparator's constructor should accept any callable type
+*/
 template <typename TIN, typename TOUT = TIN>
 class LookupTableComparator
 {
@@ -78,7 +78,7 @@ private:
 
   std::unique_ptr<TOUT[]> m_evalHolder;
 
-  /*
+  /**
     RNG for evaluations
     - By default uses a std::uniform_real_distribution<TIN>
       with the std::mt19937 variant of the std::mersenne_twister_engine
@@ -117,7 +117,7 @@ public:
       unsigned int seed = 2017, std::unique_ptr<RngInterface<TIN>> inRng = nullptr);
   ~LookupTableComparator(){}
 
-  /* Run timings with different set of random arguments */
+  /** Run timings with different set of random arguments */
   void run_timings(int nRuns = 1)
   {
     for (int ii=0;ii<nRuns;++ii) {
@@ -126,24 +126,24 @@ public:
     }
   }
 
-  /* Compute fastest and slowest times */
+  /** Compute fastest and slowest times */
   void compute_statistics()
   {
     for (auto &itImplTimer : m_implTimers)
       itImplTimer.compute_timing_stats();
   }
 
-  /* Sort the vector of implementations (m_implTimers) based on their max, mean, or min times */
+  /** Sort the vector of implementations (m_implTimers) based on their max Sorter::WORST, mean Sorter::MEAN, or min Sorter::BEST times */
   void sort_timings(Sorter type = Sorter::MEAN);
 
-  /* Print out the computed statistics for each LookupTable (no raw timings are displayed) */
+  /** Print out the computed statistics for each LookupTable (no raw timings are displayed) */
   void print_summary(std::ostream&);
 
-  /* Print out the raw timings for each LookupTable */
+  /** Print out the raw timings for each LookupTable */
   void print_json(std::ostream&);
   void print_csv_header(std::ostream&);
-  /* space separated listing of timing results. Does not print a final newline if
-   * type != Sorter::NONE which is helpful for plotting timing results */
+  /** space separated listing of timing results. Does not print a final newline if
+   * type != Sorter::NONE which is helpful for plotting timing results with external programs (e.g. Python) */
   void print_csv(std::ostream&, Sorter type = Sorter::NONE);
 
   std::vector<double> fastest_times()

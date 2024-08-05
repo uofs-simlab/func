@@ -1,4 +1,4 @@
-/*
+/**
   std::function wrapper with optional support for plotting the usage
   of a function's domain in a histogram.
   Replace your original function's usage with this class and compile
@@ -6,10 +6,12 @@
   set your table intervals to.
 
   Usage example:
-    DirectEvaluation de(&function,0,10);
-    double f = de(0.87354);
-    // sim code
-    de.print_details(std::cout); // prints max/min recorded args if FUNC_DEBUG is defined
+  \code{.cpp}
+  DirectEvaluation<double> de({MyFunction},0,10);
+  double fx = de(0.87354);
+  // sim code goes here
+  de.print_details(std::cout); // prints max/min recorded args if FUNC_DEBUG is defined
+  \endcode
 
   Notes:
   - Wraps a std::function

@@ -17,13 +17,13 @@ static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,1
  * 
  * \note
  * - Our convention for writing polynomials is:
- *   \f[p(x) = m_table[x0].coefs[0] + m_table[x0].coefs[1]*x + ... + m_table[x0].coefs[N-1]*x^{N-1}\f]
+ *   \f[p(x) = \mathrm{m_table}[x0].\mathrm{coefs}[0] + \mathrm{m_table}[x0].\mathrm{coefs}[1]*x + ... + \mathrm{m_table}[x0].\mathrm{coefs}[N-1]*x^{N-1}\f]
  *
  *  \tparam B determines whether an array of polynomials over TOUT are aligned with alignas(sizeof(TOUT)*alignments[N])
  *
  * Polynomials could store all sorts of things:
  * - 3D LUTs may have coefs for x & y dimensions of each subrectangle,
- * - LUTs could store derivative coefs */
+ * - Coefficients of f's derivatives */
 template <typename TOUT, unsigned int N, bool B> struct polynomial_helper;
 
 /** \brief Arrays of this type of polynomial are aligned
@@ -43,8 +43,11 @@ struct polynomial_helper<TOUT,N,false> {
 };
 
 /** \ingroup Polynomial */
+//template <typename TOUT, unsigned int N>
+//using polynomial = polynomial_helper<TOUT,N,std::is_floating_point<TOUT>::value>;
 template <typename TOUT, unsigned int N>
-using polynomial = polynomial_helper<TOUT,N,std::is_floating_point<TOUT>::value>;
+using polynomial = polynomial_helper<TOUT,N,false>;
+
 
 
 constexpr unsigned int factorial(unsigned int n){

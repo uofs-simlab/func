@@ -1,4 +1,4 @@
-/* 
+/**
   An implementation of RngInterface, intended to be used with the 
   generators/ distributions defined in std::random.
   Notes:

@@ -9,9 +9,17 @@ namespace func {
   but the hash involves an additional subtraction.
   \ingroup MetaTable
 
-  Usage example:
-    LinearRawInterpTable look(&function,0,10,0.0001);
-    double val = look(0.87354);
+  \code{.cpp}
+  // LinearRawInterpTable works with an untemplated function
+  double foo(double x){ return x; }
+ 
+  int main(){
+    double min = 0.0, max = 10.0, step = 0.0001;
+    UniformLinearRawInterpTable<double> L({foo}, {min, max, step});
+    auto val = L(0.87354);
+  }
+  \endcode
+
 
   Notes:
   - static data after constructor has been called

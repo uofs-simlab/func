@@ -3,16 +3,15 @@
    Returns f(x) for out of bounds arguments. If FUNC_DEBUG is defined then
    out of bounds arguments are recorded in a histogram.
 
-
    \tparam LUT_TYPE is a specific implementation of LookupTable (eg. ChebyInterpTable<3,double>)
-
-  TODO broken
   Usage example:
-    FailureProofTable<UniformChebyInterpTable<3,double>> failsafe(
-      &function,{0,10,0.0001}
-    );
-    double val = failsafe(0.87354);
-    double val = failsafe(100);
+  \code{.cpp}
+  FailureProofTable<UniformChebyInterpTable<3,double>> failsafe(
+    {MyFunction},{0,10,0.0001}
+  );
+  double val1 = failsafe(0.87354);
+  double val2 = failsafe(100);
+  \endcode
 
   Notes:
   - data is static after constructor call

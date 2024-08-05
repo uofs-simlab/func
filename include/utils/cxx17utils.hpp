@@ -46,7 +46,7 @@ TERR metric(LUT L, F f){
   return max_err;
 }
 
-/* convenience functions for defining LUTs of LUTs */
+/** convenience functions for defining LUTs of LUTs */
 template <unsigned int N, typename TIN, typename TOUT, template <typename...> class classname>
 struct curriedLUT {
   using type = classname<TIN, typename curriedLUT<N-1,TIN,TOUT,classname>::type>;
@@ -57,7 +57,7 @@ struct curriedLUT<0,TIN,TOUT,classname> {
   using type = classname<TIN,TOUT>;
 };
 
-/* TODO:
+/** TODO:
  * - Is not compatible with function derivatives (needed for nonuniform partition & Taylor tables). Is that impossible to support anyways???
  * - classname should be variadic! Is this possible?????
  * Call as func::ndimLUT<ndim,type1,type2,luttype>(f, params) */
