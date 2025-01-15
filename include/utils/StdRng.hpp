@@ -1,3 +1,10 @@
+#pragma once
+#include "RngInterface.hpp"
+#include <random>
+#include <memory>
+
+namespace func {
+
 /**
   An implementation of RngInterface, intended to be used with the 
   generators/ distributions defined in std::random.
@@ -19,13 +26,6 @@
     // using points generated from minstd_rand0
     StdRng<float,std::normal_distribution<float>,minstd_rand0> rng2(0.0,1.0));
  */
-#pragma once
-#include "RngInterface.hpp"
-#include <random>
-#include <memory>
-
-namespace func {
-
 template <typename POINT_TYPE,
          class DIST_TYPE = std::uniform_real_distribution<double>,
          class RNG_TYPE  = std::mt19937>

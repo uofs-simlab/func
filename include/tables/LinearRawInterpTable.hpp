@@ -10,7 +10,7 @@ namespace func {
   \ingroup MetaTable
 
   \code{.cpp}
-  // LinearRawInterpTable works with an untemplated function
+  // LinearRawInterpTable does not benefit from templated functions
   double foo(double x){ return x; }
  
   int main(){

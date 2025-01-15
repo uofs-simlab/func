@@ -1,3 +1,18 @@
+#pragma once
+
+#include "FunctionContainer.hpp"
+#include "config.hpp" // FUNC_USE_BOOST
+#include "json.hpp"
+#include "StdRng.hpp"
+
+#include <fstream> // ifstream, ostream
+
+#ifdef FUNC_DEBUG
+  #include "ArgumentRecord.hpp"
+#endif
+
+namespace func {
+
 /**
   std::function wrapper with optional support for plotting the usage
   of a function's domain in a histogram.
@@ -19,21 +34,6 @@
   which record arguments passed to the direct evaluation. No error if out of bounds.
   View the histogram with print_details(). Histogram code is in ArgumentRecord.hpp
   */
-#pragma once
-
-#include "FunctionContainer.hpp"
-#include "config.hpp" // FUNC_USE_BOOST
-#include "json.hpp"
-#include "StdRng.hpp"
-
-#include <fstream> // ifstream, ostream
-
-#ifdef FUNC_DEBUG
-  #include "ArgumentRecord.hpp"
-#endif
-
-namespace func {
-
 template <typename TIN, typename TOUT = TIN>
 class DirectEvaluation final : public LookupTable<TIN,TOUT>
 {

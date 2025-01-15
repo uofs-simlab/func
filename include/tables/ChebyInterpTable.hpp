@@ -10,12 +10,13 @@
 
 namespace func {
 
-/** \brief LUT using degree 1 to 7 polynomial interpolation over Chebyshev nodes on each subinterval (all coefficients are precomputed)
+/** \brief LUT using degree 1 to 7 polynomial interpolation over Chebyshev nodes on each subinterval
  *  \ingroup MetaTable
  *
- *  \f[ t_s = (a+b)/2 + (b-a)\cos(\frac{2s-1}{2n}\pi)/2, \quad s=1,\dotsc,n. \f]
+ *  \f[ t_s = (a+b)/2 + (b-a)\cos\left(\frac{2s-1}{2n}\pi\right)/2, \quad s=1,...,n. \f]
  *
  * \code{.cpp}
+ * // return x^9
  * template <typename T>
  * T foo(T x){ return (x*x*x)*(x*x*x)*(x*x*x); }
  *
@@ -28,27 +29,31 @@ namespace func {
  *   UniformChebyInterpTable<5,double> L5({FUNC_SET_F(foo,double)}, {min, max, step});
  *   UniformChebyInterpTable<6,double> L6({FUNC_SET_F(foo,double)}, {min, max, step});
  *   UniformChebyInterpTable<7,double> L7({FUNC_SET_F(foo,double)}, {min, max, step});
+ *   // similar for nonuniform case:
+ *   NonUniformChebyInterpTable<1,double> L7({FUNC_SET_F(foo,double)}, {min, max, step}); // deg 1 nonuniform
+ *   NonUniformChebyInterpTable<4,double> L7({FUNC_SET_F(foo,double)}, {min, max, step});
  *   double val = look(0.87354);
  *   // The following preserves the root of $f$ at $x=0$.
  *   UniformChebyInterpTable<2,double> L2({FUNC_SET_F(foo,double)}, {min, max, step, {{0, 0, 0.0}}};
  * }
  * \endcode
  *
- *
- * \note
- * - This is currently the only LookupTableImplementation using the
- *   special_points field in LookupTableParameters. special_points is a vector of 3-tuples:
- *   {(x_1,s_1,f^{(s_1)}(x_1)),...,(x_n,s_n,f^{(s_n)}(x_n))}.
- *   n Cheby nodes are replaced with the nearest nodes {x_k} in this list, and
- *   f (or its derivate) is exact at those nodes. Doing this can drastically
- *   reduce the relative error in f and/or its derivatives. Surely the error in
- *   the resulting LUT is somehow related to the Chebyshev polynomial of the 1st kind.
- * - ChebyTable only works if we can cast both TOUT and TIN to double. This requirement
- *   exists because Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
+ * \note the template implementation is only registered for \f$N=1,2,3,4,5,6,7\f$
+ *   but users could manually construct this class with larger \f$N\f$ if they wish.
+ *   We make no promises on convergence/error in this case.
+ * \note ChebyTable only works if we can cast both TOUT and TIN to double. This requirement
+ *   exists because Armadillo `Mat<T>`'s `is_supported_elem_type<T>` will only let us do arithmetic
  *   with float or double (not even long double!). You might think "generic types
- *   is what arma::field" is made for but that class does nothing.
- * - the template implementation is only registered for N=1,2,3,4,5,6,7
- *   but users can manually construct this class with larger N if they wish (but we make no promises on convergence/error).
+ *   is what arma::field is made for" but that class appears to do nothing.
+ * \note This is currently the only LookupTableImplementation using the
+ *   special_points field in LookupTableParameters -- a vector of 3-tuples:
+ *   \f[{(x_1,s_1,f^{(s_1)}(x_1)),...,(x_n,s_n,f^{(s_n)}(x_n))}.\f]
+ *   Then, Chebyshev nodes are replaced with the nearest nodes \f${x_k}\f$ in this list, and
+ *   \f$f\f$ (or its derivate) is exact at those nodes. Doing this can
+ *   reduce the relative error in \f$f\f$ and/or its derivatives.
+ * \warning Attempting to make \f$f\f$'s derivatives exact at some given
+ *   special points can result in a singular Vandermonde matrix. We don't have
+ *   a way to handle this issue at the moment. 
  */
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class ChebyInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>

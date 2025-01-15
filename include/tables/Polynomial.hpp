@@ -1,6 +1,6 @@
 /** \file Polynomial.hpp
  * \brief Define the polynomial class and some convenience functions (eg. Horner's eval, derivatives, printing)
- * \defgroup Polynomial
+ * \defgroup Polynomial Polynomials and helper functions
  * */
 
 #include <string>
@@ -12,16 +12,16 @@ namespace func {
 
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,16,16,16};
 
-/** \brief A typedef for std::array<TOUT,N> but polynomial arrays are sometimes aligned (always aligned for float or double)
+/** \brief A typedef for std::array<TOUT,N> along with some functions that interpret the array as polynomial coefficients.
  *  \ingroup Polynomial
  * 
- * \note
- * - Our convention for writing polynomials is:
- *   \f[p(x) = \mathrm{m_table}[x0].\mathrm{coefs}[0] + \mathrm{m_table}[x0].\mathrm{coefs}[1]*x + ... + \mathrm{m_table}[x0].\mathrm{coefs}[N-1]*x^{N-1}\f]
+ *  \note By convention, we write polynomials coefficients with increasing powers of x:
+ *   \f[p(x) = \mathrm{m\_table}[x0].\mathrm{coefs}[0] + \mathrm{m\_table}[x0].\mathrm{coefs}[1]x + ... + \mathrm{m\_table}[x0].\mathrm{coefs}[N-1]x^{N-1}\f]
+ *  \note polynomial arrays are sometimes aligned (always aligned for float or double)
  *
- *  \tparam B determines whether an array of polynomials over TOUT are aligned with alignas(sizeof(TOUT)*alignments[N])
+ *  \tparam B Boolean: determines whether an array of polynomials over TOUT are aligned with alignas(sizeof(TOUT)*alignments[N])
  *
- * Polynomials could store all sorts of things:
+ * \note Polynomials can store other things, such as
  * - 3D LUTs may have coefs for x & y dimensions of each subrectangle,
  * - Coefficients of f's derivatives */
 template <typename TOUT, unsigned int N, bool B> struct polynomial_helper;
@@ -43,10 +43,10 @@ struct polynomial_helper<TOUT,N,false> {
 };
 
 /** \ingroup Polynomial */
-//template <typename TOUT, unsigned int N>
-//using polynomial = polynomial_helper<TOUT,N,std::is_floating_point<TOUT>::value>;
 template <typename TOUT, unsigned int N>
-using polynomial = polynomial_helper<TOUT,N,false>;
+using polynomial = polynomial_helper<TOUT,N,std::is_floating_point<TOUT>::value>;
+//template <typename TOUT, unsigned int N>
+//using polynomial = polynomial_helper<TOUT,N,false>;
 
 
 
@@ -87,8 +87,8 @@ inline TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
   return sum;
 }
 
-/** \brief Given a polynomial p:[a,b]->\R, compute the coefficients of
- *   q:[c,d]->\R such that q(x) = p( [(b-a)x + (ad-bc)]/(d-c) ) by
+/** \brief Given a polynomial \f$p:[a,b]->\mathbb{R}\f$, compute the
+ * coefficients of \f$q:[c,d]->\mathbb{R}\f$ such that \f$q(x) = p( [(b-a)x + (ad-bc)]/(d-c) )\f$ by
  *   expanding p in a Taylor series.
  *   
  *   This is used all over FunC (for example, special case for rightmost

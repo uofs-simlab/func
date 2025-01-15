@@ -39,7 +39,7 @@
 
 namespace func {
 
-/*
+/**
   Factory for Lookup Tables
   - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
   - Note: New implementations must be added to the registry by adding to the ::initialize() member function
@@ -189,12 +189,13 @@ LookupTableFactory<TIN, TOUT>::create(std::string name, const FunctionContainer<
 
 
 /** from_json for unique_ptr<LookupTable> unlocks this fancy syntax:
-```c++
-  nlohmann::json jsonStats;
-  std::ifstream(filename) >> jsonStats;
-  auto lut = jsonStats.get<std::unique_ptr<func::LookupTable<TIN,TOUT>>>(); // call the constructor (or the from_json) referred to by "name"
-```
-This is only possible because std::unique_ptr<T> is default constructable
+ *
+ * ```cpp
+ *   nlohmann::json jsonStats;
+ *   std::ifstream(filename) >> jsonStats;
+ *   auto lut = jsonStats.get<std::unique_ptr<func::LookupTable<TIN,TOUT>>>(); // call the constructor (or the from_json) referred to by "name"
+ * ```
+ * This is only possible because std::unique_ptr<T> is default constructable
 */
 template <typename TIN, typename TOUT>
 void from_json(const nlohmann::json& jsonStats, std::unique_ptr<LookupTable<TIN,TOUT>>& lut) {

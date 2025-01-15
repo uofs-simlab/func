@@ -9,29 +9,29 @@
 namespace func {
 
 /**
-  \brief Interpolation over Chebyshev nodes of the second kind. The
-  inverse Vandermonde matrix is hard-coded. Allows for full type
-  generality, but numerical output is not quite as good as
-  ChebyInterpTable because Armadillo can do iterative refinement.
+  \brief Interpolation over Chebyshev nodes of the second kind. The inverse
+  Vandermonde matrix is hard-coded. This class allows for full type generality,
+  but numerical output is not quite as good as ChebyInterpTable for \f$n>4\f$
+  because Armadillo does iterative refinement.
   \ingroup MetaTable
 
   \code{.cpp}
-  // ExactInterpTable works with an untemplated function
-  double foo(double x){ return x; }
+  // return x^9
+  template <typename T>
+  T foo(T x){ return (x*x*x)*(x*x*x)*(x*x*x); }
  
   int main(){
     double min = 0.0, max = 10.0, step = 0.0001;
-    UniformExactInterpTable<double>    L({foo}, {min, max, step}); // uniform partition
-    NonUniformExactInterpTable<double> L({foo}, {min, max, step}); // nonuniform partition
+    UniformExactInterpTable<1,double>    L({FUNC_SET_F(foo,double)}, {min, max, step}); // uniform partition
+    UniformExactInterpTable<4,double>    L({FUNC_SET_F(foo,double)}, {min, max, step}); // degree 4
+    NonUniformExactInterpTable<1,double> L({FUNC_SET_F(foo,double)}, {min, max, step}); // nonuniform partition
     auto val = L(0.87354);
   }
   \endcode
 
-
-  Notes:
-  - this LUT precomputes and stores the linear coefficient so it doesn't have to
-    perform that operation every lookup (but does have to look it up)
-  - static data after constructor has been called
+  \note Each polynomial coefficient is computed when the constructor is called
+    and looked up every time its operator() is called.
+  \note constant after the constructor is called (LUT is static).
 */
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT=GridTypes::UNIFORM>
 class ExactInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
@@ -92,7 +92,7 @@ public:
 
       /* Hardcoded solutions to the Vandermonde system V(x)*c=f(x).
        * Using the macro S makes the code more legible. This is the most generic way I could write these C++
-       * literals and it is embarrassing */
+       * literals. Honestly, this is embarrassing */
       /* Another option is to use Armadillo's `inv` here, but that produces
        * objectively worse results! Armadillo (and every other high performance
        * linear algebra library Shawn has looked into) does not have a solver for general vector spaces.

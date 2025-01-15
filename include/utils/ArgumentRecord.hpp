@@ -1,21 +1,3 @@
-/*
-  \brief Helper class which acts as an extension to any existing
-  EvaluationImplementation. Wraps a vector of unsigned
-  int which acts as a histogram for recording the
-  usage of a function's domain.
-
-  \ingroup Utils
-
-  Notes:
-  - Currently, code from this class is only included in FunC if
-  the -DFUNC_DEBUG flag is specified at compile time.
-  - Argument recording is threadsafe
-  - Only used by DirectEvaluation.hpp and FailureProofTable.hpp.
-  - This is designed to be a private member variable.
-
-  TODO this class should support to_json & from_json
-  TODO Look into using boost histogram? (would add an additional dependency)
-*/
 #pragma once
 #include <string> // to_string()
 #include <memory>
@@ -82,6 +64,25 @@ public:
 #define COMPUTE_INDEX(X) \
   (static_cast<unsigned int>(m_histSize*(X-m_minArg)/(m_maxArg+1.0-m_minArg))%m_histSize)
 
+
+/**
+  \brief Helper class which acts as an extension to any existing
+  EvaluationImplementation. Wraps a vector of unsigned
+  int which acts as a histogram for recording the
+  usage of a function's domain.
+
+  \ingroup Utils
+
+  Notes:
+  - Currently, code from this class is only included in FunC if
+  the -DFUNC_DEBUG flag is specified at compile time.
+  - Argument recording is threadsafe
+  - Only used by DirectEvaluation.hpp and FailureProofTable.hpp.
+  - This is designed to be a private member variable.
+
+  TODO this class should support to_json & from_json
+  TODO Look into using boost histogram? (would add an additional dependency)
+*/
 template <typename TIN>
 class ArgumentRecord
 {

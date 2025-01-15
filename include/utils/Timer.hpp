@@ -1,3 +1,8 @@
+#pragma once
+#include <chrono>
+
+namespace func {
+
 /**
   \brief Timer class. Starts timer when created. Stops when `stop()` is called and returns the duration in seconds with `duration()`. 
 
@@ -5,10 +10,6 @@
   - duration data is static after stop() has been called.
   - time is measured in seconds
 */
-#pragma once
-#include <chrono>
-
-namespace func {
 class Timer
 {
   std::chrono::high_resolution_clock::time_point m_start;

@@ -1,3 +1,16 @@
+#pragma once
+#include "LookupTable.hpp"
+#include "LookupTableGenerator.hpp"
+#include <map> // store LUTs
+#include <vector> // arguments to ctor are vectors
+#include <memory> // shared_ptr
+#include <utility> // std::tuple
+#include <stdexcept> // invalid_argument
+#include <numeric>
+
+
+namespace func {
+
 /**
   A wrapper for several FunC lookup tables. Good for approximating a single function with multiple LUTs.
   Can also be used as a naive non-uniform lookup table. The hash for this table is O(logn) where n is the number of LUTs.
@@ -24,19 +37,6 @@
 
   TODO this class should support to/from_json. We could use the unique_ptr<LookupTable> version of from_json in LookupTableFactory
   */
-#pragma once
-#include "LookupTable.hpp"
-#include "LookupTableGenerator.hpp"
-#include <map> // store LUTs
-#include <vector> // arguments to ctor are vectors
-#include <memory> // shared_ptr
-#include <utility> // std::tuple
-#include <stdexcept> // invalid_argument
-#include <numeric>
-
-
-namespace func {
-
 template <typename TIN, typename TOUT = TIN>
 class CompositeLookupTable final : public LookupTable<TIN,TOUT> {
   // collection of FunC lookup tables used to sample from

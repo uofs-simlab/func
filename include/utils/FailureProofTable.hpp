@@ -1,3 +1,19 @@
+#pragma once
+#include "FunctionContainer.hpp"
+#include "LookupTableGenerator.hpp"
+#include "LookupTable.hpp"
+#include "json.hpp"
+#include <memory> // unique_ptr
+#include <fstream> //ifstream
+#include <limits> // std::numeric_limits<TIN>::max() / lowest()
+#include <boost/math/special_functions/sign.hpp>
+
+#ifdef FUNC_DEBUG
+  #include "ArgumentRecord.hpp"
+#endif
+
+namespace func {
+
 /** \brief A wrapper for any implementation of LookupTable L. The
    operator()(x) ensures x is within the bounds of L before returning L(x).
    Returns f(x) for out of bounds arguments. If FUNC_DEBUG is defined then
@@ -20,22 +36,6 @@
   TODO this class will support to_json but not from_json. Add another constructor
   to build this class from a FunctionContainer and a filename
 */
-#pragma once
-#include "FunctionContainer.hpp"
-#include "LookupTableGenerator.hpp"
-#include "LookupTable.hpp"
-#include "json.hpp"
-#include <memory> // unique_ptr
-#include <fstream> //ifstream
-#include <limits> // std::numeric_limits<TIN>::max() / lowest()
-#include <boost/math/special_functions/sign.hpp>
-
-#ifdef FUNC_DEBUG
-  #include "ArgumentRecord.hpp"
-#endif
-
-namespace func {
-
 template <class LUT_TYPE>
 class FailureProofTable final : public LookupTable<typename LUT_TYPE::input_type, typename LUT_TYPE::output_type> {
   using TIN = typename LUT_TYPE::input_type;
