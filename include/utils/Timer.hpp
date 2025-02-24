@@ -4,11 +4,11 @@
 namespace func {
 
 /**
-  \brief Timer class. Starts timer when created. Stops when `stop()` is called and returns the duration in seconds with `duration()`. 
+  \brief Starts a timer when created. Stops when `stop()` is called and returns
+   the duration in seconds with `duration()`. 
 
-  Notes:
-  - duration data is static after stop() has been called.
-  - time is measured in seconds
+  \note The timer's duration is static after calling `stop()`.
+  \note This measures the elapsed time in seconds.
 */
 class Timer
 {

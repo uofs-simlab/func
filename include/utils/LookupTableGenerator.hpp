@@ -22,12 +22,13 @@
 namespace func {
 
 #ifdef FUNC_USE_BOOST
-/** Taken from boost/math/tools/roots.hpp but specialized for LookupTableGenerator.
- * This is the exact same function as provided by Boost; however, we cannot call f(0)!!!
- * so the first two lines are removed and replaced with a "theoretical" value for f(0) in fmin instead.
- * We proceed until we've actually bracketed the root, then finish with toms748
- * because it has better aymptotics. We cannot use toms748 the whole time,
- * because it might try making gigantic LUTs */
+/** This function is taken from boost/math/tools/roots.hpp but specialized for
+ * LookupTableGenerator. This is the exact same function as provided by Boost;
+ * however, we cannot call f(0)!!!  so the first two lines are removed and
+ * replaced with a "theoretical" value for f(0) in fmin instead. We proceed
+ * until we've actually bracketed the root, then finish with toms748 because it
+ * performs better asymptotically. We cannot use toms748 the whole time because it
+ * might try making horrendously gigantic LUTs */
 template <class F, class T, class Tol>
 std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol, boost::uintmax_t& max_iter) {
   /* check for special cases & errors */
@@ -78,23 +79,20 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
 #endif
 
 /**
-  \brief Generate a FunC LookupTable when given that table's name and one of the following:
-  - stepsize
-  - tolerance
-  - memory size limit
-  - filename
+  \class LookupTableGenerator
+  
+  \brief Generate a FunC LookupTable from a given name and one of the
+   following: stepsize, tolerance, memory size limit, or filename. This class
+   is also equipped to compute the error in a LUT built with any given stepsize
+   and plot a LUT against its exact function.
 
-  This class is also equipped to
-  - compute table error estimates at a given stepsize
-  - plot a table implementation against the exact function
+  \note If gen_by_XXX is given a filename then it will generate a table once
+   and save that output to to filename. Future runs will build the LUT from
+   filename instead of generating that LUT from scratch.
+  \note filenames are relative to the cwd unless users provide an absolute
+   path.
 
-
-  \note If gen_by_XXX is given a filename then it will generate a table and save that output to
-  to filename. Future runs will use the table in filename instead of generating that table
-  from scratch again. filename will be with respect to the cwd unless users provide an
-  absolute path.
-
-  \note Many architectures (including Apples arm chips) take long double to be a typedef for double (horrendus)
+  \note Many architectures (including Apples arm chips) typedef long double as double (truly horrendous)
 
   \note If Boost is not available then users can only use this class to build tables by file or by step.
 
@@ -102,9 +100,9 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
   error precision TERR. We MUST be able to cast TERR to TIN and vice versa.
   Ideally TERR satisfies: sqrt(epsilon_TERR) <= epsilon_TOUT.
 
-  TODO:
-  - Newton's iterate is currently unused because sometimes it'll try building a LUT
-  so large it'll kill mortal computers
+  \todo Newton's iterations are currently unused because sometimes it'll try
+  building a LUT so large it'll kill mortal computers. There must be a way to
+  use it, but I'm not sure how.
 */
 #if defined(FUNC_USE_BOOST)
 template <typename TIN, typename TOUT = TIN, typename TERR = boost::multiprecision::cpp_bin_float_quad>

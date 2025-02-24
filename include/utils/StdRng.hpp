@@ -6,15 +6,17 @@
 namespace func {
 
 /**
-  An implementation of RngInterface, intended to be used with the 
-  generators/ distributions defined in std::random.
-  Notes:
-  - Will take ownership if given a probability distribution
-  - Will build its own probability distribution corresponding to
-  DIST_TYPE if given the correct constructor args.
-  - Builds its own number generator when init(seed) is called
+  \brief An implementation of RngInterface, intended to be used with the
+  generators/ distributions defined in std::random. Only LookupTableComparator
+  uses this class, and it's for sampling random arguments.
+
+  \note Will take ownership if given a probability distribution
+  \note Will build its own probability distribution corresponding to
+   DIST_TYPE if given the correct constructor args.
+  \note Builds its own number generator when init(seed) is called
 
   Usage example:
+  \code{.cpp}
     // uniform_real_distribution<double> generated from std::mt19937 
     // within the range 0.0 to 1.0
     StdRng<double> rng(0.0,1.0); // build a std::uniform_real_distribution<double>
@@ -25,6 +27,7 @@ namespace func {
     // a normal distribution with mean 0.0 and standard deviation 1.0,
     // using points generated from minstd_rand0
     StdRng<float,std::normal_distribution<float>,minstd_rand0> rng2(0.0,1.0));
+  \endcode
  */
 template <typename POINT_TYPE,
          class DIST_TYPE = std::uniform_real_distribution<double>,

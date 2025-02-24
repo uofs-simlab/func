@@ -12,9 +12,14 @@
 namespace func {
 
 /**
-  A wrapper for several FunC lookup tables. Good for approximating a single function with multiple LUTs.
-  Can also be used as a naive non-uniform lookup table. The hash for this table is O(logn) where n is the number of LUTs.
-  Each LUT is considered a single "subinterval"
+  \brief Approximate a single 1D function with n LUTs over its domain.
+  This works well for functions with disconnected domains, or unused regions,
+  or regions with difficult to approximate behaviour.
+
+  This class works as a naive non-uniform lookup table. The hash in operator()
+  is \f$O(logn)\f$ where \f$n\f$. At this level of abstraction, we consider
+  each encapsulated LUT to be a single subinterval, so the number of
+  subintervals is n.
 
   Usage example:
   \code{.cpp}
@@ -28,14 +33,15 @@ namespace func {
   std::cout << "C(0.01) = " << C(0.01) << std::endl;
   \endcode
 
-  \note:
-  - Takes in a variable number of previously constructed lookup tables
-  inside a std::initializer_list
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-  - operator() caches the most recently used LUT and skips the binary search when repeatedly evaluating from the same table's range
+  \note Takes in a variable number of previously constructed lookup tables
+   inside a std::initializer_list
+  \note Each member function is marked const.
+  \note Evaluate by using parentheses, just like a function
+  \note operator() caches the most recently used LUT and skips the binary
+   search when repeatedly evaluating from the same LUT's range
 
-  TODO this class should support to/from_json. We could use the unique_ptr<LookupTable> version of from_json in LookupTableFactory
+  \todo Implement to/from_json. We can use the unique_ptr<LookupTable> version
+   of from_json in LookupTableFactory to build each member LUT easily
   */
 template <typename TIN, typename TOUT = TIN>
 class CompositeLookupTable final : public LookupTable<TIN,TOUT> {

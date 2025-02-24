@@ -1,19 +1,15 @@
 #pragma once
 #include <string> // to_string()
-#include <memory>
-#include <fstream>
+#include <memory> // vector
+#include <fstream> // ostream
 #include <limits> // numeric_limits<TIN>::max() / lowest()
 #include <cmath> // pow, floor, ceil
 #include "json.hpp"
 
 namespace func {
-/* TODO 
-   The histogram will never have that many buckets so 
-   we could likely get away with just making every one of
-   this class's member variables threadprivate. */
 
-// can change FuncMutex if we decide to use std::mutex in
-// the case where openmp isn't available
+// We could change FuncMutex if we use std::mutex when openmp isn't available
+// (unlikely in real application)
 #ifdef _OPENMP // defined when -fopenmp is used at compile time
 #include <omp.h>
 class FuncMutex
@@ -60,6 +56,12 @@ public:
 };
 #endif // _OPENMP
 
+
+
+
+
+
+
 // macro used to decide where an arg should be placed in the histogram
 #define COMPUTE_INDEX(X) \
   (static_cast<unsigned int>(m_histSize*(X-m_minArg)/(m_maxArg+1.0-m_minArg))%m_histSize)
@@ -67,48 +69,43 @@ public:
 
 /**
   \brief Helper class which acts as an extension to any existing
-  EvaluationImplementation. Wraps a vector of unsigned
-  int which acts as a histogram for recording the
-  usage of a function's domain.
+   EvaluationImplementation. Wraps a vector of unsigned
+   int that act as a histogram for recording the
+   usage of a function's domain. When constructed with a std::ostream, will
 
   \ingroup Utils
 
-  Notes:
-  - Currently, code from this class is only included in FunC if
-  the -DFUNC_DEBUG flag is specified at compile time.
-  - Argument recording is threadsafe
-  - Only used by DirectEvaluation.hpp and FailureProofTable.hpp.
-  - This is designed to be a private member variable.
+  \note Code from this class is only included in FunC if the -DFUNC_DEBUG flag
+   is specified at compile time and DirectEvaluation and FailureProofTable are
+   the only classes that might use an ArgumentRecord.
+  \note An ArgumentRecord is designed to be a private member variable.
+  \note Recording arguments is threadsafe.
 
-  TODO this class should support to_json & from_json
-  TODO Look into using boost histogram? (would add an additional dependency)
+  \todo Implement functions to_json & from_json
+  \todo The histogram will never have that many buckets so we could likely get
+   away with simply making every one of this class's member variables
+   threadprivate.
+  \todo Perhaps we should use boost histogram instead but that would add an
+   additional dependency
 */
 template <typename TIN>
 class ArgumentRecord
 {
-  // Histogram used to record locations of function evaluations
-  // and other helper helper vars
-  std::vector<unsigned int> mv_histogram;
-  std::vector<FuncMutex>    mv_histogram_mutex;
+  std::vector<unsigned int> mv_histogram; //!< Histogram used to record locations of function evaluations
+  std::vector<FuncMutex>    mv_histogram_mutex; //!< Array of mutexes
   unsigned int              m_histSize;
 
   std::ostream* mp_streamer;
 
-  // Set table bounds. Can be altered to result in nicer output
-  TIN m_minArg;
+  TIN m_minArg; //!< Set m_minArg and m_maxArg to be larger than the LUT's bounds to get nicer output
   TIN m_maxArg;
 
-  /* vars containing any statistics */
-  // the index of the bucket with the largest count
-  unsigned int m_peak_index;
 
-  // the number of elements outside the histogram's range
-  unsigned int m_num_out_of_bounds;
-
-  // Record the extreme args to help the user
-  // decide what bounds to use for their tables
-  TIN m_max_recorded;
-  TIN m_min_recorded;
+  /* variables containing any statistics */
+  unsigned int m_peak_index; //!< The index of the bucket with the largest count
+  unsigned int m_num_out_of_bounds; //!< the number of arguments sampled outside the histogram's bounds
+  TIN m_max_recorded; //!< Largest argument sampled during runtime
+  TIN m_min_recorded; //!< Smallest argument sampled during runtime
 
   public:
     ArgumentRecord(TIN min, TIN max, unsigned int histSize, std::ostream* streamer) :
@@ -127,11 +124,9 @@ class ArgumentRecord
       m_min_recorded = std::numeric_limits<TIN>::max();
     }
 
-    /* make the specific stream printed to depend on a printing function */
-    //std::cerr << *this;
     ~ArgumentRecord(){ if(mp_streamer != nullptr) *mp_streamer << *this; }
 
-    /* Rebuild our argument record
+    /** Rebuild our argument record
        Note: Assuming the encapsulating LookupTable gave us a valid json object */
     ArgumentRecord(nlohmann::json jsonStats)
     {

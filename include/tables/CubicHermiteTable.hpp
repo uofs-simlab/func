@@ -95,7 +95,7 @@ public:
   // operator() is in MetaTable
 };
 
-// define friendlier names
+/* Friendlier name */
 template <typename TIN, typename TOUT=TIN>
 using UniformCubicHermiteTable = CubicHermiteTable<TIN,TOUT,GridTypes::UNIFORM>;
 template <typename TIN, typename TOUT=TIN>

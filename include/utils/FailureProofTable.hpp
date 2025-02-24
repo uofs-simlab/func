@@ -20,6 +20,7 @@ namespace func {
    out of bounds arguments are recorded in a histogram.
 
    \tparam LUT_TYPE is a specific implementation of LookupTable (eg. ChebyInterpTable<3,double>)
+
   Usage example:
   \code{.cpp}
   FailureProofTable<UniformChebyInterpTable<3,double>> failsafe(
@@ -29,12 +30,12 @@ namespace func {
   double val2 = failsafe(100);
   \endcode
 
-  Notes:
-  - data is static after constructor call
-  - optional ArgumentRecord args available to improve binning (max & min is accuratly tracked)
+  \note Each member function is marked const
+  \note User can optionally call the constructor with arguments for
+   ArgumentRecord to improve binning (better tracking the max & min arguments)
 
-  TODO this class will support to_json but not from_json. Add another constructor
-  to build this class from a FunctionContainer and a filename
+  \todo this class will support to_json but not from_json. Add another constructor
+   to build this class from a FunctionContainer and a filename
 */
 template <class LUT_TYPE>
 class FailureProofTable final : public LookupTable<typename LUT_TYPE::input_type, typename LUT_TYPE::output_type> {
@@ -65,7 +66,7 @@ public:
   //  (void) histMin; (void) histMax; (void) histSize;
   //}
 
-  /* Build our own LUT_TYPE. Only works if the template is specific enough */
+  /** Build our own LUT_TYPE. Only works if the template is specific enough */
   FailureProofTable(const FunctionContainer<TIN,TOUT>& fc, const LookupTableParameters<TIN>& par,
       TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10, std::ostream* streamer = nullptr) :
     m_LUT(fc, par)
@@ -83,7 +84,7 @@ public:
     (void) histMin; (void) histMax; (void) histSize; (void) streamer;
   }
 
-  /* if x isn't in the LUT's bounds, then return f(x) */
+  /** if x isn't in the LUT's bounds, then return f(x) */
   TOUT operator()(TIN x) const final
   {
     // check if x is in the range of the LUT

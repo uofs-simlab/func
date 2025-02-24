@@ -40,9 +40,10 @@
 namespace func {
 
 /**
-  Factory for Lookup Tables
-  - LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates table types derived from LookupTable<TIN,TOUT>
-  - Note: New implementations must be added to the registry by adding to the ::initialize() member function
+  \brief Factory design patter for LookupTable implementations. 
+  
+  \note LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates LookupTable types derived from LookupTable<TIN,TOUT>
+  \note Add new LookupTable implementations to the registry by adding their names to the ::initialize() member function
 */
 template <typename TIN, typename TOUT = TIN> class LookupTableFactory {
 public:
@@ -84,7 +85,7 @@ private:
  * -------------------------------------------------------------------------- */
 
 /**  Initialize the registry
- *  - New implementations of table types must be added to the registry here
+ *  - Register new LookupTable implementations here
  */
 template <typename TIN, typename TOUT>
 void LookupTableFactory<TIN, TOUT>::initialize_registry() {

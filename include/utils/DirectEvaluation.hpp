@@ -14,25 +14,27 @@
 namespace func {
 
 /**
-  std::function wrapper with optional support for plotting the usage
-  of a function's domain in a histogram.
-  Replace your original function's usage with this class and compile
-  with -DFUNC_DEBUG in order to figure out what bounds you should
-  set your table intervals to.
+  \brief Wrap a std::function and optionally plot that function's domain usage
+   with an ArgumentRecord (builds a histogram). To determine useful LUT bounds,
+   users should replace their mathematical function with this class and compile
+   with -DFUNC_DEBUG.
+
+  \ingroup Utils
 
   Usage example:
   \code{.cpp}
   DirectEvaluation<double> de({MyFunction},0,10);
   double fx = de(0.87354);
-  // sim code goes here
+  // sim code calling de goes here
   de.print_details(std::cout); // prints max/min recorded args if FUNC_DEBUG is defined
   \endcode
 
-  Notes:
-  - Wraps a std::function
-  - When compiled with -DFUNC_DEBUG, min and max args are used for histogram's bounds
-  which record arguments passed to the direct evaluation. No error if out of bounds.
-  View the histogram with print_details(). Histogram code is in ArgumentRecord.hpp
+  \notes When compiled with -DFUNC_DEBUG, the ArgumentRecord uses min and max
+  constructor arguments to construct a histogram's bounds. This histogram
+  record arguments passed to the DirectEvaluation and there is no issue if
+  sampled arguments are out of bounds.
+  \note View the histogram with print_details(), or construct DirectEvaluation
+  with a pointer to ostream and get output upon destruction.
   */
 template <typename TIN, typename TOUT = TIN>
 class DirectEvaluation final : public LookupTable<TIN,TOUT>

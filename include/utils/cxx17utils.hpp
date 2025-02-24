@@ -1,3 +1,7 @@
+/** \file cxx17utils.hpp
+ * \brief Beta features for building multivariate LUTs via currying. Each
+ * feature requires C++17
+*/
 
 #pragma once
 #ifndef FUNC_NO_CXX17

@@ -29,9 +29,8 @@ namespace func {
    }
    \endcode
 
-  Notes:
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
+  \note static data after constructor has been called
+  \note evaluate by using parentheses, just like a function
 */
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class TaylorTable final : public MetaTable<N+1,TIN,TOUT,GT>

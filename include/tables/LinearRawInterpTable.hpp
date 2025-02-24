@@ -10,7 +10,8 @@ namespace func {
   \ingroup MetaTable
 
   \code{.cpp}
-  // LinearRawInterpTable does not benefit from templated functions
+  // LinearRawInterpTable does not benefit from templated functions because
+  // there is no nonuniform variant
   double foo(double x){ return x; }
  
   int main(){
@@ -20,11 +21,9 @@ namespace func {
   }
   \endcode
 
-
-  Notes:
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-  - Does not have a nonuniform variant and it's not obvious how to make
+  \note static data after constructor has been called
+  \note evaluate by using parentheses, just like a function
+  \note Does not have a nonuniform variant and it's not obvious how to make
     this LookupTable implementation nonuniform unless we make the operator()
     far slower (basically defeating the purpose of this LUT type e.g. lookup
     breakpoints from m_grid?)
@@ -69,8 +68,9 @@ public:
     m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
   }
 
-  /* this operator() is slightly different from MetaTable's provided Horner's method
-   * TODO is there a way to make this work with nonuniform grids in a way that works with our model? */
+  /** this operator() is slightly different from MetaTable's provided Horner's method
+   * \todo is there a way to make this work with nonuniform grids in a way that
+   * works with our model? */
   TOUT operator()(TIN x) const override
   {
     unsigned int x0; TIN dx;

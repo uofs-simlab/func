@@ -21,13 +21,13 @@ using ImplContainer = std::vector<std::unique_ptr<LookupTable<TIN,TOUT>>>;
 enum class Sorter {NONE, BEST, MEAN, WORST};
 
 /**
-  ImplTimer struct attaches additional data for timing an implementation
+ \brief ImplTimer struct attaches additional data for timing an implementation
   to the implementation
 */
 template <typename TIN, typename TOUT>
 struct ImplTimer
 {
-  /* Note the the LookupTable can NOT be a reference here, because we
+  /* Note that the LookupTable can NOT be a reference here, because we
      want to be able to sort a container of these ImplTimers. sort
      requires operator=, and classes that have non-static reference
      members cannot implement this */
@@ -57,11 +57,18 @@ struct ImplTimer
 };
 
 /**
-  Class for comparing any class implementing LookupTables
+  \brief Compare the average time taken to call the operator() of any
+  LookupTable implementation.
 
-  - takes ownership of the vector of implementations passed to it
+  \ingroup Utils
 
-  TODO LookupTableComparator's constructor should accept any callable type
+  \note This class takes ownership of the vector of LUT implementations it is
+  constructed with
+  \note Points are randomly sampled, and by default uses a
+   std::uniform_real_distribution<TIN> with the std::mt19937 variant of the
+   std::mersenne_twister_engine. This can be changed by passing in a different StdRng
+
+  \todo LookupTableComparator's constructor should accept any callable type
 */
 template <typename TIN, typename TOUT = TIN>
 class LookupTableComparator
@@ -80,9 +87,7 @@ private:
 
   /**
     RNG for evaluations
-    - By default uses a std::uniform_real_distribution<TIN>
-      with the std::mt19937 variant of the std::mersenne_twister_engine
-  */
+      */
   std::unique_ptr<RngInterface<TIN>> mp_sampler;
   std::unique_ptr<TIN[]>             mp_randomEvaluations;
   int                                m_nEvals;
@@ -142,7 +147,7 @@ public:
   /** Print out the raw timings for each LookupTable */
   void print_json(std::ostream&);
   void print_csv_header(std::ostream&);
-  /** space separated listing of timing results. Does not print a final newline if
+  /** Output a space separated listing of timing results. Does not print a final newline if
    * type != Sorter::NONE which is helpful for plotting timing results with external programs (e.g. Python) */
   void print_csv(std::ostream&, Sorter type = Sorter::NONE);
 
@@ -200,7 +205,6 @@ inline LookupTableComparator<TIN,TOUT>::LookupTableComparator(
   mp_randomEvaluations = std::unique_ptr<TIN[]>(new TIN[m_nEvals]);
 }
 
-/* sort the vector of timings based on the min, max, or mean times */
 template <typename TIN, typename TOUT>
 inline void LookupTableComparator<TIN,TOUT>::sort_timings(Sorter type)
 {
@@ -231,7 +235,8 @@ inline void LookupTableComparator<TIN,TOUT>::sort_timings(Sorter type)
   }
 }
 
-/* Implementation of functions that print to an ostream */
+/* -- Implementation of functions that print to an ostream -- */
+
 template <typename TIN, typename TOUT>
 inline void LookupTableComparator<TIN,TOUT>::print_json(std::ostream &out)
 {

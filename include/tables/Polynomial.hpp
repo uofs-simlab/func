@@ -1,8 +1,3 @@
-/** \file Polynomial.hpp
- * \brief Define the polynomial class and some convenience functions (eg. Horner's eval, derivatives, printing)
- * \defgroup Polynomial Polynomials and helper functions
- * */
-
 #include <string>
 #include <ostream> // operator<<
 
@@ -88,7 +83,7 @@ inline TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
 }
 
 /** \brief Given a polynomial \f$p:[a,b]->\mathbb{R}\f$, compute the
- * coefficients of \f$q:[c,d]->\mathbb{R}\f$ such that \f$q(x) = p( [(b-a)x + (ad-bc)]/(d-c) )\f$ by
+ *   coefficients of \f$q:[c,d]->\mathbb{R}\f$ such that \f$q(x) = p( [(b-a)x + (ad-bc)]/(d-c) )\f$ by
  *   expanding p in a Taylor series.
  *   
  *   This is used all over FunC (for example, special case for rightmost
@@ -122,7 +117,7 @@ inline TOUT eval(polynomial<TOUT,N> p, TIN x){
 }
 
 
-/* convenient debugging method for printing a polynomial */
+/** convenient debugging method for printing a polynomial */
 template <unsigned int N, typename TOUT>
 std::string polynomial_print(const polynomial<TOUT,N>& p){
   std::string sum = "";
@@ -131,7 +126,7 @@ std::string polynomial_print(const polynomial<TOUT,N>& p){
   return sum;
 }
 
-/* print basic info about a polynomials */
+/** print basic info about a polynomials */
 template <unsigned int N, typename TOUT>
 std::ostream& operator<<(std::ostream& out, const polynomial<TOUT,N>& p){
   for(unsigned int k=N; k>1; k--)
@@ -140,7 +135,7 @@ std::ostream& operator<<(std::ostream& out, const polynomial<TOUT,N>& p){
   return out;
 }
 
-/* wraps operator<< */
+/** wraps operator<< */
 template <unsigned int N, typename TOUT>
 inline std::string to_string(const polynomial<TOUT,N>& p) {
   std::ostringstream ss;

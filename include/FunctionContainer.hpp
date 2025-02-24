@@ -71,18 +71,17 @@ namespace func {
 
   Used to pass mathematical functions to FunC's LUTs.
 
-  Notes:
-  - Only the LUTs that need derivatives (Taylor, Hermite, Pade, and every
+  \note Only the LUTs that need derivatives (Taylor, Hermite, Pade, and every
     NonUniformLUT) need Boost's adVar[1-7] functions.
-  - The automatic differentiation requires the mathematical function is templated
+  \note The automatic differentiation requires the mathematical function is templated
     on some abstract type
-  - Autodiff was introduced in Boost 1.71. This class reduces to a simple std::function
+  \note Autodiff was introduced in Boost 1.71. This class reduces to a simple std::function
     wrapper if Boost is not available or is too old.
-  - Most of the machinery is necessary to use `get_nth_func<N>` which returns
+  \note Most of the machinery is necessary to use `get_nth_func<N>` which returns
     the ith order autodiff functions based on an index
 
-  - copy and paste the following example code into a new file and
-    rename the example to your own function with `:%s/foo/new_name/g` in Vim
+  copy and paste the following example code into a new file and
+  rename the example to your own function with `:%s/foo/new_name/g` in Vim
 
   \code{.cpp}
   #include FunctionContainer.hpp

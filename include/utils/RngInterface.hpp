@@ -2,8 +2,7 @@
 namespace func {
 
 /**
-  Abstract interface for interfacing with classes
-  that can generate random numbers
+  \brief Abstract interface for classes that can generate random numbers
 */
 template <typename POINT_TYPE>
 class RngInterface {
