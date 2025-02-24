@@ -61,11 +61,12 @@ public:
   virtual TIN step_size() const = 0;
   virtual std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const = 0;
 
-  /** \note any implementation of print_json should call their implementation of nlohmann's to_json */
+  /** \note Every class implementing LookupTable should call their implementation
+   * of nlohmann's to_json from print_json */
   virtual void print_json(std::ostream& out) const = 0;
 };
 
-/** \brief print basic info about a LookupTable if the user attempts to write L to std::out */
+/** \brief Print basic info about a LookupTable if the user attempts to write L to std::out */
 template <typename TIN, typename TOUT = TIN>
 std::ostream& operator<<(std::ostream& out, const LookupTable<TIN,TOUT>& L){
   out << L.name() << " " << L.min_arg() << " " << L.max_arg() << " "
@@ -73,7 +74,7 @@ std::ostream& operator<<(std::ostream& out, const LookupTable<TIN,TOUT>& L){
   return out;
 }
 
-/** \brief return the output from operator<< as a string */
+/** \brief Return the output from operator<< as a string */
 template <typename TIN, typename TOUT = TIN>
 inline std::string to_string(const LookupTable<TIN,TOUT>& L) {
   std::ostringstream ss;

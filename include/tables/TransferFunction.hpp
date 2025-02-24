@@ -27,7 +27,7 @@ namespace func {
 
   When given a FunctionContainer with a defined first derivative then this will construct a valid TransferFunction.
   Let \f$f\f$ be a function defined over \f$[a,b]\f$. Then, construct \f$S: [a,b]\rightarrow[a,b]\f$ as
-    \f[S(x) = a + \frac{b-a}{c}\int_a^x\frac{1}{\sqrt{1+f'(t)^2}} dt\f].
+    \f[S(x) = a + \frac{b-a}{c}\int_a^x\frac{1}{\sqrt{1+f'(t)^2}} dt,\f]
   where \f$c = \int_a^b\frac{1}{\sqrt{1+f'(t)^2}} dt\f$. This way, \f$S(a)=a, S(b)=b\f$.
   Computing \f$S^{-1}\f$ has to be fast so we approximate is as a monotone Hermite
   cubic polynomial and then rebuild \f$S\f$ as \f$(S^{-1})^{-1}\f$ using
@@ -39,7 +39,7 @@ namespace func {
   \note We need Boost version 1.71.0 or newer to generate a candidate transfer function.
     Boost is not required if TransferFunction is given coefficients.
   \note Resulting nonuniform LUT performs better if f' is largest near the endpoints [a,b].
-    If f' is largest near the middle of an interval (eg \f$e^{-x^2}\f$ when a<-3 and b>3)
+    If f' is largest near the middle of an interval (eg \f$e^{-x^2}\f$ when \f$a<-3\f$ and \f$b>3\f$)
     then the grid remains uniform. This is an issue with the way we approximate S!
 
   \todo Currently, transfer functions are basically useless if \f$f'\f$ is not
@@ -53,7 +53,7 @@ namespace func {
     \f$p(x) = a_0 + a_1x + a_2x^2 + a_3x^3\f$
   is monotone over \f$\mathbb{R}\f$ if and only if \f$a_2^2 < 3a_1a_3\f$. Maybe
   we can compute a polynomial minimizing
-    \f$int_a^b |f(t)-p(t)| dt\f$
+    \f$\max_t |f(t)-p(t)| \f$
   such that
     \f$p(a) = a, p(b) = b\f$, and \f$a_2^2 < 3a_1a_3\f$.
   That would be a much better general purpose solution. The search space is convex!

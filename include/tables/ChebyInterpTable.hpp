@@ -13,8 +13,10 @@ namespace func {
 /** \brief LUT using degree 1 to 7 polynomial interpolation over Chebyshev nodes on each subinterval
  *  \ingroup MetaTable
  *
+ * Chebyshev nodes are a partition of the interval \f$[a,b]\f$ such that
  *  \f[ t_s = (a+b)/2 + (b-a)\cos\left(\frac{2s-1}{2n}\pi\right)/2, \quad s=1,...,n. \f]
  *
+ * Example usage
  * \code{.cpp}
  * // return x^9
  * template <typename T>
@@ -38,9 +40,10 @@ namespace func {
  * }
  * \endcode
  *
- * \note the template implementation is only registered for \f$N=1,2,3,4,5,6,7\f$
- *   but users could manually construct this class with larger \f$N\f$ if they wish.
- *   We make no promises on convergence/error in this case.
+ * \note The template implementation is only registered in the factory for
+ *   \f$N=1,2,3,4,5,6,7\f$ but users could construct this class with larger
+ *   \f$N\f$ if they wish. We make no promises on convergence/error in this
+ *   case.
  * \note ChebyTable only works if we can cast both TOUT and TIN to double. This requirement
  *   exists because Armadillo `Mat<T>`'s `is_supported_elem_type<T>` will only let us do arithmetic
  *   with float or double (not even long double!). You might think "generic types

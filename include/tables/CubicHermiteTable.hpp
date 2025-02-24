@@ -19,7 +19,9 @@ namespace func {
  *   NonUniformCubicHermiteTable<double> L({FUNC_SET_F(foo,double)}, {min, max, step}); // nonuniform partition
  *   auto val = L(0.87354);
  * }
- * \endcode */
+ * \endcode
+ * \note Each member function is declared const
+ * */
 template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class CubicHermiteTable final : public MetaTable<4,TIN,TOUT,GT>
 {

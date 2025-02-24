@@ -21,8 +21,11 @@ namespace func {
 
    \tparam LUT_TYPE is a specific implementation of LookupTable (eg. ChebyInterpTable<3,double>)
 
+  \ingroup Utils
+
   Usage example:
   \code{.cpp}
+  // Build a UniformChebyInterpTable<3,double> with the arguments {0,10,0.0001}
   FailureProofTable<UniformChebyInterpTable<3,double>> failsafe(
     {MyFunction},{0,10,0.0001}
   );
@@ -34,8 +37,9 @@ namespace func {
   \note User can optionally call the constructor with arguments for
    ArgumentRecord to improve binning (better tracking the max & min arguments)
 
-  \todo this class will support to_json but not from_json. Add another constructor
-   to build this class from a FunctionContainer and a filename
+  \todo This class will support to_json but not from_json because it needs a
+   FunctionContainer. Add another constructor to build this class from a
+   FunctionContainer and a filename
 */
 template <class LUT_TYPE>
 class FailureProofTable final : public LookupTable<typename LUT_TYPE::input_type, typename LUT_TYPE::output_type> {
@@ -66,7 +70,8 @@ public:
   //  (void) histMin; (void) histMax; (void) histSize;
   //}
 
-  /** Build our own LUT_TYPE. Only works if the template is specific enough */
+  /** Build our own LUT_TYPE. This constructor will works if the template
+   * argument LUT_TYPE is specific enough */
   FailureProofTable(const FunctionContainer<TIN,TOUT>& fc, const LookupTableParameters<TIN>& par,
       TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10, std::ostream* streamer = nullptr) :
     m_LUT(fc, par)

@@ -30,11 +30,11 @@ namespace func {
   \endcode
 
   \notes When compiled with -DFUNC_DEBUG, the ArgumentRecord uses min and max
-  constructor arguments to construct a histogram's bounds. This histogram
-  record arguments passed to the DirectEvaluation and there is no issue if
-  sampled arguments are out of bounds.
+   constructor arguments to construct a histogram's bounds. This histogram
+   record arguments passed to the DirectEvaluation and there is no issue if
+   sampled arguments are out of bounds.
   \note View the histogram with print_details(), or construct DirectEvaluation
-  with a pointer to ostream and get output upon destruction.
+   with a pointer to ostream and get output upon destruction.
   */
 template <typename TIN, typename TOUT = TIN>
 class DirectEvaluation final : public LookupTable<TIN,TOUT>
@@ -49,7 +49,9 @@ class DirectEvaluation final : public LookupTable<TIN,TOUT>
 #endif
 public:
 
-  /* Setup argument recording if FUNC_DEBUG is defined used at compile time */
+  /** Simply store the first member of func_container and pass each argument to
+   * it whenever operator() is called. Optionally set up argument recording if
+   * FUNC_DEBUG is defined used at compile time */
   DirectEvaluation(const FunctionContainer<TIN,TOUT>& func_container,
       TIN min = 0.0, TIN max = 1.0, unsigned int histSize = 10, TOUT aerr = 0.0, TIN rerr = 0.0, std::ostream* streamer = nullptr) :
     m_func(func_container.standard_fun)

@@ -21,8 +21,7 @@ using ImplContainer = std::vector<std::unique_ptr<LookupTable<TIN,TOUT>>>;
 enum class Sorter {NONE, BEST, MEAN, WORST};
 
 /**
- \brief ImplTimer struct attaches additional data for timing an implementation
-  to the implementation
+ \brief Helper struct: takes a LookupTable and attaches a set of timings to it
 */
 template <typename TIN, typename TOUT>
 struct ImplTimer
@@ -62,6 +61,8 @@ struct ImplTimer
 
   \ingroup Utils
 
+  For example usage, see any file in the examples directory.
+
   \note This class takes ownership of the vector of LUT implementations it is
   constructed with
   \note Points are randomly sampled, and by default uses a
@@ -85,9 +86,7 @@ private:
 
   std::unique_ptr<TOUT[]> m_evalHolder;
 
-  /**
-    RNG for evaluations
-      */
+  /* RNG for evaluations */
   std::unique_ptr<RngInterface<TIN>> mp_sampler;
   std::unique_ptr<TIN[]>             mp_randomEvaluations;
   int                                m_nEvals;
@@ -97,13 +96,13 @@ private:
   //  double minTime, maxTime, meanTime;
   //} m_timingStatistics;
 
-  /* Fill mp_randomEvaluations with random points to be evaluated */
+  /** Fill mp_randomEvaluations with random points to be evaluated */
   void draw_new_sample_points() {
     for (int ii=0;ii<m_nEvals;++ii)
       mp_randomEvaluations[ii] = mp_sampler->get_point();
   }
 
-  /* Time implementation evaluations */
+  /** Time implementation evaluations */
   void run_all_single()
   {
     for (auto &itImplTimer : m_implTimers) {
@@ -118,6 +117,7 @@ private:
 
 public:
 
+  /** Prepare to run several timings for each LUT in the vector inImpl */
   LookupTableComparator(ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, unsigned int nEvals = 100000,
       unsigned int seed = 2017, std::unique_ptr<RngInterface<TIN>> inRng = nullptr);
   ~LookupTableComparator(){}

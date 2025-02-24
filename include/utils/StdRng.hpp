@@ -10,6 +10,8 @@ namespace func {
   generators/ distributions defined in std::random. Only LookupTableComparator
   uses this class, and it's for sampling random arguments.
 
+  \ingroup Utils
+
   \note Will take ownership if given a probability distribution
   \note Will build its own probability distribution corresponding to
    DIST_TYPE if given the correct constructor args.
@@ -40,30 +42,30 @@ class StdRng : public RngInterface<POINT_TYPE>
   unsigned int m_seed = 1;
 
   public:
-    // Take ownership of the pointer to probability distribution passed in
-    StdRng(std::unique_ptr<DIST_TYPE> dist) : mp_distribution(std::move(dist))
+  /** Take ownership of the pointer to probability distribution passed in */
+  StdRng(std::unique_ptr<DIST_TYPE> dist) : mp_distribution(std::move(dist))
   {
     init(m_seed); // initialize the seed & generator to 1
   }
 
-    // create a new StdRng based on the template type and its parameters
-    template <typename ... DIST_TYPE_ARGS>
-    StdRng(DIST_TYPE_ARGS ... args) :
-      StdRng(std::unique_ptr<DIST_TYPE>(new DIST_TYPE(args ...))){}
+  /** Create a new StdRng based on the template type and its parameters */
+  template <typename ... DIST_TYPE_ARGS>
+  StdRng(DIST_TYPE_ARGS ... args) :
+    StdRng(std::unique_ptr<DIST_TYPE>(new DIST_TYPE(args ...))){}
 
-    // set the seed and generator of the distribution
-    void init(unsigned int seed)
-    {
-      m_seed = seed;
-      mp_generator.reset(new RNG_TYPE(seed));
-    }
+  /** Set the seed and generator of the distribution */
+  void init(unsigned int seed)
+  {
+    m_seed = seed;
+    mp_generator.reset(new RNG_TYPE(seed));
+  }
 
-    // return the seed
-    unsigned int seed(){ return m_seed; }
+  /** Return the seed */
+  unsigned int seed(){ return m_seed; }
 
-    // get a random point from the given distribution
-    POINT_TYPE get_point(){ return static_cast<POINT_TYPE>((*mp_distribution)(*mp_generator)); }
+  /** Get a random point from the given distribution */
+  POINT_TYPE get_point(){ return static_cast<POINT_TYPE>((*mp_distribution)(*mp_generator)); }
 
-    ~StdRng(){}
+  ~StdRng(){}
 };
 }

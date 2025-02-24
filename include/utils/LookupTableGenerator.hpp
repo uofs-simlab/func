@@ -86,8 +86,10 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
    is also equipped to compute the error in a LUT built with any given stepsize
    and plot a LUT against its exact function.
 
-  \note If gen_by_XXX is given a filename then it will generate a table once
-   and save that output to to filename. Future runs will build the LUT from
+  \ingroup Utils
+
+  \note If `gen_by_XXX` is given a nonempty filename then it will generate a table once
+   and save that output to to `filename`. Future runs will build the LUT from
    filename instead of generating that LUT from scratch.
   \note filenames are relative to the cwd unless users provide an absolute
    path.
@@ -97,12 +99,12 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
   \note If Boost is not available then users can only use this class to build tables by file or by step.
 
   \note LookupTableGenerator is header only because it is templated on the
-  error precision TERR. We MUST be able to cast TERR to TIN and vice versa.
-  Ideally TERR satisfies: sqrt(epsilon_TERR) <= epsilon_TOUT.
+   error precision TERR. We MUST be able to cast TERR to TIN and vice versa.
+   Ideally TERR satisfies: sqrt(epsilon_TERR) <= epsilon_TOUT.
 
   \todo Newton's iterations are currently unused because sometimes it'll try
-  building a LUT so large it'll kill mortal computers. There must be a way to
-  use it, but I'm not sure how.
+   building a LUT so large it'll kill mortal computers. There must be a way to
+   use it, but I'm not sure how.
 */
 #if defined(FUNC_USE_BOOST)
 template <typename TIN, typename TOUT = TIN, typename TERR = boost::multiprecision::cpp_bin_float_quad>
@@ -116,23 +118,22 @@ private:
   LookupTableParameters<TIN> m_par;
   TIN m_min, m_max; // TODO min/max member variables are convenient but this data is already in m_par...
 
-  LookupTableFactory<TIN,TOUT> factory;
+  LookupTableFactory<TIN,TOUT> factory; //!< Use the factory design pattern
 
-  /* Nested functor for error evaluation */
-  struct LookupTableErrorFunctor;
-
-  /* Nested functor for optimal grid spacing determination */
-  struct OptimalStepSizeFunctor;
+  struct LookupTableErrorFunctor; //!< Nested functor for error evaluation
+  struct OptimalStepSizeFunctor; //!< Nested functor for optimal grid spacing determination
 
 
-  /* check if filename exists or if the user can access it */
+  /** check if filename exists or if the user can access it */
   bool file_exists(std::string filename){
     return static_cast<bool>(std::ifstream(filename));
   }
 
+  /** When given a nonempty filename, print lut to filename */
   inline void save_lut(LookupTable<TIN,TOUT>* lut, std::string filename){
     if(filename == "") return;
 
+    // TODO check if filename already exists????
     std::ofstream out_file(filename);
     lut->print_json(out_file);
     out_file.close();
@@ -166,7 +167,7 @@ public:
     return factory.create(tableKey, m_fc, LookupTableParameters<TIN>{0,0,0}, jsonStats);
   }
 
-  /* A wrapper for the LookupTableFactory */
+  /** A wrapper for the LookupTableFactory */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_step(std::string tableKey, TIN stepSize, std::string filename = "")
   {
     if(filename != "" && file_exists(filename))
@@ -181,21 +182,21 @@ public:
     return lut;
   }
 
-  /* Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
+  /** Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename = "");
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN desiredErr, std::string filename = ""){
     return generate_by_tol(tableKey, desiredErr, desiredErr, filename);
   }
 
-  /* Generate a table takes up desiredSize bytes */
+  /** Generate a table takes up desiredSize bytes */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize, std::string filename = "");
 
-  /* Return the approx error in tableKey at stepSize
+  /** Return the approx error in tableKey at stepSize
    * - relTol is a parameter which determines how much effect small f(x) values have on the error calculation */
   long double error_at_step_size(std::string tableKey, TIN stepSize, TIN relTol = static_cast<TIN>(1.0));
   long double error_of_table(const LookupTable<TIN,TOUT>& L, TIN relTol = static_cast<TIN>(1.0));
 
-  /* compare tableKey to the original function at stepSize */
+  /** compare tableKey to the original function at stepSize */
   void plot_implementation_at_step_size(std::string tableKey, TIN table_step, TIN plot_step);
 
   TIN min_arg(){ return m_par.minArg; }
@@ -206,7 +207,7 @@ public:
 /* Non-trivial member definitions */
 /*----------------------------------------------------------------------------*/
 
-/* lambda used for computing error in a given lookup table */
+/* lambda useful for computing error in a given lookup table */
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::LookupTableErrorFunctor
 {
@@ -231,12 +232,12 @@ private:
   TERR m_relTol;
 };
 
-/* lambda used for finding error over table bounds */
+/* lambda useful for finding error over a LUT's bounds */
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 {
-  /* small relTol => don't worry about small f(x) in error metric.
-   * large relTol => small |f(x)| must be approximated well compared to large |f(x)| */
+  /* Given small relTol => don't worry about small f(x) in error metric.
+   * Given large relTol => small |f(x)| must be approximated well compared to large |f(x)| */
   OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR relTol, TERR desiredErr) :
     m_parent(parent), m_tableKey(tableKey), m_relTol(relTol), m_desiredErr(desiredErr) {}
 
@@ -249,6 +250,13 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     return error_of_table(impl.get());
   }
 
+  /** Want a small bracket for brent's method so for each interval in the table,
+   * compute the maximum error.
+   * - Must be careful about the last interval b/c tableMaxArg >= maxArg
+   *   (and we don't care about error outside of table bounds)
+   * - TODO This parallelizes reasonably well, but is this the best pragma possible?
+   * - TODO brent's method occasionally spends much more time on single intervals (stragglers)
+   * - TODO can be slow for high order tables with very few subintervals */
   TIN error_of_table(const LookupTable<TIN,TOUT>* impl){
     using namespace boost::math::tools;
 
@@ -257,14 +265,6 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     boost::uintmax_t max_it = 20;
     TERR max_err = 0;
 
-    /* Want a small bracket for brent's method so for each interval in the table,
-     * compute the maximum error.
-     * - Must be careful about the last interval b/c tableMaxArg >= maxArg
-     *   (and we don't care about error outside of table bounds)
-     * - TODO This parallelizes reasonably well, but is this the best pragma possible?
-     * - TODO brent's method occasionally spends much more time on single intervals (stragglers)
-     * - TODO can be slow for high order tables with very few subintervals
-     *   */
     #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_subintervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->bounds_of_subinterval(ii);

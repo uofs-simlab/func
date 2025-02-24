@@ -66,7 +66,7 @@ namespace func {
 
 
 /**
-  \brief Wrapper for `std::function<TOUT(TIN)>` and some optional `std::functions`
+  \brief Wrapper for `std::function<TOUT(TIN)>` and some optional `std::function`s
   of Boost's automatic differentiation type
 
   Used to pass mathematical functions to FunC's LUTs.
@@ -80,7 +80,7 @@ namespace func {
   \note Most of the machinery is necessary to use `get_nth_func<N>` which returns
     the ith order autodiff functions based on an index
 
-  copy and paste the following example code into a new file and
+  Copy and paste the following example code into a new file and
   rename the example to your own function with `:%s/foo/new_name/g` in Vim
 
   \code{.cpp}

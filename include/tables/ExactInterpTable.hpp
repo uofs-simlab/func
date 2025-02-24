@@ -31,7 +31,7 @@ namespace func {
 
   \note Each polynomial coefficient is computed when the constructor is called
     and looked up every time its operator() is called.
-  \note constant after the constructor is called (LUT is static).
+  \note Each member function is declared const
 */
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT=GridTypes::UNIFORM>
 class ExactInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>

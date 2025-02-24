@@ -1,6 +1,7 @@
 /** \file cxx17utils.hpp
  * \brief Beta features for building multivariate LUTs via currying. Each
  * feature requires C++17
+ * \ingroup Utils
 */
 
 #pragma once
@@ -14,6 +15,7 @@
 
 namespace func {
 
+/** \brief Compute the error in a multivariate LUT */
 template <unsigned int N, typename TERR, class LUT, typename F>
 TERR metric(LUT L, F f){
   TERR max_err = 0;
@@ -50,21 +52,25 @@ TERR metric(LUT L, F f){
   return max_err;
 }
 
-/** convenience functions for defining LUTs of LUTs */
+/** BETA FEATURE: Convenience functions for defining LUTs of LUTs */
 template <unsigned int N, typename TIN, typename TOUT, template <typename...> class classname>
 struct curriedLUT {
   using type = classname<TIN, typename curriedLUT<N-1,TIN,TOUT,classname>::type>;
 };
 
+/** BETA FEATURE: Base case: zero currying is equivalent to the LUT itself */
 template<typename TIN, typename TOUT, template <typename...> class classname>
 struct curriedLUT<0,TIN,TOUT,classname> {
   using type = classname<TIN,TOUT>;
 };
 
-/** TODO:
- * - Is not compatible with function derivatives (needed for nonuniform partition & Taylor tables). Is that impossible to support anyways???
- * - classname should be variadic! Is this possible?????
- * Call as func::ndimLUT<ndim,type1,type2,luttype>(f, params) */
+/** \brief BETA FEATURE: Define a LUT with N input variables
+ *
+ * Call as func::ndimLUT<ndim,type1,type2,luttype>(f, params)
+ * See examples/2D_lut.cpp for example usage
+ *
+ * \todo This is not compatible with function derivatives (needed for nonuniform partition & Taylor tables). Is that impossible to support anyways?
+ * \todo Template argument classname should be variadic! Is this possible? */
 template<unsigned int N, typename TIN, typename TOUT, template <typename...> class classname, class F, typename... TIN2>
 constexpr typename curriedLUT<N-1,TIN,TOUT,classname>::type ndimLUT(F f, const std::vector<LookupTableParameters<TIN>>& params, TIN2... other) {
   auto H = sizeof...(other);

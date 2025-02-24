@@ -1,3 +1,7 @@
+/** \file Polynomial.hpp
+ *  \brief Define a polynomial and provide several helper functions
+ * */
+
 #include <string>
 #include <ostream> // operator<<
 
@@ -8,11 +12,10 @@ namespace func {
 static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,16,16,16};
 
 /** \brief A typedef for std::array<TOUT,N> along with some functions that interpret the array as polynomial coefficients.
- *  \ingroup Polynomial
  * 
  *  \note By convention, we write polynomials coefficients with increasing powers of x:
- *   \f[p(x) = \mathrm{m\_table}[x0].\mathrm{coefs}[0] + \mathrm{m\_table}[x0].\mathrm{coefs}[1]x + ... + \mathrm{m\_table}[x0].\mathrm{coefs}[N-1]x^{N-1}\f]
- *  \note polynomial arrays are sometimes aligned (always aligned for float or double)
+ *   \f[p(x) = \mathrm{m\_table}[x0].\mathrm{coefs}[0] + \mathrm{m\_table}[x0].\mathrm{coefs}[1]x + ... + \mathrm{m\_table}[x0].\mathrm{coefs}[N-1]x^{N-1}.\f]
+ *  \note Polynomial arrays are sometimes aligned (currently only aligned for float or double)
  *
  *  \tparam B Boolean: determines whether an array of polynomials over TOUT are aligned with alignas(sizeof(TOUT)*alignments[N])
  *
@@ -21,23 +24,20 @@ static constexpr unsigned int alignments[] = {0,1,2,4,4,8,8,8,8,16,16,16,16,16,1
  * - Coefficients of f's derivatives */
 template <typename TOUT, unsigned int N, bool B> struct polynomial_helper;
 
-/** \brief Arrays of this type of polynomial are aligned
- * \ingroup Polynomial */
+/** \brief Arrays of this type of polynomial are aligned */
 template <typename TOUT, unsigned int N>
 struct alignas(sizeof(TOUT)*alignments[N]) polynomial_helper<TOUT,N,true> {
   constexpr unsigned int size() const noexcept { return N; }
   TOUT coefs[N];
 };
 
-/** \brief Arrays of this type of polynomial are not aligned
- *  \ingroup Polynomial */
+/** \brief Arrays of this type of polynomial are not aligned */
 template <typename TOUT, unsigned int N>
 struct polynomial_helper<TOUT,N,false> {
   constexpr unsigned int size() const noexcept { return N; }
   TOUT coefs[N];
 };
 
-/** \ingroup Polynomial */
 template <typename TOUT, unsigned int N>
 using polynomial = polynomial_helper<TOUT,N,std::is_floating_point<TOUT>::value>;
 //template <typename TOUT, unsigned int N>

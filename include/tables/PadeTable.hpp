@@ -45,8 +45,8 @@ static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
   \note This class only works if TOUT and TIN can both be cast to double. 
     Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
     with float or double (not even long double) and arma::field is useless.
-  \note static data after constructor has been called
-  \note evaluate by using parentheses, just like a function
+  \note Evaluate by using parentheses, just like a function
+  \note Each member function is marked const
   \note Available template values are all M,N such that 0 < N <= M and M+N<=7
   \note Template values where M < N are not supported
   \note Requires both Armadillo and Boost version 1.71.0 or newer to generate

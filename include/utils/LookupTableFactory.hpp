@@ -28,9 +28,11 @@
          return new classname<__VA_ARGS__, TIN, TOUT>(fc, args, jsonStats);                                                                               \
        }})
 
-// This will have to change slightly depending on the maximum number of template arguments,
-// but it's easy enough to understand, prevents name polution, and is needed in FunctionContainer
-// anyways: https://stackoverflow.com/a/11763277/14090389
+// FUNC_ADD_TABLE_TO_REGISTRY is slightly different depending on the maximum
+// number of template arguments. It's obtuse code, but it's easy enough to
+// understand if you _must_ understand it, prevents name pollution, and almost
+// identical code is necessary in FunctionContainer anyways:
+// https://stackoverflow.com/a/11763277/14090389
 #define FUNC_REGISTRY_GET_MACRO(_1,_2,_3,NAME,...) NAME
 
 // Call with FUNC_ADD_TABLE_TO_REGISTRY(classname,template_args_if_they_exist)
@@ -41,6 +43,8 @@ namespace func {
 
 /**
   \brief Factory design patter for LookupTable implementations. 
+
+  \ingroup Utils
   
   \note LookupTableFactory<TIN,TOUT>::create(str_name, fc, par) generates LookupTable types derived from LookupTable<TIN,TOUT>
   \note Add new LookupTable implementations to the registry by adding their names to the ::initialize() member function
@@ -48,15 +52,15 @@ namespace func {
 template <typename TIN, typename TOUT = TIN> class LookupTableFactory {
 public:
 
-  /* The map type that holds the registry */
+  
   using registry_t =
-      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(const FunctionContainer<TIN, TOUT>&, const LookupTableParameters<TIN>&, const nlohmann::json& jsonStats)>>;
+      std::map<std::string, std::function<LookupTable<TIN, TOUT> *(const FunctionContainer<TIN, TOUT>&, const LookupTableParameters<TIN>&, const nlohmann::json& jsonStats)>>; //!< This map type holds the registry
 
-  /* Constructor initializes registry, default destructor. */
+  /** Constructor initializes registry, default destructor. */
   LookupTableFactory() { initialize_registry(); };
   ~LookupTableFactory() = default;
 
-  /*
+  /**
    * Create a lookup table from
    * - string_name - Stringified table type
    * - fc          - FunctionContainer holding the function that the table evaluates
@@ -65,15 +69,15 @@ public:
   std::unique_ptr<LookupTable<TIN, TOUT>> create(std::string string_name, const FunctionContainer<TIN, TOUT>& fc, const LookupTableParameters<TIN>& args,
       const nlohmann::json& jsonStats=nlohmann::json());
 
-  /* Return a container of the keys for table types that have been registered */
+  /** Return a container of the keys for table types that have been registered */
   std::vector<std::string> get_registered_keys();
 
 private:
 
-  /* Hold mapping from strings to constructors for derived table types. */
-  registry_t registry;
+  registry_t registry; //!< Hold mapping from strings to constructors for derived table types
 
-  /* Register every LookupTable implementation we officially support (construct the registry) */
+  /** Register every LookupTable implementation we officially support (construct the registry).
+   * \note Register new LookupTable implementations here */
   void initialize_registry();
 };
 
@@ -84,9 +88,6 @@ private:
  * --------------------------------------------------------------------------
  * -------------------------------------------------------------------------- */
 
-/**  Initialize the registry
- *  - Register new LookupTable implementations here
- */
 template <typename TIN, typename TOUT>
 void LookupTableFactory<TIN, TOUT>::initialize_registry() {
   FUNC_ADD_TABLE_TO_REGISTRY(UniformTaylorTable,1);

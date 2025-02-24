@@ -21,8 +21,8 @@ namespace func {
   }
   \endcode
 
-  \note static data after constructor has been called
-  \note evaluate by using parentheses, just like a function
+  \note Each member function is marked const
+  \note Evaluate by using parentheses, just like a function
   \note Does not have a nonuniform variant and it's not obvious how to make
     this LookupTable implementation nonuniform unless we make the operator()
     far slower (basically defeating the purpose of this LUT type e.g. lookup
@@ -68,7 +68,9 @@ public:
     m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
   }
 
-  /** this operator() is slightly different from MetaTable's provided Horner's method
+  /** This operator() is different from MetaTable's provided Horner's method
+   * because we must compute the two coefficients of the linear interpolating
+   * polynomial
    * \todo is there a way to make this work with nonuniform grids in a way that
    * works with our model? */
   TOUT operator()(TIN x) const override

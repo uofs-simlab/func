@@ -68,10 +68,13 @@ public:
 
 
 /**
-  \brief Helper class which acts as an extension to any existing
-   EvaluationImplementation. Wraps a vector of unsigned
-   int that act as a histogram for recording the
-   usage of a function's domain. When constructed with a std::ostream, will
+  \brief A class used internally by FunC. Wraps a vector of unsigned int that
+  act as a histogram for recording the usage of a function's domain.
+   
+  When constructed with a std::ostream, this will print to that ostream when
+  the destructor is called. It is okay for provided arguments to be out of
+  bounds. In this case, the max or min arg recorded will be updated, but the
+  histogram's bounds will not grow dynamically.
 
   \ingroup Utils
 
@@ -108,6 +111,11 @@ class ArgumentRecord
   TIN m_min_recorded; //!< Smallest argument sampled during runtime
 
   public:
+
+    /** Arguments min and max determine histogram bounds, affecting the output
+     * in the printed histogram. histSize is the number of buckets. When
+     * provided an ostream != nullptr, this class will output *this to ostream
+     * when destructed */
     ArgumentRecord(TIN min, TIN max, unsigned int histSize, std::ostream* streamer) :
       m_minArg(min), m_maxArg(max), m_histSize(histSize), mp_streamer(streamer)
     {
@@ -124,10 +132,12 @@ class ArgumentRecord
       m_min_recorded = std::numeric_limits<TIN>::max();
     }
 
+    /** Print to the optional argument mp_streamer if one was provided at the time of construction */
     ~ArgumentRecord(){ if(mp_streamer != nullptr) *mp_streamer << *this; }
 
     /** Rebuild our argument record
-       Note: Assuming the encapsulating LookupTable gave us a valid json object */
+       \note This assumes the encapsulating LookupTable provided a valid json object
+       \todo Maybe optionally provide an ostream? */
     ArgumentRecord(nlohmann::json jsonStats)
     {
       m_minArg = jsonStats["ArgumentRecord"]["minArg"].get<TIN>();
@@ -144,7 +154,7 @@ class ArgumentRecord
       m_min_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<TIN>();
     }
 
-    /** place x in the histogram. Mimic pipeline parallelism for any statistics with only one instance */
+    /** Place x in the histogram. Mimic pipeline parallelism for any statistics with only one instance */
     void record_arg(TIN x)
     {
       // Record x if it's within our histogram's limits
@@ -205,7 +215,7 @@ class ArgumentRecord
     }
 
 
-    /** make a string representation of the histogram */
+    /** Make a string representation of the histogram. */
     std::string to_string() const
     {
       // avoid division by zero by printing nothing if the histogram is empty
@@ -229,7 +239,7 @@ class ArgumentRecord
       return hist_str;
     }
 
-    /** print each field in this class to the given ostream */
+    /** Print each field in this class to the given ostream. */
     void print_json(nlohmann::json& jsonStats) const
     {
       jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
@@ -255,15 +265,15 @@ class ArgumentRecord
     return t;
   }
   
-  /** return the index of the bucket with the largest count */
+  /** Return the index of the bucket with the largest count. */
   unsigned int index_of_peak() const { return m_peak_index; }
-  /** return the count from the bucket with the largest count */
+  /** Return the count from the bucket with the largest count. */
   unsigned int peak() const { return mv_histogram[m_peak_index]; }
 
-  /** return the number of elements outside the histogram's range */
+  /** Return the number of elements outside the histogram's range. */
   unsigned int num_out_of_bounds() const { return m_num_out_of_bounds; }
 
-  /** Return the extreme args to help the user decide what bounds to use for their LUTs */
+  /** Return the extreme args to help the user decide what bounds to use for their LUTs. */
   TIN max_recorded() const { return m_max_recorded; }
   TIN min_recorded() const { return m_min_recorded; }
 };

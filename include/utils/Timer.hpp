@@ -7,6 +7,8 @@ namespace func {
   \brief Starts a timer when created. Stops when `stop()` is called and returns
    the duration in seconds with `duration()`. 
 
+  \ingroup Utils
+
   \note The timer's duration is static after calling `stop()`.
   \note This measures the elapsed time in seconds.
 */
@@ -20,13 +22,14 @@ class Timer
 
 public:
 
+  /** Start the timer */
   Timer() : m_duration(0), m_done(false)
   {
     m_start = std::chrono::high_resolution_clock::now();
   }
   ~Timer(){};
 
-  // stop timer
+  /** Stop the timer */
   void stop()
   {
     m_finish = std::chrono::high_resolution_clock::now();
@@ -39,6 +42,7 @@ public:
     }
   }
 
+  /** Return how long the timer ran for */
   double duration(){ return m_duration.count(); };
 };
 }

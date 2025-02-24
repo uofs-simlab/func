@@ -246,7 +246,7 @@ public:
   }
 
 
-  /** find which polynomial p_k to evaluate. Also, each p_k:[0,1]->R so we must set dx=(x-x_k)/(x_{k+1}-x_k) */
+  /** Find which polynomial \f$p_k\f$ to evaluate. Also, each \f$p_k:[0,1]->R\f$ so we must set \f$dx=(x-x_k)/(x_{k+1}-x_k)\f$ */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::UNIFORM,bool>::type = true>
   inline std::pair<unsigned int, TIN> hash(TIN x) const {
     // nondimensionalized x position, scaled by step size
@@ -257,21 +257,24 @@ public:
     return std::make_pair(x0, dx);
   }
 
-  /** the polynomials for nonuniform LUTs map [x_k,x_{k+1}]->R so we don't have to change x.
-   * Calls m_transferFunction.inverse(x), using 6 FLOPs and 4 std::array<TIN,4> access */
+  /** The polynomials for nonuniform LUTs map \f$[x_k,x_{k+1}]->R\f$ so we
+   * don't have to preprocess \f$x\f$. Calls m_transferFunction.inverse(x),
+   * using 6 FLOPs and 4 std::array<TIN,4> access */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::NONUNIFORM,bool>::type = true>
   inline std::pair<unsigned int, TIN> hash(TIN x) const {
     unsigned int x0 = static_cast<unsigned int>(m_transferFunction.inverse(x));
     return std::make_pair(x0, x); // we don't subtract dx by x0 because every polynomial was rescaled during construction
   }
 
-  /** Find the subinterval [x_k,x_{k+1}) that x belongs to, fetch polynomial
-   * coefficients from m_table[k], and use Horner's method to compute p_k(x).
+  /** Find the subinterval \f$[x_k,x_{k+1})\f$ that \f$x\f$ belongs to, fetch
+   * the coefficients of the polynomial \f$p_k(x)\f$ from `m_table[k]`, and use
+   * Horner's method to compute \f$p_k(x)\f$.
    *
-   * TODO Pade & LinearRawInterpTable must override this operator. Maybe
-   * operator() will be faster if each implementation provides their own
-   * operator() and diff(). If the vtable isn't optimized out then perchance
-   * removing the use of virtual will remove that overhead. */
+   * \todo PadeTable & LinearRawInterpTable must override this operator. Maybe
+   *  operator() will be faster if each implementation provides their own
+   *  operator() and diff(). If the vtable isn't optimized out then perchance
+   *  removing the use of virtual will remove that overhead. 
+   * \todo surely this could use openmp simd... */
   //#pragma omp declare simd // warning: GCC does not currently support mixed size types for 'simd' functions
   TOUT operator()(TIN x) const override {
     unsigned int x0; TIN dx;
@@ -307,8 +310,9 @@ public:
     return sum;
   }
 
-  /** \brief Return the sth derivative of L at x: p_k^(s)(x)
-   * TODO make this function virtual and override in Pade and linear raw tables */
+  /** \brief Return the \f$s\f$th derivative of \f$L\f$ at \f$x\f$: ie return \f$p_k^{(s)}(x)\f$
+   *
+   * \todo Make this function virtual and override in PadeTable and LinearRawInterpTables */
   TOUT diff(unsigned int s, TIN x) const {
     unsigned int x0; TIN dx;
     std::tie(x0,dx) = hash<GT>(x);
@@ -321,7 +325,7 @@ public:
     return static_cast<TIN>(pow(m_stepSize_inv,s))*sum;
   }
 
-  /** \brief Same pattern as the variadic operator() but for the s^th derivative. */
+  /** \brief Same pattern as the variadic operator() but for the \f$s\f$th derivative. */
   template<typename... TIN2>
   inline auto diff(unsigned int s, TIN x, TIN2... args) const {
     unsigned int x0; TIN dx;
@@ -371,9 +375,9 @@ MetaTable<N,TIN,TOUT,GT> operator/(MetaTable<N,TIN,TOUT,GT> lhs, const TIN& scal
  * without having to implement to/from_json first). SFINAE is also necessary
  * because nlohmann uses static_asserts to check if TIN/TOUT have to/from_json
  *
- * TODO This use of SFINAE does (as expected) increase the compile
+ * \todo This use of SFINAE does (as expected) increase the compile
  * time by several percentage points. Can we edit the json library instead to
- * make the compile errors into runtime errors?
+ * make the compile errors into runtime errors??
  * */
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 

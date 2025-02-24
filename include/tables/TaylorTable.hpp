@@ -29,7 +29,7 @@ namespace func {
    }
    \endcode
 
-  \note static data after constructor has been called
+  \note Each member function is marked const
   \note evaluate by using parentheses, just like a function
 */
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
