@@ -1,8 +1,10 @@
 /*! \mainpage Main page
- * Before beginning, we recommend reading the Readme.md on FunC's GitHub. 
- * This includes some basic theory of LUTs, a use case, some important classes, and the installation guide.
+ * Before beginning, we recommend reading the Readme.md on FunC's GitHub.  This
+ * includes some basic theory of LUTs, a use case, some important classes, and
+ * the installation guide.  We cannot easily include Readme.md in this user
+ * manual because Doxygen uses a syntax for equations that is incompatible with
+ * LaTeX and GitHub Markdown.
  *
  * https://github.com/uofs-simlab/func
  * 
- * \note We cannot put FunC's Readme.md in this document because Doxygen uses a syntax for equations that is incompatible with LaTeX and GitHub Markdown.
  */

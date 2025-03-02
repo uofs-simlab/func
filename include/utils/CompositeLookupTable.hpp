@@ -12,13 +12,20 @@
 namespace func {
 
 /**
-  \brief Approximate a single 1D function with n LUTs over its domain.
-  This works well for functions with disconnected domains, or unused regions,
-  or regions with difficult to approximate behaviour.
+  \brief Approximate a single 1D function with $M$ LUTs over pairwise disjoint
+  subintervals of its domain. CompositeLookupTable works well for functions
+  with disconnected domains, or unused regions, or regions with difficult to
+  approximate behaviour.
 
-  This class works as a naive non-uniform lookup table. The hash in `operator()`
-  is \f$O(\log n)\f$ where \f$n\f$. The number of subintervals is the sum of each
-  encapsulated LUT's subintervals, which is much greater than \f$n\f$.
+  This is implemented with a `std::map` of $M$ `shared_ptr<LookupTable>`. The
+  \texttt{operator()(\tin{} x)} of a \texttt{CompositeLookupTable} calls
+  `map::upper\_bound(x)` to perform a binary search over the right endpoint of
+  each LUT. So, the hash is \f$O(\log M)\f$. The `operator()` caches the most
+  recently used LUT and skips the binary search when repeatedly evaluating from
+  the same LUT's range.
+
+  This class works as a naive non-uniform lookup table.
+ 
 
   \ingroup Utils
 
@@ -34,11 +41,11 @@ namespace func {
   std::cout << "C(0.01) = " << C(0.01) << std::endl;
   \endcode
 
-  \note Constructs a LookupTableGenerator to construct each LUT
+  \note Constructs a LookupTableGenerator to construct each LUT.
   \note Each member function is marked const.
-  \note Evaluate by using parentheses, just like a function
-  \note `operator()` caches the most recently used LUT and skips the binary
-   search when repeatedly evaluating from the same LUT's range
+  \note Evaluate by using parentheses, just like a function.
+  \note The number of subintervals is the sum of each
+   encapsulated LUT's subintervals, which is much greater than \f$n\f$
 
   \todo Implement to/from_json. We can use the unique_ptr<LookupTable> version
    of from_json in LookupTableFactory to build each member LUT easily
