@@ -1,58 +1,57 @@
-Lookup Tables over nonuniform partitions of $[a,b]$
+Lookup Tables over nonuniform partitions of [a,b]
 ---------------------------------------------------
 `FunC` provides two methods for constructing a LUT over a nonuniform partition
-of $[a,b]$. First, many of `FunC`'s LookupTable implementations have built-in
-support for a nonuniform partition, but such a construction does not allow any
-input from the user. This construction ensures `FunC` can hash its nonuniform
-LookupTables in $6$ FLOPs and zero comparisons. Another option is to use a
-`CompositeLookuptable`.
+of \f$[a,b]\f$. First, many of `FunC`'s LookupTable implementations have built-in
+support for a nonuniform partition, but such a construction does not allow for
+custom partitions of \f$[a,b]\f$ from the user. This way, we ensure `FunC` can
+hash its nonuniform LUTs in \f$6\f$ FLOPs and zero comparisons. If a custom
+partition is required then the other option is to use a `CompositeLookuptable`,
+although the resulting LUT will be much slower.
 
-Let $L_1,L_2,\dotsc,L_M$ be LUTs of $f$ over the pairwise disjoint intervals
-$[a_1,b_1], [a_2,b_2]$, $\dotsc$, $[a_M,b_M]$, respectively (not necessarily
-partitioning the domain of $f$). A \texttt{CompositeTable} of
-$L_1,L_2,\dotsc,L_M$ is a piecewise function of the form
-\[
+Let \f$L_1,L_2,...,L_M\f$ be LUTs of \f$f\f$ over the pairwise disjoint
+intervals \f$[a_1,b_1], [a_2,b_2], ..., [a_M,b_M]\f$, respectively (not
+necessarily partitioning the domain of \f$f\f$). A `CompositeTable` of
+\f$L_1,L_2,...,L_M\f$ is a piecewise function of the form
+\f[
 	C(x) =
-	\begin{cases}
-		L_1(x), & \text{if } a_1\leq x\leq b_1, \\
-		L_2(x), & \text{if } a_2\leq x\leq b_2, \\
-		\hspace*{3mm} \vdots & \hspace*{11mm} \vdots \\
-		L_M(x), & \text{if } a_M\leq x\leq b_M, \\
-		f(x), & \text{otherwise.}
-	\end{cases}
-\]
-A \texttt{CompositeLookupTable} allows users to build LUTs over
-arbitrary nonuniform partitions. This is useful if $f$ has
-discontinuities, $f$ is difficult to accurately approximate on some
-subset of its domain, or the user's program requires that $f$ is exact
+	\cases{
+		L_1(x), & if $a_1\leq x\leq b_1$, \cr
+		L_2(x), & if $a_2\leq x\leq b_2$, \cr
+		\hspace*{3mm} . & \hspace*{11mm} . \cr
+		\hspace*{3mm} . & \hspace*{11mm} . \cr
+		\hspace*{3mm} . & \hspace*{11mm} . \cr
+		L_M(x), & if $a_M\leq x\leq b_M$, \cr
+		f(x), & otherwise.
+	}
+\f]
+A `CompositeLookupTable` allows users to build LUTs over
+arbitrary nonuniform partitions. This is useful if \f$f\f$ has
+discontinuities, \f$f\f$ is difficult to accurately approximate on some
+subset of its domain, or the user's program requires that \f$f\f$ is exact
 at certain other special points (roots, extrema, inflection points, etc). The
-downside is that this requires $O(\log n)$ comparisons each time the class's
+downside is that this requires \f$O(\log n)\f$ comparisons each time the class's
 `operator()` is called.
 
-We can reduce the relative error in a LUT by building a
-\texttt{CompositeLookupTable} over $f$'s roots. Doing so with $f(x) =
-\ln|\Gamma(x)|$ over $[0.1,3]$, $L=\texttt{UniformExactInterpTable<3>}$,
-and $30$ subintervals reduces $E(L)$ with $\abstol=\reltol=1$ from
-$1.19805\times10^{-4}$ to $5.7253\times10^{-6}$ ($21$ times less error).
+We can reduce the relative error in a LUT by building a `CompositeLookupTable`
+over \f$f\f$'s roots. Doing so with \f$f(x) = \ln|\Gamma(x)|\f$ over
+\f$[0.1,3]\f$, \f$L=\texttt{UniformExactInterpTable<3>}\f$, and \f$30\f$
+subintervals reduces \f$E(L)\f$ with \f$a_{\mathrm{tol}}=r_{\mathrm{tol}}=1\f$
+from \f$1.19805\times10^{-4}\f$ to \f$5.7253\times10^{-6}\f$ (\f$21\f$ times
+less error). 
 
-To remedy this issue, we can build a
-\texttt{CompositeLookupTable} over $f$'s inflection points as shown in
-Figure \ref{fig:InflectionCompositeLookupTable}. The constituent
-nonuniform LUTs use a nontrivial partition of $[-5,5]$, and the
-overall composite LUT is $28$ times more accurate than a single
-nonuniform LUT. 
-Figure \ref{fig:InflectionCompositeLookupTableTiming}
-shows how long it takes to apply each LUT from Figure
-\ref{fig:InflectionCompositeLookupTable} to a random vector of length
-$1\,000\,000$. We see that the \texttt{CompositeLookupTable}'s
-\texttt{operator()} is about $12$ times slower than individual~LUTs.
+As for the nonuniform LUTs, they tend to perform best when \f$f'\f$ is largest
+at its endpoints \f$a,b\f$. For example, the nonuniform LUT will have almost
+the exact same partition as a uniform LUT for the function \f$f(x)=e^{x^2}\f$
+(because) \f$f'(a)=-f'(b)\approx10^{-10}\f$ is very small.
+To remedy this issue, we can build a `CompositeLookupTable` over
+\f$f\f$'s inflection points (extremum of \f$f'\f$) as shown in the following
+figure. The constituent nonuniform LUTs use a nontrivial partition of
+\f$[-5,5]\f$, and the overall composite LUT is \f$28\f$ times more accurate than a
+single nonuniform LUT and has the same memory usage the other LUTs. 
 
-\begin{figure}[htbp]
-	\caption{Building a \texttt{CompositeLookupTable} of $e^{-10x^2}$ and including inflection points in the partition of $[-5,5]$}
-	\label{fig:InflectionCompositeLookupTable}
-\footnotesize
-\centering
-\begin{lstlisting}
+
+Building a `CompositeLookupTable` of \f$e^{-10x^2}\f$ and including inflection points in the partition of \f$[-5,5]\f$:
+```cpp
 FunctionContainer<double> func_container{FUNC_SET_F(MyFunction,double)}; auto step = 0.05;
 UniformExactInterpTable<3,double>       uniformlut(func_container, {min,max,step});
 NonUniformExactInterpTable<3,double> nonuniformlut(func_container, {min,max,step});
@@ -67,37 +66,34 @@ CompositeLookupTable<double> nonunifcom(func_container, {
 	{"NonUniformExactInterpTable<3>",    -1.0/sqrt(2.0*10.0),1.0/sqrt(2.0*10.0),    a*err,a*err},
 	{"NonUniformExactInterpTable<3>",                        1.0/sqrt(2.0*10.0),max,a*err,a*err},
 });
-\end{lstlisting}
-%/* Verify nonuniformlut and uniformlut are approx. equal and compare with the composite LUT */
-%std::cout << "Error in uniform LUT:    " << err << std::endl;
-%std::cout << "Error in nonuniform LUT: " << err << " + " 
-%	<< gen.error_of_table(nonuniformlut) - err << std::endl;
-%std::cout << "Error in nonuniform composite LUT: " << gen.error_of_table(nonunifcom) << std::endl;
-%std::cout << "Memory usage of uniform LUT: " << uniformlut.size() << std::endl;
-%std::cout << "Memory usage of nonuniform composite LUT: " << nonunifcom.size() << std::endl;
+/* Verify nonuniformlut and uniformlut are approx. equal and compare with the composite LUT */
+std::cout << "Error in uniform LUT:    " << err << std::endl;
+std::cout << "Error in nonuniform LUT: " << err << " + " 
+	<< gen.error_of_table(nonuniformlut) - err << std::endl;
+std::cout << "Error in nonuniform composite LUT: " << gen.error_of_table(nonunifcom) << std::endl;
+std::cout << "Memory usage of uniform LUT: " << uniformlut.size() << std::endl;
+std::cout << "Memory usage of nonuniform composite LUT: " << nonunifcom.size() << std::endl;
+```
+
 Output:
-\begin{lstlisting}
+
+```
 Error in uniform LUT:    1.05229e-06
 Error in nonuniform LUT: 1.05229e-06 + -3.83676e-14
 Error in nonuniform composite LUT: 3.52733e-08
 Memory usage of uniform LUT: 6432
 Memory usage of nonuniform composite LUT: 6496
-\end{lstlisting}
-The LUTs \texttt{uniformlut} and \texttt{nonuniformlut} use almost
-identical partitions of $[-5,5]$ because $e^{-10x^2}$ is approximately $0$ at
-the endpoints $-5,5$. The composite LUT's uses the same amount of memory as
-\texttt{uniformlut}, but its consituent nonuniform LUTs use nontrivial transfer
-functions. Overall, it has $28$ times less error than \texttt{uniformlut}.
-\end{figure}
+```
 
-\begin{figure}[htbp]
-  \caption{Average time to apply the \texttt{operator()} of each LUT
-    from Figure \ref{fig:InflectionCompositeLookupTable} ten times to
-    a random vector of size $1\,000\,000$}
-	\label{fig:InflectionCompositeLookupTableTiming}
-\footnotesize
-\centering
-\begin{lstlisting}
+The following figure shows how long it takes to apply each LUT from the
+previous figure to a random vector of length \f$1\,000\,000\f$. We see that the
+`CompositeLookupTable`'s `operator()` is about \f$12\f$ times slower than
+individual LUTs. The `CompositeLookupTable`'s improvement in accuracy comes at
+a cost.
+
+Average time to apply the `operator()` of each LUT from the previous
+figure ten times to a random vector of size \f$1\,000\,000\f$
+```
 ----------------------------------------------------------------------------
 Table input and output types: d -> d
 Number of trials performed: 10
@@ -115,7 +111,4 @@ Number of evaluations used: 1 000 000
 | Memory usage (B): 6496
 | Timings:          Min 0.0371598s Max 0.0372521s Mean 0.0371988s
 ----------------------------------------------------------------------------
-\end{lstlisting}
-\end{figure}
-
-
+```

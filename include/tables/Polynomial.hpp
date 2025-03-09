@@ -55,9 +55,9 @@ constexpr unsigned int permutation(unsigned int n, unsigned int k){
   return n*permutation(n-1u,k-1u);
 }
 
-/** \brief Compute p^(s)(x), the sth derivative of p at x.
+/** \brief Compute \f$p^{(s)}(x)\f$, the \f$s\f$th derivative of \f$p\f$ at \f$x\f$.
  *
- * \note p cannot be empty
+ * \note \f$p\f$ cannot be empty
  * */
 template <unsigned int N, typename TOUT, typename TIN = TOUT>
 inline TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
@@ -82,9 +82,9 @@ inline TOUT polynomial_diff(polynomial<TOUT,N> p, TIN x, unsigned s){
   return sum;
 }
 
-/** \brief Given a polynomial \f$p:[a,b]->\mathbb{R}\f$, compute the
- *   coefficients of \f$q:[c,d]->\mathbb{R}\f$ such that \f$q(x) = p( [(b-a)x + (ad-bc)]/(d-c) )\f$ by
- *   expanding p in a Taylor series.
+/** \brief Given a polynomial \f$p:[a,b]\to\mathbb{R}\f$, compute the
+ *   coefficients of \f$q:[c,d]\to\mathbb{R}\f$ such that \f$q(x) = p( [(b-a)x + (ad-bc)]/(d-c) )\f$ by
+ *   expanding \f$p\f$ in a Taylor series.
  *   
  *   This is used all over FunC (for example, special case for rightmost
  *   interval, Nonuniform LUTs, and Taylor/Pade tables). Optimizations
@@ -98,9 +98,9 @@ inline polynomial<TOUT,N> taylor_shift(polynomial<TOUT,N> p, TIN a, TIN b, TIN c
   return q;
 }
 
-/** \brief Compute p(x)
+/** \brief Compute \f$p(x)\f$
  *
- * \note p cannot be empty
+ * \note \f$p\f$ cannot be empty
  * */
 template <unsigned int N, typename TOUT, typename TIN = TOUT>
 inline TOUT eval(polynomial<TOUT,N> p, TIN x){
@@ -117,7 +117,7 @@ inline TOUT eval(polynomial<TOUT,N> p, TIN x){
 }
 
 
-/** convenient debugging method for printing a polynomial */
+/** Convenient debugging method for printing a polynomial. TODO this could wrap operator<< */
 template <unsigned int N, typename TOUT>
 std::string polynomial_print(const polynomial<TOUT,N>& p){
   std::string sum = "";
@@ -126,7 +126,7 @@ std::string polynomial_print(const polynomial<TOUT,N>& p){
   return sum;
 }
 
-/** print basic info about a polynomials */
+/** Print basic info about a polynomial */
 template <unsigned int N, typename TOUT>
 std::ostream& operator<<(std::ostream& out, const polynomial<TOUT,N>& p){
   for(unsigned int k=N; k>1; k--)

@@ -14,10 +14,10 @@
 namespace func {
 
 /**
-  \brief Wrap a std::function and optionally plot that function's domain usage
-   with an ArgumentRecord (builds a histogram). To determine useful LUT bounds,
+  \brief Wrap a `std::function` and optionally plot that function's domain usage
+   with an `ArgumentRecord` (builds a histogram). To determine useful LUT bounds,
    users should replace their mathematical function with this class and compile
-   with -DFUNC_DEBUG.
+   with `-DFUNC_DEBUG`.
 
   \ingroup Utils
 
@@ -29,11 +29,11 @@ namespace func {
   de.print_details(std::cout); // prints max/min recorded args if FUNC_DEBUG is defined
   \endcode
 
-  \notes When compiled with -DFUNC_DEBUG, the ArgumentRecord uses min and max
+  \notes When compiled with `-DFUNC_DEBUG`, the `ArgumentRecord` uses min and max
    constructor arguments to construct a histogram's bounds. This histogram
-   record arguments passed to the DirectEvaluation and there is no issue if
+   record arguments passed to the `DirectEvaluation` and there is no issue if
    sampled arguments are out of bounds.
-  \note View the histogram with print_details(), or construct DirectEvaluation
+  \note View the histogram with `print_details()`, or construct `DirectEvaluation`
    with a pointer to ostream and get output upon destruction.
   */
 template <typename TIN, typename TOUT = TIN>
@@ -50,7 +50,7 @@ class DirectEvaluation final : public LookupTable<TIN,TOUT>
 public:
 
   /** Simply store the first member of func_container and pass each argument to
-   * it whenever operator() is called. Optionally set up argument recording if
+   * it whenever `operator()` is called. Optionally set up argument recording if
    * FUNC_DEBUG is defined used at compile time */
   DirectEvaluation(const FunctionContainer<TIN,TOUT>& func_container,
       TIN min = 0.0, TIN max = 1.0, unsigned int histSize = 10, TOUT aerr = 0.0, TIN rerr = 0.0, std::ostream* streamer = nullptr) :
@@ -80,7 +80,7 @@ public:
   //#endif
   //}
 
-  /** \brief Evaluate the underlying std::function and optionally record the argument x */
+  /** \brief Evaluate the underlying `std::function` and optionally record the argument x */
   TOUT operator()(TIN x) const final
   {
     #ifdef FUNC_DEBUG

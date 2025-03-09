@@ -82,13 +82,14 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
   \class LookupTableGenerator
   
   \brief Generate a FunC LookupTable from a given name and one of the
-   following: stepsize, tolerance, memory size limit, or filename. This class
-   is also equipped to compute the error in a LUT built with any given stepsize
-   and plot a LUT against its exact function.
+   following: stepsize, tolerance, memory size limit, or filename with
+   generate_by_step, generate_by_tol, generate_by_impl_size, and generate_by_file
+   respectively. This class is also equipped to compute the error in a LUT
+   built with any given stepsize and plot a LUT against its exact function.
 
   \ingroup Utils
 
-  \note If `gen_by_XXX` is given a nonempty filename then it will generate a table once
+  \note If `generate_by_XXX` is given a nonempty filename then it will generate a table once
    and save that output to to `filename`. Future runs will build the LUT from
    filename instead of generating that LUT from scratch.
   \note filenames are relative to the cwd unless users provide an absolute
@@ -96,11 +97,11 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
 
   \note Many architectures (including Apples arm chips) typedef long double as double (truly horrendous)
 
-  \note If Boost is not available then users can only use this class to build tables by file or by step.
+  \note If Boost is not available then users can only use this class to build LUTs by file or by step.
 
   \note LookupTableGenerator is header only because it is templated on the
    error precision TERR. We MUST be able to cast TERR to TIN and vice versa.
-   Ideally TERR satisfies: sqrt(epsilon_TERR) <= epsilon_TOUT.
+   Ideally TERR satisfies: \f$\sqrt(\epsilon_{\mathrm{TERR}}) <= \epsilon_{\mathrm{TOUT}}.
 
   \todo Newton's iterations are currently unused because sometimes it'll try
    building a LUT so large it'll kill mortal computers. There must be a way to
@@ -250,13 +251,14 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     return error_of_table(impl.get());
   }
 
-  /** Want a small bracket for brent's method so for each interval in the table,
-   * compute the maximum error.
-   * - Must be careful about the last interval b/c tableMaxArg >= maxArg
+
+  /** Use Brent's method to find the maximum of
+   * \f$|f(x)-L(x)|/(a_{\mathrm{tol}}+r_{\mathrm{tol}}|f(x)|)\f$ over each
+   * subinterval of L. 
+   * \note Must be careful about the last interval b/c tableMaxArg >= maxArg
    *   (and we don't care about error outside of table bounds)
-   * - TODO This parallelizes reasonably well, but is this the best pragma possible?
-   * - TODO brent's method occasionally spends much more time on single intervals (stragglers)
-   * - TODO can be slow for high order tables with very few subintervals */
+   * \todo This parallelizes reasonably well, but does it really use the best pragma possible?
+   * \todo brent's method occasionally spends much more time on single intervals (stragglers) so there's some potential for */
   TIN error_of_table(const LookupTable<TIN,TOUT>* impl){
     using namespace boost::math::tools;
 
@@ -270,7 +272,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
       std::pair<TIN,TIN> intEndPoints = impl->bounds_of_subinterval(ii);
       /* TODO 
        * - does float_next and float_prior restrict the possible values of TIN?
-       *   I think they might be the result of an old misdiagnosis
+       *   I think they might be the result of an old misdiagnosis of NaN
        * - Is it possible for x or xtop to be rounded outside the LUT's domain after casting to TERR? */
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
@@ -284,7 +286,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
       }
     }
 
-    /* want return to be 0 if the same, +/- on either side */
+    /* will return 0 if the f and L are exactly the same */
     max_err = -max_err;
     return static_cast<TIN>(max_err-m_desiredErr);
   }

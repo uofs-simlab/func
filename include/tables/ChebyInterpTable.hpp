@@ -47,7 +47,7 @@ namespace func {
  * \note ChebyTable only works if we can cast both TOUT and TIN to double. This requirement
  *   exists because Armadillo `Mat<T>`'s `is_supported_elem_type<T>` will only let us do arithmetic
  *   with float or double (not even long double!). You might think "generic types
- *   is what arma::field is made for" but that class appears to do nothing.
+ *   is what arma::field is made for" but I can't get that class to work for our purposes.
  * \note This is currently the only LookupTableImplementation using the
  *   special_points field in LookupTableParameters -- a vector of 3-tuples:
  *   \f[{(x_1,s_1,f^{(s_1)}(x_1)),...,(x_n,s_n,f^{(s_n)}(x_n))}.\f]

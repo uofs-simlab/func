@@ -12,13 +12,13 @@
 namespace func {
 
 /**
-  \brief Approximate a single 1D function with $M$ LUTs over pairwise disjoint
-  subintervals of its domain. CompositeLookupTable works well for functions
+  \brief Approximate a single \f$1\f$D function with $M$ LUTs over pairwise disjoint
+  subintervals of its domain. `CompositeLookupTable` works well for functions
   with disconnected domains, or unused regions, or regions with difficult to
   approximate behaviour.
 
-  This is implemented with a `std::map` of $M$ `shared_ptr<LookupTable>`. The
-  \texttt{operator()(\tin{} x)} of a \texttt{CompositeLookupTable} calls
+  This is implemented with a `std::map` of \f$M\f$ `shared_ptr<LookupTable>`. The
+  `operator()(\tin{} x)` of a `CompositeLookupTable` calls
   `map::upper\_bound(x)` to perform a binary search over the right endpoint of
   each LUT. So, the hash is \f$O(\log M)\f$. The `operator()` caches the most
   recently used LUT and skips the binary search when repeatedly evaluating from

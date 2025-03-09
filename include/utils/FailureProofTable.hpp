@@ -14,9 +14,9 @@
 
 namespace func {
 
-/** \brief A wrapper for any implementation of LookupTable L. The
-   operator()(x) ensures x is within the bounds of L before returning L(x).
-   Returns f(x) for out of bounds arguments. If FUNC_DEBUG is defined then
+/** \brief A wrapper for any implementation of LookupTable \f$L\f$. The
+   `operator()(x)` ensures \f$x\f$ is within the bounds of \f$L\f$ before returning \f$L(x)\f$.
+   Returns \f$f(x)\f$ for out of bounds arguments. If `FUNC_DEBUG` is defined then
    out of bounds arguments are recorded in a histogram.
 
    \tparam LUT_TYPE is a specific implementation of LookupTable (eg. ChebyInterpTable<3,double>)
@@ -37,9 +37,9 @@ namespace func {
   \note User can optionally call the constructor with arguments for
    ArgumentRecord to improve binning (better tracking the max & min arguments)
 
-  \todo This class will support to_json but not from_json because it needs a
-   FunctionContainer. Add another constructor to build this class from a
-   FunctionContainer and a filename
+  \todo This class will support `to_json` but not `from_json` because it needs a
+   `FunctionContainer`. Add another constructor to build this class from a
+   `FunctionContainer` and a `filename`
 */
 template <class LUT_TYPE>
 class FailureProofTable final : public LookupTable<typename LUT_TYPE::input_type, typename LUT_TYPE::output_type> {

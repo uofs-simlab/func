@@ -18,6 +18,9 @@ namespace func {
 template <typename TIN, typename TOUT>
 using ImplContainer = std::vector<std::unique_ptr<LookupTable<TIN,TOUT>>>;
 
+/**
+ \brief specify how a LookupTableComparator should sort its results.
+*/
 enum class Sorter {NONE, BEST, MEAN, WORST};
 
 /**
@@ -56,7 +59,7 @@ struct ImplTimer
 };
 
 /**
-  \brief Compare the average time taken to call the operator() of any
+  \brief Compare the average time taken to call the `operator()` of any
   LookupTable implementation.
 
   \ingroup Utils
@@ -66,10 +69,10 @@ struct ImplTimer
   \note This class takes ownership of the vector of LUT implementations it is
   constructed with
   \note Points are randomly sampled, and by default uses a
-   std::uniform_real_distribution<TIN> with the std::mt19937 variant of the
-   std::mersenne_twister_engine. This can be changed by passing in a different StdRng
+   `std::uniform_real_distribution<TIN>` with the `std::mt19937` variant of the
+   `std::mersenne_twister_engine`. This can be changed by passing in a different `StdRng`
 
-  \todo LookupTableComparator's constructor should accept any callable type
+  \todo `LookupTableComparator`'s constructor should accept any callable type
 */
 template <typename TIN, typename TOUT = TIN>
 class LookupTableComparator
