@@ -1,7 +1,46 @@
 /*! \mainpage Main page
- * To learn about the purpose, use cases, and math of FunC, go to the Readme.md on FunC's GitHub
+
+`FunC` (Function Comparator) is a C++ tool for approximating any
+univariate, pure function (without any side-effects) \f$f:\texttt{TIN}\to
+\texttt{TOUT}\f$ with a lookup table (LUT) over a closed interval \f$[a,b]\f$.
+\f$\texttt{TIN}\f$ and \f$\texttt{TOUT}\f$ must be types with overloads for
+\f$\texttt{operator+,-}\f$, and there must be a commutative
+\f$\texttt{operator*:TIN}\times\texttt{TOUT}\to\texttt{TOUT}\f$ (so
+\f$\texttt{TOUT}\f$ forms a vector space over the field \f$\texttt{TIN}\f$). We
+take a LUT as any piecewise approximation of \f$f\f$, so a LUT of \f$f\f$ takes
+the following form.
+\f[
+	L(x) = \cases{
+		p_0(x)     & if $x_0 \leq x < x_1$, \cr
+		p_1(x)     & if $x_1 \leq x < x_2$, \cr
+		\quad .    & \cr
+		\quad .    & \cr
+		\quad .    & \cr
+		p_{N-1}(x) & if $x_{N-1} \leq x \leq x_N$,
+	}
+\f]
+where \f$p_k\f$ are usually (but not necessarily) polynomials. `FunC` can
+build LUTs where each \f$p_k\f$ in the equation above are interpolating
+polynomials (up to degree 7 with Chebyshev nodes of the first kind or
+degree 6 with Chebyshev nodes of the second kind), Taylor polynomials
+(up to degree 7), Pade approximants, or degree 3 Hermite interpolating
+polynomials. The \f$x_k\f$ in the equation above partition \f$[a,b]\f$, so
+\f$a = x_0 < x_1 < ... < x_n = b\f$. The \f$x_k\f$ can form a uniform partition (so
+\f$x_k=a+k(b-a)/N\f$) or be an automatically generated nonuniform partition. The
+user has no control over the nonuniform partition to ensure the hash only takes
+\f$6\f$ FLOPs and zero comparisons.
+
+`FunC` aims to streamline finding a good LUT of \f$f\f$ for a user's application. To do so, we measure factors such as
+- absolute and relative tolerances for error
+- domain usage (i.e. the inputs to \f$f\f$ during the user's program's runtime)
+- evaluation frequency (i.e. how much work is being done in between calls to \f$f\f$)
+
+`FunC`'s DirectEvaluation class measures the first two, and a
+LookupTableGenerator optimizes a LUT's step size according to maximum
+tolerances for error.
+
+ * Installation details are covered in the Readme.md on FunC's GitHub.
  *
- * ## https://github.com/uofs-simlab/func
+ * https://github.com/uofs-simlab/func
  * 
- * \note We cannot put FunC's Readme.md here because Doxygen does not use the same syntax for equations as LaTeX or GitHub Markdown.
  */

@@ -9,12 +9,28 @@ namespace func {
 /** \brief LUT using degree 1 to 7 truncated Taylor series 
     \ingroup MetaTable
 
-  Usage example:
-    TaylorTable look(&function,0,10,0.0001);
-    double val = look(0.87354);
-  Notes:
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
+   \code{.cpp}
+   // TaylorTable requires the user's mathematical function is templated
+   template <typename T>
+   T foo(T x){ return x; }
+  
+   int main(){
+     double min = 0.0, max = 10.0, step = 0.0001;
+     UniformTaylorTable<1,double> L1({FUNC_SET_F(foo,double)}, {min, max, step}); // uniform
+     UniformTaylorTable<2,double> L2({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformTaylorTable<3,double> L3({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformTaylorTable<4,double> L4({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformTaylorTable<5,double> L5({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformTaylorTable<6,double> L6({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformTaylorTable<7,double> L6({FUNC_SET_F(foo,double)}, {min, max, step});
+     NonUniformTaylorTable<1,double> L6({FUNC_SET_F(foo,double)}, {min, max, step}); // nonuniform
+     NonUniformTaylorTable<7,double> L6({FUNC_SET_F(foo,double)}, {min, max, step});
+     auto val = L(0.87354);
+   }
+   \endcode
+
+  \note Each member function is marked const
+  \note evaluate by using parentheses, just like a function
 */
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class TaylorTable final : public MetaTable<N+1,TIN,TOUT,GT>

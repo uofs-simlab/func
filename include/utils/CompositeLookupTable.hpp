@@ -1,23 +1,3 @@
-/*
-  A wrapper for several FunC lookup tables. Good for approximating a single function with multiple LUTs.
-  Can also be used as a naive non-uniform lookup table. The hash for this table is O(logn) where n is the number of LUTs.
-  Each LUT is considered a single "subinterval"
-
-  Usage example:
-
-    double val = comp_table(0.87354);
-
-  Notes:
-  - Takes in a variable number of previously constructed lookup tables
-  inside a std::initializer_list
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-  - operator() caches the most recently used LUT and skips the binary search when repeatedly evaluating from the same table's range
-  - 
-
-
-  TODO this class should support to/from_json. We could use the unique_ptr<LookupTable> version of from_json in LookupTableFactory
-  */
 #pragma once
 #include "LookupTable.hpp"
 #include "LookupTableGenerator.hpp"
@@ -31,6 +11,45 @@
 
 namespace func {
 
+/**
+  \brief Approximate a single \f$1\f$D function with $M$ LUTs over pairwise disjoint
+  subintervals of its domain. `CompositeLookupTable` works well for functions
+  with disconnected domains, or unused regions, or regions with difficult to
+  approximate behaviour.
+
+  This is implemented with a `std::map` of \f$M\f$ `shared_ptr<LookupTable>`. The
+  `operator()(\tin{} x)` of a `CompositeLookupTable` calls
+  `map::upper\_bound(x)` to perform a binary search over the right endpoint of
+  each LUT. So, the hash is \f$O(\log M)\f$. The `operator()` caches the most
+  recently used LUT and skips the binary search when repeatedly evaluating from
+  the same LUT's range.
+
+  This class works as a naive non-uniform lookup table.
+ 
+
+  \ingroup Utils
+
+  Usage example:
+  \code{.cpp}
+  std::vector<std::tuple<std::string,TYPE,TYPE,TYPE>> v{
+    // {tableKey, left, right, step},
+    {"UniformExactInterpTable<3>",MIN_ARG,std::exp(7.7/13.0287),STEP},
+    {"UniformExactInterpTable<3>",std::exp(7.7/13.0287),MAX_ARG,STEP}
+  };
+  FunctionContainer<TYPE> func_container{FUNC_SET_F(MyFunction,TYPE)};
+  CompositeLookupTable<TYPE> C(func_container, v);
+  std::cout << "C(0.01) = " << C(0.01) << std::endl;
+  \endcode
+
+  \note Constructs a LookupTableGenerator to construct each LUT.
+  \note Each member function is marked const.
+  \note Evaluate by using parentheses, just like a function.
+  \note The number of subintervals is the sum of each
+   encapsulated LUT's subintervals, which is much greater than \f$n\f$
+
+  \todo Implement to/from_json. We can use the unique_ptr<LookupTable> version
+   of from_json in LookupTableFactory to build each member LUT easily
+  */
 template <typename TIN, typename TOUT = TIN>
 class CompositeLookupTable final : public LookupTable<TIN,TOUT> {
   // collection of FunC lookup tables used to sample from
@@ -41,8 +60,8 @@ class CompositeLookupTable final : public LookupTable<TIN,TOUT> {
   //LookupTableFactory<TIN,TOUT> factory; TODO might be useful for building a CompositeTable from a file...
 
 public:
-  /* vector of n table names, a vector of n step sizes, and a vector of n pairs.
-   * Order of names determines which tables are used on which subintervals */
+  /** Construct a CompositeLookupTable from a FunctionContainer and a vector of 4-tuples:
+   * n LUT names, n step sizes, n lower bounds, and n upper bounds. */
   CompositeLookupTable(const FunctionContainer<TIN,TOUT>& func_container, const std::vector<std::tuple<std::string,TIN,TIN,TIN>>& name_l_r_steps) :
     m_fun(func_container.standard_fun)
   {
@@ -50,7 +69,7 @@ public:
       throw std::invalid_argument("Error in func::CompositeLUT: given a null func::FunctionContainer.");
 
     /* TODO we could check that each LUT is over distinct intervals, but that'll probably require setting an order for name_l_r_steps
-     * and it's probably not that bad if the output from operator() is not unique for each input */
+     * and it's probably not that bad if the output from operator() is not unique for each input anyways */
 
     /* -- build each of the given LUTs -- */
     for(auto&& name_l_r_step : name_l_r_steps){
@@ -65,6 +84,8 @@ public:
     recentLUT = m_lutmap.cbegin()->second;
   }
 
+  /** Construct a CompositeLookupTable from a FunctionContainer and a vector of 5-tuples:
+   * n LUT names, n lower bounds, n upper bounds, n absolute tolerances and n relative tolerances */
   CompositeLookupTable(const FunctionContainer<TIN,TOUT>& func_container, const std::vector<std::tuple<std::string,TIN,TIN,TIN,TIN>>& name_l_r_atol_rtols) :
     m_fun(func_container.standard_fun)
   {
@@ -86,13 +107,16 @@ public:
 
   ~CompositeLookupTable(){}
 
+  /** Perform binary search for a LUT with the appropriate bounds and returns
+   * LUT(x). Resorts to the original function if arguments are out of bounds.
+   * Caches the most recently used LUT. */
   TOUT operator()(TIN x) const final
   {
     /* check if x is within the bounds of the most recently used LUT (in a threadsafe way) */
     std::shared_ptr<LookupTable<TIN,TOUT>> localrecentLUT;
-    #pragma omp critical(diedie)
+    #pragma omp critical(func_composite_table_caching)
     {
-    localrecentLUT = recentLUT;
+      localrecentLUT = recentLUT;
     }
     if((localrecentLUT->min_arg() < x) && (x < localrecentLUT->max_arg())) return (*localrecentLUT)(x);
 
@@ -102,7 +126,7 @@ public:
     if(iter != m_lutmap.cend()){
       auto lut = iter->second;
       if(lut->min_arg() < x){
-        #pragma omp critical(diedie)
+        #pragma omp critical(func_composite_table_caching)
         {
           recentLUT = lut;
         }
@@ -117,7 +141,7 @@ public:
   TIN max_arg() const final { return m_lutmap.crbegin()->first; }
   unsigned int order() const final { return 0u; } // TODO maybe return min order?
 
-  /* sum the sizes of each LookupTable */
+  /** Sum the sizes of each LookupTable */
   std::size_t size() const final {
     return std::accumulate(m_lutmap.cbegin(), m_lutmap.cend(), std::size_t{0},
       [](std::size_t total, const typename lookup_map_t::value_type& L)
@@ -130,12 +154,13 @@ public:
       { return total + L.second->num_subintervals(); });
   }
 
-  /* return the min step size of each LookupTable */
+  /** Return the min step size of each LookupTable */
   TIN step_size() const final {
     return std::min_element(m_lutmap.cbegin(), m_lutmap.cend(),
       [](const typename lookup_map_t::value_type& L1, const typename lookup_map_t::value_type& L2)
       { return L1.second->step_size() <= L2.second->step_size(); })->second->step_size(); }
 
+  /** Iterate through each LUT, counting each of its subintervals until we arrive upon the intervalNumber-th subinterval */
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final {
     long int N = intervalNumber; // need a signed integer to safely do subtraction
     auto it = m_lutmap.cbegin();
@@ -152,6 +177,9 @@ public:
   }
 
   void print_json(std::ostream& out) const final { (void) out; /* TODO call to_json() */ };
+  /** Get the closest LUT such that this argument is less than its upper bound.
+   * \note x might be outside the return LUT's bounds if the given function is
+   *  not approximated with a single LUT over its entire domain */
   std::shared_ptr<LookupTable<TIN,TOUT>> get_table(TIN x){ return m_lutmap.lower_bound(x)->second; }
 };
 

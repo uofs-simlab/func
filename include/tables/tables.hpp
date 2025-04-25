@@ -1,6 +1,6 @@
-/** \file Global include for FunC's LUTs
- * @defgroup MetaTable Polynomial Based LookupTable implementations
- * \brief This group of classes all implement MetaTable for a fast approximation to a user's mathematical function */
+/** @defgroup MetaTable Polynomial Based LookupTable implementations
+ * This group of classes implement MetaTable. So, the underlying approximation
+ * methods involve polynomials in some way */
 #pragma once
 #include "ChebyInterpTable.hpp"
 #include "CubicHermiteTable.hpp"

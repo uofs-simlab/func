@@ -10,13 +10,14 @@
 #ifdef FUNC_USE_BOOST
 #include <boost/math/differentiation/autodiff.hpp>
 
-// two helper macros to make FUNC_SET_F work like a variadic macro
+/// @private
 #define FUNC_SET_F_ONE_TYPE(F,TYPE)               \
   F<TYPE>, F<func::adVar<TYPE,1>>,                \
   F<func::adVar<TYPE,2>>, F<func::adVar<TYPE,3>>, \
   F<func::adVar<TYPE,4>>, F<func::adVar<TYPE,5>>, \
   F<func::adVar<TYPE,6>>, F<func::adVar<TYPE,7>>
 
+/// @private
 #define FUNC_SET_F_TWO_TYPE(F,TIN,TOUT)                                                 \
   F<TIN,TOUT>, F<func::adVar<TIN,1>,func::adVar<TOUT,1>>,                               \
   F<func::adVar<TIN,2>,func::adVar<TOUT,2>>, F<func::adVar<TIN,3>,func::adVar<TOUT,3>>, \
@@ -24,8 +25,8 @@
   F<func::adVar<TIN,6>,func::adVar<TOUT,6>>, F<func::adVar<TIN,7>,func::adVar<TOUT,7>>
 
 namespace func {
-/** convenient shorthand for Boost's forward mode autodiff variable */
 using boost::math::differentiation::autodiff_fvar;
+/*** convenient shorthand for Boost's forward mode autodiff variable */
 template <typename T, unsigned int N>
 using adVar = autodiff_fvar<T,N>;
 
@@ -46,12 +47,15 @@ struct nth_differentiable<TIN,TOUT,0>{
 };
 
 #else
+/// @private
 #define FUNC_SET_F_ONE_TYPE(F,TYPE)     F<TYPE>
+/// @private
 #define FUNC_SET_F_TWO_TYPE(F,TIN,TOUT) F<TIN,TOUT>
 
 namespace func {
 #endif // FUNC_USE_BOOST
 
+/// @private
 #define FUNC_GET_MACRO_FUNCTION_CONTAINER(_1,_2,_3,NAME,...) NAME
 
 /** \brief Macro to list out FunctionContainer constructor arguments.
@@ -62,27 +66,23 @@ namespace func {
 
 
 /**
-  \brief Wrapper for `std::function<TOUT(TIN)>` and some optional `std::functions`
+  \brief Wrapper for `std::function<TOUT(TIN)>` and some optional `std::function`s
   of Boost's automatic differentiation type
 
   Used to pass mathematical functions to FunC's LUTs.
 
-  Notes:
-  - Only the LUTs that need derivatives (Taylor, Hermite, Pade, and every
+  \note Only the LUTs that need derivatives (Taylor, Hermite, Pade, and every
     NonUniformLUT) need Boost's adVar[1-7] functions.
-  - The automatic differentiation requires the mathematical function is templated
+  \note The automatic differentiation requires the mathematical function is templated
     on some abstract type
-  - Autodiff was introduced in Boost 1.71. This class reduces to a simple std::function
+  \note Autodiff was introduced in Boost 1.71. This class reduces to a simple std::function
     wrapper if Boost is not available or is too old.
-  - Most of the machinery is necessary to use `get_nth_func<N>` which returns
+  \note Most of the machinery is necessary to use `get_nth_func<N>` which returns
     the ith order autodiff functions based on an index
 
-  - copy and paste the following example code into a new file and
-    rename the example to your own function with
-    1. :%s/foo/new_name/g in Vim or
-    2. (TODO whatever it is) in emacs.
+  Copy and paste the following example code into a new file and
+  rename the example to your own function with `:%s/foo/new_name/g` in Vim
 
-  Example:
   \code{.cpp}
   #include FunctionContainer.hpp
   template <typename T>
@@ -95,8 +95,8 @@ namespace func {
 
     // Use this version if it's inconvenient to template your function:
     FunctionContainer<TYPE> foo_container2 {foo<TYPE>};
-    // The only downside is then you can't generate LUTs that need
-    // automatic differentiation (runtime exception if you try)
+    // The only downside is that you can't generate LUTs that need
+    // automatic differentiation. There will be a runtime exception if you try
     return 0;
   }
   \endcode */
@@ -124,9 +124,11 @@ public:
   /** \brief return the Boost autodiff function that automatically
    * differentiates the user's function N times.
    *
-   * \note call as func_container->template get_nth_func<N>() to get the member
-   * \note Only supports up to 7 differentiations.
-   * \note Implemented with 9 different overloads of fun_type<N> */
+   * \note Get the nth differentiable template instantiation of the given
+   * function by calling the function container as `func_container->template
+   * get_nth_func<N>()`
+   * \note Only supports 7 or fewer derivatives.
+   * \note Implemented with 9 different overloads of `fun_type<N>` */
   template<unsigned int N>
   typename fun_type<N>::type get_nth_func() const { return get_nth_func(fun_type<N>()); }
 #endif // FUNC_USE_BOOST
@@ -148,8 +150,8 @@ public:
     standard_fun(fun) {};
 
 #ifdef FUNC_USE_BOOST
-  /** \brief Users should not use this function directly. See the example usage
-   * for FunctionContainer and the macro `FUNC_SET_F(...)` */
+  /** \brief Users should not call this constructor without wrapping their
+   * argument with the macro `FUNC_SET_F(...)`. See the example usage for FunctionContainer */
   FunctionContainer(std::function<TOUT(TIN)>   fun,
       std::function<adVar<TOUT,1>(adVar<TIN,1>)> fun1,
       std::function<adVar<TOUT,2>(adVar<TIN,2>)> fun2,

@@ -9,30 +9,41 @@
 namespace func {
 
 /**
-  \brief Linear Interpolation LUT with uniform sampling (precomputed coefficients)
+  \brief Interpolation over Chebyshev nodes of the second kind. The inverse
+  Vandermonde matrix is hard-coded. This class allows for full type generality,
+  but numerical output is not quite as good as ChebyInterpTable for \f$n>4\f$
+  because Armadillo does iterative refinement.
   \ingroup MetaTable
 
-  Usage example:
-    UniformExactInterpTable<3,double> look(&function,0,10,0.0001);
-    double val = look(0.87354);
+  \code{.cpp}
+  // return x^9
+  template <typename T>
+  T foo(T x){ return (x*x*x)*(x*x*x)*(x*x*x); }
+ 
+  int main(){
+    double min = 0.0, max = 10.0, step = 0.0001;
+    UniformExactInterpTable<1,double>    L({FUNC_SET_F(foo,double)}, {min, max, step}); // uniform partition
+    UniformExactInterpTable<4,double>    L({FUNC_SET_F(foo,double)}, {min, max, step}); // degree 4
+    NonUniformExactInterpTable<1,double> L({FUNC_SET_F(foo,double)}, {min, max, step}); // nonuniform partition
+    auto val = L(0.87354);
+  }
+  \endcode
 
-  Notes:
-  - table precomputes and stores the linear coefficient so it doesn't have to
-    perform that operation every lookup (but does have to look it up)
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
+  \note Each polynomial coefficient is computed when the constructor is called
+    and looked up every time its operator() is called.
+  \note Each member function is declared const
 */
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT=GridTypes::UNIFORM>
 class ExactInterpTable final : public MetaTable<N+1,TIN,TOUT,GT>
 {
   INHERIT_META(N+1,TIN,TOUT,GT);
 
-  template <std::size_t K>
-  inline TOUT dot(std::array<TIN,K> x, std::array<TOUT,K> y){
-    TOUT sum = x[0]*y[0];
-    for(std::size_t k = 1; k<K; k++) sum += x[k]*y[k];
-    return sum;
-  }
+  //template <std::size_t K>
+  //inline TOUT dot(std::array<TIN,K> x, std::array<TOUT,K> y){
+  //  TOUT sum = x[0]*y[0];
+  //  for(std::size_t k = 1; k<K; k++) sum += x[k]*y[k];
+  //  return sum;
+  //}
 
 public:
   ExactInterpTable() = default;
@@ -81,7 +92,7 @@ public:
 
       /* Hardcoded solutions to the Vandermonde system V(x)*c=f(x).
        * Using the macro S makes the code more legible. This is the most generic way I could write these C++
-       * literals and it is embarrassing */
+       * literals. Honestly, this is embarrassing */
       /* Another option is to use Armadillo's `inv` here, but that produces
        * objectively worse results! Armadillo (and every other high performance
        * linear algebra library Shawn has looked into) does not have a solver for general vector spaces.

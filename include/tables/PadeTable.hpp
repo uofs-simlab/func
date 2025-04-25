@@ -13,29 +13,43 @@ namespace func {
 static double constexpr fact[] = {1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0};
 
 /**
-  \brief LUT using [M/N] pade approximants with uniform sampling.
+  \brief LUT using [M/N] pade approximants.
   \ingroup MetaTable
   
   Polynomial coefficients are calculated using Armadillo.
 
-  Usage example using [4/3] approximants:
-    PadeTable<4,3> look(&function,0,10,0.0001);
-    double val = look(0.87354);
+   \code{.cpp}
+   // PadeTable requires the user's mathematical function is templated
+   template <typename T>
+   T foo(T x){ return x; }
+  
+   int main(){
+     double min = 0.0, max = 10.0, step = 0.0001;
+     // build every possible PadeTable
+     UniformPadeTable<4,3,double> L1({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<3,3,double> L2({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<5,2,double> L3({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<4,2,double> L4({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<3,2,double> L5({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<2,2,double> L6({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<6,1,double> L7({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<5,1,double> L8({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<4,1,double> L9({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<3,1,double> L10({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<2,1,double> L11({FUNC_SET_F(foo,double)}, {min, max, step});
+     UniformPadeTable<1,1,double> L12({FUNC_SET_F(foo,double)}, {min, max, step});
+     auto val = L(0.87354);
+   }
+   \endcode
 
-  Notes:
-  - This class only works if TOUT and TIN can both be cast to double. 
+  \note This class only works if TOUT and TIN can both be cast to double. 
     Armadillo Mat<T>'s `is_supported_elem_type<T>` will only let us do arithmetic
     with float or double (not even long double) and arma::field is useless.
-    TODO disable constructor if TOUT cannot be cast to double
-
-  - TODO add a way to build these tables with a pole on the left or right endpoints
-  - table precomputes and stores any coefficients so it doesn't have to
-    perform that operation every lookup (but does have to look it up)
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-  - Available template values are all M,N such that 0 < N <= M and M+N<=7
-  - Template values where M < N are not supported
-  - Requires both Armadillo and Boost version 1.71.0 or newer to generate
+  \note Evaluate by using parentheses, just like a function
+  \note Each member function is marked const
+  \note Available template values are all M,N such that 0 < N <= M and M+N<=7
+  \note Template values where M < N are not supported
+  \note Requires both Armadillo and Boost version 1.71.0 or newer to generate
 */
 template <unsigned int M, unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class PadeTable final : public MetaTable<M+N+1,TIN,TOUT,GT>

@@ -116,10 +116,10 @@ int main(int argc, char* argv[]){
     //"UniformPadeTable<4,3>",
   };
 
-  //LookupTableGenerator<TYPE> gen(func_container, tableMin, tableMax);
-  LookupTableParameters<TYPE> par {tableMin, tableMax, 0.0};
-  par.special_points = {{std::exp(7.7/13.0287), 0, 0.0}};
-  LookupTableGenerator<TYPE> gen(func_container, par);
+  LookupTableGenerator<TYPE> gen(func_container, tableMin, tableMax);
+  //LookupTableParameters<TYPE> par {tableMin, tableMax, 0.0};
+  //par.special_points = {{std::exp(7.7/13.0287), 0, 0.0}};
+  //LookupTableGenerator<TYPE> gen(func_container, par);
 
   impls.emplace_back(unique_ptr<LookupTable<TYPE>>(new DirectEvaluation<TYPE>(func_container,tableMin,tableMax)));
   for (auto itName : uniformNames) {

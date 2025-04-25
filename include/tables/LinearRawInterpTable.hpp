@@ -9,14 +9,21 @@ namespace func {
   but the hash involves an additional subtraction.
   \ingroup MetaTable
 
-  Usage example:
-    LinearRawInterpTable look(&function,0,10,0.0001);
-    double val = look(0.87354);
+  \code{.cpp}
+  // LinearRawInterpTable does not benefit from templated functions because
+  // there is no nonuniform variant
+  double foo(double x){ return x; }
+ 
+  int main(){
+    double min = 0.0, max = 10.0, step = 0.0001;
+    UniformLinearRawInterpTable<double> L({foo}, {min, max, step});
+    auto val = L(0.87354);
+  }
+  \endcode
 
-  Notes:
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-  - Does not have a nonuniform variant and it's not obvious how to make
+  \note Each member function is marked const
+  \note Evaluate by using parentheses, just like a function
+  \note Does not have a nonuniform variant and it's not obvious how to make
     this LookupTable implementation nonuniform unless we make the operator()
     far slower (basically defeating the purpose of this LUT type e.g. lookup
     breakpoints from m_grid?)
@@ -61,8 +68,11 @@ public:
     m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
   }
 
-  /* this operator() is slightly different from MetaTable's provided Horner's method
-   * TODO is there a way to make this work with nonuniform grids in a way that works with our model? */
+  /** This operator() is different from MetaTable's provided Horner's method
+   * because we must compute the two coefficients of the linear interpolating
+   * polynomial
+   * \todo is there a way to make this work with nonuniform grids in a way that
+   * works with our model? */
   TOUT operator()(TIN x) const override
   {
     unsigned int x0; TIN dx;

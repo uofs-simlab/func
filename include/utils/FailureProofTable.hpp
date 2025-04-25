@@ -1,26 +1,3 @@
-/** \brief A wrapper for any implementation of LookupTable L. The
-   operator()(x) ensures x is within the bounds of L before returning L(x).
-   Returns f(x) for out of bounds arguments. If FUNC_DEBUG is defined then
-   out of bounds arguments are recorded in a histogram.
-
-
-   \tparam LUT_TYPE is a specific implementation of LookupTable (eg. ChebyInterpTable<3,double>)
-
-  TODO broken
-  Usage example:
-    FailureProofTable<UniformChebyInterpTable<3,double>> failsafe(
-      &function,{0,10,0.0001}
-    );
-    double val = failsafe(0.87354);
-    double val = failsafe(100);
-
-  Notes:
-  - data is static after constructor call
-  - optional ArgumentRecord args available to improve binning (max & min is accuratly tracked)
-
-  TODO this class will support to_json but not from_json. Add another constructor
-  to build this class from a FunctionContainer and a filename
-*/
 #pragma once
 #include "FunctionContainer.hpp"
 #include "LookupTableGenerator.hpp"
@@ -37,6 +14,33 @@
 
 namespace func {
 
+/** \brief A wrapper for any implementation of LookupTable \f$L\f$. The
+   `operator()(x)` ensures \f$x\f$ is within the bounds of \f$L\f$ before returning \f$L(x)\f$.
+   Returns \f$f(x)\f$ for out of bounds arguments. If `FUNC_DEBUG` is defined then
+   out of bounds arguments are recorded in a histogram.
+
+   \tparam LUT_TYPE is a specific implementation of LookupTable (eg. ChebyInterpTable<3,double>)
+
+  \ingroup Utils
+
+  Usage example:
+  \code{.cpp}
+  // Build a UniformChebyInterpTable<3,double> with the arguments {0,10,0.0001}
+  FailureProofTable<UniformChebyInterpTable<3,double>> failsafe(
+    {MyFunction},{0,10,0.0001}
+  );
+  double val1 = failsafe(0.87354);
+  double val2 = failsafe(100);
+  \endcode
+
+  \note Each member function is marked const
+  \note User can optionally call the constructor with arguments for
+   ArgumentRecord to improve binning (better tracking the max & min arguments)
+
+  \todo This class will support `to_json` but not `from_json` because it needs a
+   `FunctionContainer`. Add another constructor to build this class from a
+   `FunctionContainer` and a `filename`
+*/
 template <class LUT_TYPE>
 class FailureProofTable final : public LookupTable<typename LUT_TYPE::input_type, typename LUT_TYPE::output_type> {
   using TIN = typename LUT_TYPE::input_type;
@@ -66,7 +70,8 @@ public:
   //  (void) histMin; (void) histMax; (void) histSize;
   //}
 
-  /* Build our own LUT_TYPE. Only works if the template is specific enough */
+  /** Build our own LUT_TYPE. This constructor will works if the template
+   * argument LUT_TYPE is specific enough */
   FailureProofTable(const FunctionContainer<TIN,TOUT>& fc, const LookupTableParameters<TIN>& par,
       TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10, std::ostream* streamer = nullptr) :
     m_LUT(fc, par)
@@ -84,7 +89,7 @@ public:
     (void) histMin; (void) histMax; (void) histSize; (void) streamer;
   }
 
-  /* if x isn't in the LUT's bounds, then return f(x) */
+  /** if x isn't in the LUT's bounds, then return f(x) */
   TOUT operator()(TIN x) const final
   {
     // check if x is in the range of the LUT
