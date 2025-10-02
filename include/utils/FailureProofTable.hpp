@@ -1,34 +1,3 @@
-/* TODO don't wrap a smart pointer. Just store a LUT directly!
- *
-  A wrapper for a standard func table class. If an argument is outside a
-  table's range then the original function is used and the arg is recorded.
-
-  Usage example:
-    FailureProofTable<double> failsafe(unique_ptr<UniformLookupTable<double>>(
-      new UniformCubicPrecomputedInterpolationTable<double>(&function,0,10,0.0001))
-    );
-    double val = failsafe(0.87354);
-    // or
-    FailureProofTable<double,double,UniformCubicPrecomputedInterpolationTable<double>> failsafe(
-      &function,{0,10,0.0001}
-    );
-    double val = failsafe(0.87354);
-
-  Notes:
-  - ownership of the original table is moved to this class upon construction
-  (not a problem since tables don't have move constructors for unique_ptr)
-  - specify the LUT_TYPE in the third template arg is recommended because it
-  avoids a virtual operator() call, and doing so lets you built this table like
-  any other FunC lookup table
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-  - specify the FUNC_DEBUG flag to turn on argument recording for args outside
-  the table's range.
-  - optional ArgumentRecord args available if you want nicer looking output
-
-  TODO this class should support to_json but not from_json! Add another constructor
-  to build this class from a FunctionContainer and a filename
-*/
 #pragma once
 #include "FunctionContainer.hpp"
 #include "LookupTableGenerator.hpp"
@@ -37,6 +6,7 @@
 #include <memory> // unique_ptr
 #include <fstream> //ifstream
 #include <limits> // std::numeric_limits<TIN>::max() / lowest()
+#include <boost/math/special_functions/sign.hpp>
 
 #ifdef FUNC_DEBUG
   #include "ArgumentRecord.hpp"
@@ -44,12 +14,43 @@
 
 namespace func {
 
-template <class LUT_TYPE, typename TIN, typename TOUT = TIN>
-class FailureProofTable final : public LookupTable<TIN,TOUT> {
-  std::function<TOUT(TIN)> m_fun;
+/** \brief A wrapper for any implementation of LookupTable \f$L\f$. The
+   `operator()(x)` ensures \f$x\f$ is within the bounds of \f$L\f$ before returning \f$L(x)\f$.
+   Returns \f$f(x)\f$ for out of bounds arguments. If `FUNC_DEBUG` is defined then
+   out of bounds arguments are recorded in a histogram.
+
+   \tparam LUT_TYPE is a specific implementation of LookupTable (eg. ChebyInterpTable<3,double>)
+
+  \ingroup Utils
+
+  Usage example:
+  \code{.cpp}
+  // Build a UniformChebyInterpTable<3,double> with the arguments {0,10,0.0001}
+  FailureProofTable<UniformChebyInterpTable<3,double>> failsafe(
+    {MyFunction},{0,10,0.0001}
+  );
+  double val1 = failsafe(0.87354);
+  double val2 = failsafe(100);
+  \endcode
+
+  \note Each member function is marked const
+  \note User can optionally call the constructor with arguments for
+   ArgumentRecord to improve binning (better tracking the max & min arguments)
+
+  \todo This class will support `to_json` but not `from_json` because it needs a
+   `FunctionContainer`. Add another constructor to build this class from a
+   `FunctionContainer` and a `filename`
+*/
+template <class LUT_TYPE>
+class FailureProofTable final : public LookupTable<typename LUT_TYPE::input_type, typename LUT_TYPE::output_type> {
+  using TIN = typename LUT_TYPE::input_type;
+  using TOUT = typename LUT_TYPE::output_type;
+
   LUT_TYPE m_LUT;
+  std::function<TIN(TOUT)> m_fun;
+  
   #ifdef FUNC_DEBUG
-  mutable std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
+    mutable std::unique_ptr<ArgumentRecord<TIN>> mp_recorder;
   #endif
 public:
   /* Deep copy the given LUT */
@@ -69,28 +70,32 @@ public:
   //  (void) histMin; (void) histMax; (void) histSize;
   //}
 
-  /* Build our own LUT_TYPE. Only works if the template is specific enough */
+  /** Build our own LUT_TYPE. This constructor will works if the template
+   * argument LUT_TYPE is specific enough */
   FailureProofTable(const FunctionContainer<TIN,TOUT>& fc, const LookupTableParameters<TIN>& par,
-      TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10) : m_LUT(fc, par)
+      TIN histMin = 1, TIN histMax = 0, unsigned int histSize = 10, std::ostream* streamer = nullptr) :
+    m_LUT(fc, par)
   {
-  m_fun = fc.standard_fun;
-  #ifdef FUNC_DEBUG
-  // check if we're using the default (aka bad) histogram arguments
-  if(histMin >= histMax){
-    histMin = m_LUT.min_arg();
-    histMax = m_LUT.max_arg();
-  }
-  mp_recorder.reset(new ArgumentRecord<TIN>(histMin, histMax, histSize));
-  #endif
-  // ignore histogram parameters if they're unused
-  (void) histMin; (void) histMax; (void) histSize;
+    m_fun = fc.standard_fun;
+    #ifdef FUNC_DEBUG
+    // check if we're using the default (aka bad) histogram arguments
+    if(histMin >= histMax){
+      histMin = m_LUT.min_arg();
+      histMax = m_LUT.max_arg();
+    }
+    mp_recorder.reset(new ArgumentRecord<TIN>(histMin, histMax, histSize, streamer));
+    #endif
+    // ignore histogram parameters if they're unused
+    (void) histMin; (void) histMax; (void) histSize; (void) streamer;
   }
 
-  /* if x isn't in the LUT's bounds, then return f(x) */
+  /** if x isn't in the LUT's bounds, then return f(x) */
   TOUT operator()(TIN x) const final
   {
-    // check if x is in the range of the table
-    //if((x - m_minArg)*(m_maxArg - x) > 0){ // is this a possible micro-optimization?
+    // check if x is in the range of the LUT
+    // try boost sign????
+    //if(boost::math::sign(x - m_LUT.min_arg()) * boost::math::sign(m_LUT.max_arg() - x) > 0){
+    // if((x - m_LUT.min_arg())*(m_LUT.max_arg() - x) > 0){
     if((m_LUT.min_arg() < x) && (x < m_LUT.max_arg())){
       return m_LUT(x);
     }else{
@@ -109,7 +114,14 @@ public:
   unsigned int num_subintervals() const final { return m_LUT.num_subintervals();}
   TIN step_size() const final { return m_LUT.step_size(); }
   std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final { return m_LUT.bounds_of_subinterval(intervalNumber);}
-  void print_json(std::ostream& out) const final { (void) out; /* TODO call to_json() */ };
+  
+  void print_json(std::ostream& out) const final
+  { 
+    (void) out; 
+    #ifdef FUNC_DEBUG
+      out << mp_recorder->print_json(out);
+    #endif
+  };
 };
-// TODO make to_json()
+
 } // namespace func

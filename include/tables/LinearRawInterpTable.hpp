@@ -1,27 +1,43 @@
-/*
-  Linear Interpolation LUT. Coefficients are computed at lookup time.
-  Approx 50% less memory usage compared to EqSpaceInterpTable<1> but the hash involves an additional subtraction.
-
-  Usage example:
-    LinearRawInterpTable look(&function,0,10,0.0001);
-    double val = look(0.87354);
-
-  Notes:
-  - static data after constructor has been called
-  - evaluate by using parentheses, just like a function
-  - Does not have a nonuniform variant and it's not obvious how to make one unless we make the operator() far slower (lookup data from m_grid?)
-*/
 #pragma once
 #include "MetaTable.hpp"
 
 namespace func {
 
+/**
+  \brief Linear Interpolation LUT where coefficients are computed when calling operator().
+  Uses approx 50% less memory than an equivalent UniformExactInterpTable<1>
+  but the hash involves an additional subtraction.
+  \ingroup MetaTable
+
+  \code{.cpp}
+  // LinearRawInterpTable does not benefit from templated functions because
+  // there is no nonuniform variant
+  double foo(double x){ return x; }
+ 
+  int main(){
+    double min = 0.0, max = 10.0, step = 0.0001;
+    UniformLinearRawInterpTable<double> L({foo}, {min, max, step});
+    auto val = L(0.87354);
+  }
+  \endcode
+
+  \note Each member function is marked const
+  \note Evaluate by using parentheses, just like a function
+  \note Does not have a nonuniform variant and it's not obvious how to make
+    this LookupTable implementation nonuniform unless we make the operator()
+    far slower (basically defeating the purpose of this LUT type e.g. lookup
+    breakpoints from m_grid?)
+*/
 template <typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class LinearRawInterpTable final : public MetaTable<1,TIN,TOUT,GT>
 {
   INHERIT_META(1,TIN,TOUT,GT);
 public:
-  // build the LUT from scratch or look in jsonStats for an existing LUT
+  LinearRawInterpTable() = default;
+  // This LUT _must_ use a different operator() than the base class MetaTable
+  //LinearRawInterpTable(const MetaTable<N+1,TIN,TOUT,GT>& L): MetaTable<N+1,TIN,TOUT,GT>(L) {}
+
+  // Either build the LUT from scratch or read data from json
   LinearRawInterpTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par,
       const nlohmann::json& jsonStats=nlohmann::json()) :
     MetaTable<1,TIN,TOUT,GT>(func_container, par, jsonStats)
@@ -47,12 +63,16 @@ public:
       TIN x = m_minArg + ii*m_stepSize;
       m_table[ii].coefs[0] = fun(x);
     }
-    // special case to make lut(tableMaxArg) work
-    m_table[m_numTableEntries-1].coefs[0] = m_table[m_numTableEntries-2].coefs[0];
+
+    /* special case to make lut(tableMaxArg) work */
+    m_table[m_numTableEntries-1] = taylor_shift(m_table[m_numTableEntries-2], static_cast<TIN>(1), static_cast<TIN>(2), static_cast<TIN>(0), static_cast<TIN>(1));
   }
 
-  /* this operator() is slightly different from MetaTable's provided Horner's method
-   * TODO is there a way to make this work with nonuniform grids in a way that works with our model? */
+  /** This operator() is different from MetaTable's provided Horner's method
+   * because we must compute the two coefficients of the linear interpolating
+   * polynomial
+   * \todo is there a way to make this work with nonuniform grids in a way that
+   * works with our model? */
   TOUT operator()(TIN x) const override
   {
     unsigned int x0; TIN dx;

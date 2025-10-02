@@ -7,7 +7,7 @@
 #define FUNC_IF_CONSTEXPR if constexpr
 #else
 #define FUNC_IF_CONSTEXPR if
-#define FUNC_NO_CXX17_IF_CONSTEXPR
+#define FUNC_NO_CXX17
 #endif
 
 // This is a cmake variable defined in CMakeLists.txt

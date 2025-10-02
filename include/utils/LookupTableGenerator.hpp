@@ -1,28 +1,3 @@
-/*
-  Generate a FunC LookupTable when given that table's name and one of the following:
-  - stepsize
-  - tolerance
-  - memory size limit
-  - filename
-  If gen_by_XXX is given a filename then it will generate a table and save that output to
-  to filename. Future runs will use the table in filename instead of generating that table
-  from scratch again. filename will be with respect to the cwd unless users provide an
-  absolute path.
-
-  If Boost is not available then users can only build tables by file.
-
-  Provided as a header only class because it is templated on the error precision TERR.
-  We MUST be able to cast TERR to TIN and vice versa.
-  Ideally TERR satisfies: sqrt(epsilon_TERR) <= epsilon_TOUT.
-
-  This class is also equipped to
-  - compute table error estimates at a given stepsize
-  - plot a table implementation against the exact function
-
-  TODO:
-  - Newton's iterate is currently unused because sometimes it'll try building a LUT so large that
-  they'll kill mortal computers
-*/
 #pragma once
 #include "LookupTable.hpp"
 #include "LookupTableFactory.hpp"
@@ -47,17 +22,26 @@
 namespace func {
 
 #ifdef FUNC_USE_BOOST
-/* Taken from boost/math/tools/roots.hpp but specialized for LookupTableGenerator.
- * This is the exact same function as provided by Boost; however, our application cannot call f(0)!!!
- * so the first two lines are removed and we provide a "theoretical" value for f(0) in fmin instead */
+/** This function is taken from boost/math/tools/roots.hpp but specialized for
+ * LookupTableGenerator. This is the exact same function as provided by Boost;
+ * however, we cannot call f(0)!!!  so the first two lines are removed and
+ * replaced with a "theoretical" value for f(0) in fmin instead. We proceed
+ * until we've actually bracketed the root, then finish with toms748 because it
+ * performs better asymptotically. We cannot use toms748 the whole time because it
+ * might try making horrendously gigantic LUTs */
 template <class F, class T, class Tol>
 std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol, boost::uintmax_t& max_iter) {
   /* check for special cases & errors */
   if(fmin == 0){ max_iter = 0; return std::make_pair(min, min); }
   if(fmax == 0){ max_iter = 0; return std::make_pair(max, max); }
-
   if(min >= max) throw std::invalid_argument("func::LookupTableGenerator: bisect arguments in wrong order");
   else if(fmin * fmax >= 0) throw std::invalid_argument("func::LookupTableGenerator: function values do not alternate in sign");
+  
+  // TODO warning is not helpful. Also, we need to account for how
+  // unpredictable any LUT's error is for early iterations. Maybe
+  // increment with something like: unpredictability = 1+0.5*unpredictability?
+  //unsigned int unpredictability = 0;
+  //std::string warning_message = "Warning in func::LookupTableGenerator: Difficult to predict behaviour of requested LUT. FunC is unlikely to find the maximum step size satisfying the given tolerances. To silence this warning, build your LUT by step if one is found. Unpredictability = ";
 
   /* bisection iteration */
   boost::uintmax_t count = max_iter;
@@ -69,11 +53,17 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
     if (fmid == 0) {
       min = max = mid;
       break;
+    }else if (fmax < fmid){
+      // decreasing the step size did not decrease the error. Keep
+      // trying to decrease the step size anyways and hope for the best...
+      max = mid;
+      //unpredictability++;
+      //std::cerr << mid << "," << fmid << std::endl;
     }else if (boost::math::sign(fmid) * boost::math::sign(fmin) < 0){
       max = mid;
     }else{
-      /* use toms748 when the left endpoint changes.
-       * This will have better asymptotics and we don't have to worry about making a gigantic LUT */
+      /* We have officially bracketed the root. Now finish with toms748 */
+      //if(unpredictability > 4) std::cerr << warning_message << unpredictability << ".\n";
       max_iter -= count; // max_iter = number of iterations of bisection
       auto r = boost::math::tools::toms748_solve(f, mid, max, fmid, fmax, tol, count);
       max_iter += count; // add the number of iterations in toms748
@@ -88,7 +78,35 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
 }
 #endif
 
+/**
+  \class LookupTableGenerator
+  
+  \brief Generate a FunC LookupTable from a given name and one of the
+   following: stepsize, tolerance, memory size limit, or filename with
+   generate_by_step, generate_by_tol, generate_by_impl_size, and generate_by_file
+   respectively. This class is also equipped to compute the error in a LUT
+   built with any given stepsize and plot a LUT against its exact function.
 
+  \ingroup Utils
+
+  \note If `generate_by_XXX` is given a nonempty filename then it will generate a table once
+   and save that output to to `filename`. Future runs will build the LUT from
+   filename instead of generating that LUT from scratch.
+  \note filenames are relative to the cwd unless users provide an absolute
+   path.
+
+  \note Many architectures (including Apples arm chips) typedef long double as double (truly horrendous)
+
+  \note If Boost is not available then users can only use this class to build LUTs by file or by step.
+
+  \note LookupTableGenerator is header only because it is templated on the
+   error precision TERR. We MUST be able to cast TERR to TIN and vice versa.
+   Ideally TERR satisfies: \f$\sqrt(\epsilon_{\mathrm{TERR}}) <= \epsilon_{\mathrm{TOUT}}.
+
+  \todo Newton's iterations are currently unused because sometimes it'll try
+   building a LUT so large it'll kill mortal computers. There must be a way to
+   use it, but I'm not sure how.
+*/
 #if defined(FUNC_USE_BOOST)
 template <typename TIN, typename TOUT = TIN, typename TERR = boost::multiprecision::cpp_bin_float_quad>
 #else
@@ -99,27 +117,27 @@ class LookupTableGenerator
 private:
   FunctionContainer<TIN,TOUT> m_fc;
   LookupTableParameters<TIN> m_par;
-  TIN m_min, m_max; // min/max member variables are convenient but they should be removed in favour of m_par...
+  TIN m_min, m_max; // TODO min/max member variables are convenient but this data is already in m_par...
 
-  LookupTableFactory<TIN,TOUT> factory;
+  LookupTableFactory<TIN,TOUT> factory; //!< Use the factory design pattern
 
-  /* Nested functor for error evaluation */
-  struct LookupTableErrorFunctor;
-
-  /* Nested functor for optimal grid spacing determination */
-  struct OptimalStepSizeFunctor;
+  struct LookupTableErrorFunctor; //!< Nested functor for error evaluation
+  struct OptimalStepSizeFunctor; //!< Nested functor for optimal grid spacing determination
 
 
-  /* check if filename exists or if the user can access it */
+  /** check if filename exists or if the user can access it */
   bool file_exists(std::string filename){
     return static_cast<bool>(std::ifstream(filename));
   }
 
+  /** When given a nonempty filename, print lut to filename */
   inline void save_lut(LookupTable<TIN,TOUT>* lut, std::string filename){
     if(filename == "") return;
 
+    // TODO check if filename already exists????
     std::ofstream out_file(filename);
     lut->print_json(out_file);
+    out_file.close();
     return;
   }
 
@@ -132,7 +150,7 @@ public:
 
   ~LookupTableGenerator(){}
 
-  /* A wrapper for the LookupTableFactory<std::string> which builds tables from a file
+  /** A wrapper for the LookupTableFactory<std::string> which builds tables from a file
    * tableKey arg only exists as a sanity check (it's pointless otherwise) */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_file(std::string filename, std::string tableKey = "")
   {
@@ -140,7 +158,8 @@ public:
       throw std::invalid_argument("Error in func::LookupTableGenerator.generate_by_file: filename is not a valid json file.");
 
     nlohmann::json jsonStats;
-    std::ifstream(filename) >> jsonStats;
+    std::ifstream ifs(filename); ifs >> jsonStats; ifs.close();
+    
     // get the tableKey from filename
     if(tableKey == ""){
       tableKey = jsonStats["name"].get<std::string>();
@@ -149,7 +168,7 @@ public:
     return factory.create(tableKey, m_fc, LookupTableParameters<TIN>{0,0,0}, jsonStats);
   }
 
-  /* A wrapper for the LookupTableFactory */
+  /** A wrapper for the LookupTableFactory */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_step(std::string tableKey, TIN stepSize, std::string filename = "")
   {
     if(filename != "" && file_exists(filename))
@@ -164,22 +183,22 @@ public:
     return lut;
   }
 
-  /* Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
+  /** Generate a table that has the largest possible stepsize such that the error is less than desiredErr */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN a_tol, TIN r_tol, std::string filename = "");
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_tol(std::string tableKey, TIN desiredErr, std::string filename = ""){
     return generate_by_tol(tableKey, desiredErr, desiredErr, filename);
   }
 
-  /* Generate a table takes up desiredSize bytes */
+  /** Generate a table takes up desiredSize bytes */
   std::unique_ptr<LookupTable<TIN,TOUT>> generate_by_impl_size(std::string tableKey, unsigned long desiredSize, std::string filename = "");
 
-  /* Return the approx error in tableKey at stepSize
+  /** Return the approx error in tableKey at stepSize
    * - relTol is a parameter which determines how much effect small f(x) values have on the error calculation */
   long double error_at_step_size(std::string tableKey, TIN stepSize, TIN relTol = static_cast<TIN>(1.0));
   long double error_of_table(const LookupTable<TIN,TOUT>& L, TIN relTol = static_cast<TIN>(1.0));
 
-  /* compare tableKey to the original function at stepSize */
-  void plot_implementation_at_step_size(std::string tableKey, TIN stepSize);
+  /** compare tableKey to the original function at stepSize */
+  void plot_implementation_at_step_size(std::string tableKey, TIN table_step, TIN plot_step);
 
   TIN min_arg(){ return m_par.minArg; }
   TIN max_arg(){ return m_par.maxArg; }
@@ -189,7 +208,7 @@ public:
 /* Non-trivial member definitions */
 /*----------------------------------------------------------------------------*/
 
-/* lambda used for computing error in a given lookup table */
+/* lambda useful for computing error in a given lookup table */
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::LookupTableErrorFunctor
 {
@@ -214,12 +233,12 @@ private:
   TERR m_relTol;
 };
 
-/* lambda used for finding error over table bounds */
+/* lambda useful for finding error over a LUT's bounds */
 template <typename TIN, typename TOUT, typename TERR>
 struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
 {
-  /* small relTol => don't worry about small f(x) in error metric.
-   * large relTol => small |f(x)| must be approximated well compared to large |f(x)| */
+  /* Given small relTol => don't worry about small f(x) in error metric.
+   * Given large relTol => small |f(x)| must be approximated well compared to large |f(x)| */
   OptimalStepSizeFunctor(LookupTableGenerator<TIN,TOUT,TERR> &parent, std::string tableKey, TERR relTol, TERR desiredErr) :
     m_parent(parent), m_tableKey(tableKey), m_relTol(relTol), m_desiredErr(desiredErr) {}
 
@@ -232,6 +251,14 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     return error_of_table(impl.get());
   }
 
+
+  /** Use Brent's method to find the maximum of
+   * \f$|f(x)-L(x)|/(a_{\mathrm{tol}}+r_{\mathrm{tol}}|f(x)|)\f$ over each
+   * subinterval of L. 
+   * \note Must be careful about the last interval b/c tableMaxArg >= maxArg
+   *   (and we don't care about error outside of table bounds)
+   * \todo This parallelizes reasonably well, but does it really use the best pragma possible?
+   * \todo brent's method occasionally spends much more time on single intervals (stragglers) so there's some potential for */
   TIN error_of_table(const LookupTable<TIN,TOUT>* impl){
     using namespace boost::math::tools;
 
@@ -240,19 +267,13 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
     boost::uintmax_t max_it = 20;
     TERR max_err = 0;
 
-    /* Want a small bracket for brent's method so for each interval in the table,
-     * compute the maximum error.
-     * - Must be careful about the last interval b/c tableMaxArg >= maxArg
-     *   (and we don't care about error outside of table bounds)
-     * - TODO This scales well, but is this the best pragma possible?
-     * - TODO brent's method occasionally spends much more time on single intervals (stragglers)
-     * - TODO can be slow for high order tables with very few subintervals
-     *   */
     #pragma omp parallel for
     for(unsigned ii=0; ii<impl->num_subintervals(); ii++){
       std::pair<TIN,TIN> intEndPoints = impl->bounds_of_subinterval(ii);
-      /* TODO does this restrict the possible values of TIN?
-       * Is it possible for x or xtop to be rounded outside the LUT's domain after casting to TERR? */
+      /* TODO 
+       * - does float_next and float_prior restrict the possible values of TIN?
+       *   I think they might be the result of an old misdiagnosis of NaN
+       * - Is it possible for x or xtop to be rounded outside the LUT's domain after casting to TERR? */
       TERR x = static_cast<TERR>(boost::math::float_next(intEndPoints.first));
       TERR xtop = static_cast<TERR>(boost::math::float_prior(intEndPoints.second));
 
@@ -265,7 +286,7 @@ struct LookupTableGenerator<TIN,TOUT,TERR>::OptimalStepSizeFunctor
       }
     }
 
-    /* want return to be 0 if the same, +/- on either side */
+    /* will return 0 if the f and L are exactly the same */
     max_err = -max_err;
     return static_cast<TIN>(max_err-m_desiredErr);
   }
@@ -408,7 +429,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
     If a suitable bracket is found, this guarantees a solution below a_tol.
     Otherwise, bracket_and_solve throws an error.
   */
-  const boost::uintmax_t BRACKET_MAX_IT = std::numeric_limits<TIN>::digits - 2;  // Limit to maximum iterations.
+  const boost::uintmax_t BRACKET_MAX_IT = 2*(std::numeric_limits<TIN>::digits - 2);  // Limit to maximum iterations.
   boost::uintmax_t it = BRACKET_MAX_IT;        // Initally our chosen max iterations, but updated with actual.
 
   /* Throw when the log-Newton method did not converge AND there are no bracketing iterations performed. */
@@ -436,8 +457,7 @@ std::unique_ptr<LookupTable<TIN,TOUT>> LookupTableGenerator<TIN,TOUT,TERR>::gene
   */
   /* f(m_max-m_min) - a_tol > 0 (otherwise we would've quit already) */
   //std::pair<TIN, TIN> r = toms748_solve(g, static_cast<TIN>(0.0), m_max-m_min, -static_cast<TIN>(a_tol), static_cast<TIN>(fmax_step-a_tol), tol, it);
-  std::pair<TIN, TIN> r = bisect(g, static_cast<TIN>(0.0), m_max-m_min, -static_cast<TIN>(a_tol), static_cast<TIN>(fmax_step-a_tol), tol, it);
-  /* TODO make a warning if we hit the max tolerance & say that the user should increase the precision in TOUT */
+  std::pair<TIN,TIN> r = bisect(g, static_cast<TIN>(0.0), m_max-m_min, -static_cast<TIN>(a_tol), static_cast<TIN>(fmax_step-a_tol), tol, it);
   if(it == BRACKET_MAX_IT)
     std::cerr << "Warning from func::LookupTableGenerator::generate_by_tol: bisection/toms748 did not achieve tolerance within the maximum number of iterations = " << BRACKET_MAX_IT << ". Either lower tolerance or use a higher precision type for template parameter TOUT." << std::endl; //"Currently, TOUT = " << typeid(temp_tout).name();
 
@@ -477,20 +497,16 @@ long double LookupTableGenerator<TIN,TOUT,TERR>::error_of_table(const LookupTabl
 
 
 template <typename TIN, typename TOUT, typename TERR>
-void LookupTableGenerator<TIN,TOUT,TERR>::plot_implementation_at_step_size(std::string tableKey, TIN stepSize)
+void LookupTableGenerator<TIN,TOUT,TERR>::plot_implementation_at_step_size(std::string tableKey, TIN table_step, TIN plot_refinement)
 {
-  /*
-    Can be implemented in terms of the Functor used in solving for a specific
-    tolerance, so that is reused.
-  */
   LookupTableParameters<TIN> par = m_par;
-  par.stepSize = stepSize;
+  par.stepSize = table_step;
   auto impl = factory.create(tableKey, m_fc, par);
 
   std::cout << "# x func impl" << std::endl;
   for (TIN x = impl->min_arg();
            x < impl->max_arg();
-           x+= impl->step_size()/static_cast<double>(100)){
+           x+= impl->step_size()/plot_refinement){
     std::cout << x << " " <<
       (m_fc.standard_fun)(x) << " " <<
       (*impl)(x) << std::endl;

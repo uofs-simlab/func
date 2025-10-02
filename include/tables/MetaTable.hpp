@@ -1,21 +1,3 @@
-/*
-  MetaTable handles any _piecewise polynomial based_ interpolation:
-
-  Note:
-  - In the case where (max-min)/stepsize is not an integer then
-  the actual maximum allowable argument is greater than max
-  - if stepSize divides max-min exactly then operator(max) will be out of array bounds
-  so every implementation has an extra (unnecessary in most cases) table entry.
-
-  Info on template parameters:
-
-  N = number of coefficients used in underlying piecewise polynomials
-  Provided Horner's method which is the most common table evaluation method in FunC
-
-  UNIFORM: Every subinterval is the same length so the hash is super fast; however,
-  many more subintervals might be needed
-  NONUNIFORM: Use a transfer function to create a nonuniform grid with an O(1) hash.
-*/
 #pragma once
 #include "LookupTable.hpp"
 #include "TransferFunction.hpp"
@@ -25,8 +7,8 @@
 #include <stdexcept>
 #include "json.hpp"
 
-/* Give inheriting classes access to member variables without
-   having to use "this->" excessively. These "using" statements must have protected access */
+/** Classes inheriting MetaTable need this macro to access member variables without
+   writing "this->" excessively. These "using" statements must have protected access */
 #define INHERIT_META(N,TIN,TOUT,GT) \
   using MetaTable<N,TIN,TOUT,GT>::m_order; \
   using MetaTable<N,TIN,TOUT,GT>::m_name; \
@@ -41,9 +23,10 @@
   using MetaTable<N,TIN,TOUT,GT>::m_table; \
   using MetaTable<N,TIN,TOUT,GT>::m_transferFunction
 
-/* Parallelization macro. Notes:
- * - we could align m_table to sizeof(TOUT) to get some more speedup? */
+/** Parallelization macro.
+ * \note perhaps we could align m_table to sizeof(TOUT) to get some more speedup */
 #define FUNC_BUILDPAR _Pragma("omp parallel for schedule(dynamic)")
+
 
 namespace func {
 
@@ -58,28 +41,95 @@ inline std::string grid_type_to_string() {
   } 
 }
 
+/**
+  \brief MetaTable handles any piecewise _polynomial_ based interpolation. Highly templated
+  \ingroup MetaTable
+
+  \note If (max-min)/stepsize is not an integer then the actual
+    maximum allowable argument `m_tableMaxArg` is
+    `std::ceil(m_stepSize_inv*(m_maxArg-m_minArg)))` (which is slightly larger
+    than the given max)
+  \note If (max-min)/stepsize _is_ an integer, then `hash(max)=index_max+1`. To
+    remedy this, every implementation must have an extra (unnecessary in
+    most cases) entry in m_table
+  \note If `TIN` approximates a field and `TOUT` approximates a vector space over `TIN`,
+    then `MetaTable<N,TIN,TOUT,GT>` approximates a vector space over `TIN`.
+    MetaTable provides methods for addition/subtraction & scalar
+    multiplication/division. This feature makes the N-D LUTs possible. 
+  \note Provides functions to read/write LUTs from a JSON file by implementing
+    nlohmann's to/from_json.
+
+  \tparam N, unsigned int: is the number of coefficients required to represent
+  each polynomial. So, N = deg(p_k) + 1 where p_k is the polynomial
+  approximating f over interval k
+  \tparam TIN, typename: is the type of the inputs passed to f.
+  \tparam TOUT, typename: is the type that f outputs (and the type of the coefficients of each p_k).
+  \tparam GT, GridType: is the type of partition that this LUT uses. The options are
+  - UNIFORM: Every subinterval is the same length so the hash takes 4 FLOPs &
+    zero comparisons; however, unnecessary subintervals might be needed
+  - NONUNIFORM: Use a TransferFunction to create a nonuniform partition of [a,b] with an O(1) hash.
+*/
 template <unsigned int N, typename TIN, typename TOUT=TIN, GridTypes GT=GridTypes::UNIFORM>
 class MetaTable : public LookupTable<TIN,TOUT>
 {
 protected:
-  std::string m_name;             // name of implementation type
-  TIN m_minArg, m_maxArg;         // bounds of evaluation
-  TIN m_stepSize, m_stepSize_inv; // fixed grid spacing (and its inverse)
-  TIN m_tableMaxArg; // > m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
+  std::string m_name;             //!< name of implementation type
+  TIN m_minArg, m_maxArg;         //!< bounds of evaluation
+  TIN m_stepSize, m_stepSize_inv; //!< fixed grid spacing (and its inverse)
+  TIN m_tableMaxArg; //!< \> m_maxArg if (m_maxArg-m_minArg)/m_stepSize is non-integer
 
-  unsigned int m_order;           // order of accuracy of implementation
-  std::size_t  m_dataSize;        // size of relevant data for impl evaluation
-  unsigned int m_numIntervals;    // = (m_tableMaxArg - m_minArg)/m_stepSize;
-  unsigned int m_numTableEntries; // length of m_table (usually = m_numIntervals + 1)
-  __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; // holds polynomials coefficients
-  TransferFunction<TIN> m_transferFunction; // used to make nonuniform grids (default constructable)
+  unsigned int m_order;           //!< order of accuracy of implementation
+  std::size_t  m_dataSize;        //!< size of relevant data for impl evaluation
+  unsigned int m_numIntervals;    //!< = (m_tableMaxArg - m_minArg)/m_stepSize;
+  unsigned int m_numTableEntries; //!< length of m_table (usually = m_numIntervals + 1)
+
+  __attribute__((aligned)) std::unique_ptr<polynomial<TOUT,N>[]> m_table; //!< holds polynomials coefficients
+
+  TransferFunction<TIN> m_transferFunction; //!< used to make nonuniform grids (default constructable)
+
+
+  /** \brief Copy-swap pattern, necessary for `operator=`
+   *  \post L is overwritten by the data in `this*` and `this*` loses access to its data. */
+  void swap(MetaTable<N,TIN,TOUT,GT>& L) noexcept {
+    L.m_name = m_name;
+    L.m_minArg = m_minArg;
+    L.m_maxArg = m_maxArg;
+    L.m_order = m_order;
+    L.m_dataSize = m_dataSize;
+    L.m_numIntervals = m_numIntervals;
+    L.m_numTableEntries = m_numTableEntries;
+    L.m_stepSize = m_stepSize;
+    L.m_stepSize_inv = m_stepSize_inv;
+    L.m_tableMaxArg = m_tableMaxArg;
+    L.m_transferFunction = m_transferFunction;
+    L.m_table = std::move(m_table);
+    return;
+  }
 
 public:
-  /* using a std::unique_ptr member variables implicitly deletes the default
+  /** Using a std::unique_ptr member variables implicitly deletes the default
    * move ctor so we must explicitly ask for the default move ctor */
   MetaTable() = default;
 
-  /* Set every generic member variable from a json file */
+  /** deepcopy constructor */
+  MetaTable(const MetaTable<N,TIN,TOUT,GT>& L) : m_name(L.m_name), m_minArg(L.m_minArg), m_maxArg(L.m_maxArg),
+    m_stepSize(L.m_stepSize), m_stepSize_inv(L.m_stepSize_inv), m_tableMaxArg(L.m_tableMaxArg),
+    m_order(L.m_order), m_dataSize(L.m_dataSize), m_numIntervals(L.m_numIntervals), m_numTableEntries(L.m_numTableEntries)
+  {
+    m_table.reset(new polynomial<TOUT,N>[m_numTableEntries]);
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] = L.m_table[ii].coefs[jj];
+  }
+
+  /** Implemented with the copy-swap pattern */
+  MetaTable<N,TIN,TOUT,GT>& operator=(MetaTable<N,TIN,TOUT,GT> L){
+    L.swap(*this);
+    return *this;
+  }
+
+  /** Use a json file to set every generic member variable */
   MetaTable(const FunctionContainer<TIN,TOUT>& func_container, const LookupTableParameters<TIN>& par, const nlohmann::json& jsonStats) :
     m_minArg(par.minArg), m_maxArg(par.maxArg), m_stepSize(par.stepSize) {
     /* build this table from a json file */
@@ -88,13 +138,15 @@ public:
       return;
     }
 
-    /* If the step size does not exactly divide the arg domain, the max arg of the table is set
-     * to the nearest value above such that it does. */
+    /* only positive stepsizes allowed */
     if(m_stepSize <= static_cast<TIN>(0.0))
       throw std::invalid_argument("func::MetaTable was given a nonpositive stepSize. stepSize must be positive.");
 
+    /* If the step size does not exactly divide the arg domain, the max arg of the table is set
+     * to the nearest value above such that it does. */
     m_stepSize_inv = static_cast<TIN>(1.0)/m_stepSize;
-    m_numIntervals = static_cast<unsigned>(std::ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
+    using std::ceil;
+    m_numIntervals = static_cast<unsigned>(ceil(m_stepSize_inv*(m_maxArg-m_minArg)));
     m_tableMaxArg = m_minArg+m_stepSize*m_numIntervals; // always >= m_maxArg
 
     // We need a valid FunctionContainer to generate any LUT
@@ -107,7 +159,7 @@ public:
       m_transferFunction = TransferFunction<TIN>(func_container,m_minArg,m_tableMaxArg,m_stepSize);
   }
 
-  /* public access to protected member vars */
+  /* -- public getters for protected member vars -- */
   std::string name() const final { return m_name; }
   TIN min_arg() const final { return m_minArg; }
   TIN max_arg() const final { return m_maxArg; }
@@ -116,7 +168,7 @@ public:
   std::size_t size() const final { return m_dataSize; }
   unsigned int num_subintervals() const final { return m_numIntervals; }
   TIN step_size() const final { return m_stepSize; }
-  std::pair<TIN,TIN> bounds_of_subinterval(unsigned intervalNumber) const final {
+  std::pair<TIN,TIN> bounds_of_subinterval(unsigned int intervalNumber) const final {
     // initialize to bounds of uniform LUT and adjust if LUT is nonuniform
     TIN intervalMin = m_minArg + intervalNumber*m_stepSize;
     TIN intervalMax = m_minArg + (intervalNumber+1)*m_stepSize;
@@ -139,15 +191,62 @@ public:
   std::array<TIN,4> transfer_function_coefs() const { return m_transferFunction.get_coefs(); }
 
 
-  /* give the nlohmann json functions access to every member variable (must use SFINAE because we want people
-   * to construct LUTs over arbitrary types regardless of whether they have to/from json functions) */
+  /** This declaration gives the nlohmann json functions access to every member
+   * variable. This _must_ use SFINAE because we want people to construct LUTs
+   * over arbitrary types regardless of whether those types have implemented to/from json */
   template <unsigned int N1, typename TIN1, typename TOUT1, GridTypes GT1,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN1 >::value && 
                                  std::is_constructible<nlohmann::json,TOUT1>::value, bool>::type>
   friend void from_json(const nlohmann::json& jsonStats, MetaTable<N1,TIN1,TOUT1,GT1>& lut);
 
+  /** LUTs form a vector space over TIN if TOUT forms a vector space over TIN
+   * Note these operations could be heavily optimized with template expressions
+   * but that doesn't work with the auto keyword (currectly used with
+   * operator()(...)) and that'd be a loooot of work... 
+   *
+   * Maybe we could implement polynomial using an existing linear algebra library with fast
+   * (possibly template expression based) operator+ and operator*? */
+  MetaTable<N,TIN,TOUT,GT>& operator+=(const MetaTable<N,TIN,TOUT,GT>& other) {
+    if((m_numTableEntries != other.m_numTableEntries) || (m_minArg != other.m_minArg) || (m_maxArg != other.m_maxArg))
+      throw std::invalid_argument("Error in func::MetaTable: cannot add two LUTs with different subintervals");
 
-  /* find which polynomial p_k to evaluate. Also, each p_k:[0,1]->R so we must set dx=(x-x_k)/(x_{k+1}-x_k) */
+    /* \todo I do not believe that TransferFunctions currently work with LUTs
+     * of LUTs yet.  Maybe try lerping the transfer functions? Maybe simply
+     * restrict the nonuniform part to certain dimensions */
+
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] += other.m_table[ii].coefs[jj];
+    return *this;
+  }
+  MetaTable<N,TIN,TOUT,GT>& operator-=(const MetaTable<N,TIN,TOUT,GT>& other) {
+    if((m_numTableEntries != other.m_numTableEntries) || (m_minArg != other.m_minArg) || (m_maxArg != other.m_maxArg))
+      throw std::invalid_argument("Error in func::MetaTable: cannot subtract two LUTs with different subintervals");
+
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] -= other.m_table[ii].coefs[jj];
+    return *this;
+  }
+  MetaTable<N,TIN,TOUT,GT>& operator*=(const TIN& a) {
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] *= a;
+    return *this;
+  }
+  MetaTable<N,TIN,TOUT,GT>& operator/=(const TIN& a) {
+    #pragma omp simd collapse(2)
+    for(unsigned int ii=0; ii<m_numTableEntries; ++ii)
+      for(unsigned int jj=0; jj<N; ++jj)
+        m_table[ii].coefs[jj] /= a;
+    return *this;
+  }
+
+
+  /** Find which polynomial \f$p_k\f$ to evaluate. Also, each \f$p_k:[0,1]->R\f$ so we must set \f$dx=(x-x_k)/(x_{k+1}-x_k)\f$ */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::UNIFORM,bool>::type = true>
   inline std::pair<unsigned int, TIN> hash(TIN x) const {
     // nondimensionalized x position, scaled by step size
@@ -158,44 +257,127 @@ public:
     return std::make_pair(x0, dx);
   }
 
-  /* the polynomials for nonuniform LUTs map [x_k,x_{k+1}]->R so we don't have to change x */
+  /** The polynomials for nonuniform LUTs map \f$[x_k,x_{k+1}]->R\f$ so we
+   * don't have to preprocess \f$x\f$. Calls m_transferFunction.inverse(x),
+   * using 6 FLOPs and 4 std::array<TIN,4> access */
   template <GridTypes GT1, typename std::enable_if<GT1 == GridTypes::NONUNIFORM,bool>::type = true>
   inline std::pair<unsigned int, TIN> hash(TIN x) const {
-    // perform interval search in 6 FLOPs and 4 std::array<TIN,4> accesses
     unsigned int x0 = static_cast<unsigned int>(m_transferFunction.inverse(x));
-    return std::make_pair(x0, x); // don't subtract dx by x0 because every polynomial was already rescaled accordingly
+    return std::make_pair(x0, x); // we don't subtract dx by x0 because every polynomial was rescaled during construction
   }
 
-  /* TODO Pade & LinearRawInterpTable must override this operator. Maybe operator() will be faster if each
-   * implementation provides their own operator() and diff(). Perchance that will remove the overhead from
-   * using a vtable */
+  /** Find the subinterval \f$[x_k,x_{k+1})\f$ that \f$x\f$ belongs to, fetch
+   * the coefficients of the polynomial \f$p_k(x)\f$ from `m_table[k]`, and use
+   * Horner's method to compute \f$p_k(x)\f$.
+   *
+   * \todo PadeTable & LinearRawInterpTable must override this operator. Maybe
+   *  operator() will be faster if each implementation provides their own
+   *  operator() and diff(). If the vtable isn't optimized out then perchance
+   *  removing the use of virtual will remove that overhead. 
+   * \todo surely this could use openmp simd... */
   //#pragma omp declare simd // warning: GCC does not currently support mixed size types for 'simd' functions
   TOUT operator()(TIN x) const override {
     unsigned int x0; TIN dx;
     std::tie(x0,dx) = hash<GT>(x);
     
     // general degree horners method, evaluated from the inside out.
-    TOUT sum = static_cast<TOUT>(0); // must initialize sum with a nonzero value to make LUT addition easy
-    for(unsigned int k=N-1; k>0; k--)
-      sum = (m_table[x0].coefs[k] + sum)*dx;
-    return m_table[x0].coefs[0]+sum;
+    TOUT sum = m_table[x0].coefs[N-1];
+    for(unsigned int k=N-1; k>0; k--){
+      sum *= dx;
+      sum += m_table[x0].coefs[k-1];
+    }
+    return sum;
   }
-  //TOUT diff(unsigned int N, TIN x) final {}
+
+  /** \brief If LUT coefficients (of type TOUT) are callable, then apply each to `args` as soon as possible.
+   *
+   * \note We must use an `auto` return type because there's no straightforward way
+   *   to statically deduce the return type ahead of time.
+   * \note This function does not perform well with template expressions (e.g. LUTs
+   *   of arma::mat) so use the other `operator()` in that case.
+   * \note This variadic `operator()` cannot be in the LUT interface because it
+   *   must be templated. */
+  template<typename... TIN2>
+  inline auto operator()(TIN x, TIN2 ... args) const {
+    unsigned int x0; TIN dx;
+    std::tie(x0,dx) = hash<GT>(x);
+
+    auto sum = m_table[x0].coefs[N-1](args...);
+    for(unsigned int k=N-1; k>0; k--){
+      sum *= dx;
+      sum += m_table[x0].coefs[k-1](args...);
+    }
+    return sum;
+  }
+
+  /** \brief Return the \f$s\f$th derivative of \f$L\f$ at \f$x\f$: ie return \f$p_k^{(s)}(x)\f$
+   *
+   * \todo Make this function virtual and override in PadeTable and LinearRawInterpTables */
+  TOUT diff(unsigned int s, TIN x) const {
+    unsigned int x0; TIN dx;
+    std::tie(x0,dx) = hash<GT>(x);
+
+    auto sum = static_cast<TIN>(permutation(N-1,s))*m_table[x0].coefs[N-1];
+    for(unsigned int k=N-1; k>s; k--){
+      sum *= dx;
+      sum += static_cast<TIN>(permutation(k-1,s))*m_table[x0].coefs[k-1];
+    }
+    return static_cast<TIN>(pow(m_stepSize_inv,s))*sum;
+  }
+
+  /** \brief Same pattern as the variadic operator() but for the \f$s\f$th derivative. */
+  template<typename... TIN2>
+  inline auto diff(unsigned int s, TIN x, TIN2... args) const {
+    unsigned int x0; TIN dx;
+    std::tie(x0,dx) = hash<GT>(x);
+
+    auto sum = static_cast<TIN>(permutation(N-1,s))*(m_table[x0].coefs[N-1].diff(args...));
+    for(unsigned int k=N-1; k>s; k--){
+      sum *= dx;
+      sum += static_cast<TIN>(permutation(k-1,s))*(m_table[x0].coefs[k-1].diff(args...));
+    }
+    return static_cast<TIN>(pow(m_stepSize_inv,s))*sum;
+  }
 };
 
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator+(MetaTable<N,TIN,TOUT,GT> lhs, const MetaTable<N,TIN,TOUT,GT>& rhs){
+    return lhs += rhs;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator-(MetaTable<N,TIN,TOUT,GT> lhs, const MetaTable<N,TIN,TOUT,GT>& rhs){
+    return lhs -= rhs;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator*(MetaTable<N,TIN,TOUT,GT> lhs, const TIN& scalar){
+    return lhs *= scalar;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator*(const TIN& scalar, MetaTable<N,TIN,TOUT,GT> lhs){
+    return lhs *= scalar;
+}
+template <unsigned int N, typename TIN, typename TOUT, GridTypes GT>
+MetaTable<N,TIN,TOUT,GT> operator/(MetaTable<N,TIN,TOUT,GT> lhs, const TIN& scalar){
+    return lhs /= scalar;
+}
 
-/* Reading & writing functions for any LUT derived from MetaTable.
- * Enables the convenient "get" syntax from nlohmann::json for specific implementations.
-   eg:
-  ```c++
-  nlohmann::json jsonStats;
-  std::ifstream(filename) >> jsonStats;
-  auto lut = jsonStats.get<func::UniformLinearInterpolationTable<TIN,TOUT>>();
-  ```
- * Uses SFINAE to automatically disable these functions if TIN or TOUT do not support nlohmann's json
- * (then users can use their abstract types without having to implement to/from json)
+/** \brief Reading & writing functions for any LUT derived from MetaTable.
+ * Enables the convenient "get" syntax from nlohmann::json for any class that implements MetaTable.
  *
- * TODO can we just edit the json library to make the compile time errors into runtime errors? SFINAE takes forever to compile...
+   eg:
+  \code{.cpp}
+  nlohmann::json jsonStats;
+  std::ifstream(filename) >> jsonStats; // call to_json
+  auto lut = jsonStats.get<func::UniformLinearInterpolationTable<TIN,TOUT>>(); // call from_json
+  \endcode
+ * Uses SFINAE to automatically disable these functions if TIN or TOUT do not
+ * support nlohmann's json (then users can have LUTs over abstract types
+ * without having to implement to/from_json first). SFINAE is also necessary
+ * because nlohmann uses static_asserts to check if TIN/TOUT have to/from_json
+ *
+ * \todo This use of SFINAE does (as expected) increase the compile
+ * time by several percentage points. Can we edit the json library instead to
+ * make the compile errors into runtime errors??
  * */
 template <unsigned int N, typename TIN, typename TOUT, GridTypes GT,
          typename std::enable_if<std::is_constructible<nlohmann::json,TIN >::value && 

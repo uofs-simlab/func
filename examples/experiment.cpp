@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
   int    nEvals       = std::stoi(argv[5]);
   unsigned int seed   = std::stoi(argv[6]);
 
-  FunctionContainer<TYPE> func_container{FUNC_SET_F(MyFunction,TYPE)};
+  FunctionContainer<TYPE> func_container {FUNC_SET_F(MyFunction,TYPE)};
   LookupTableFactory<TYPE> factory;
 
   /* Check which implementations are available */
@@ -58,17 +58,17 @@ int main(int argc, char* argv[]){
 
   /* Which LUT implementations to use */
   std::vector<std::string> uniformNames {
-    "UniformChebyInterpTable<1>",
-    "UniformChebyInterpTable<2>",
-    "UniformChebyInterpTable<3>",
-    "UniformChebyInterpTable<4>",
-    "UniformChebyInterpTable<5>",
-    "UniformChebyInterpTable<6>",
-    "UniformChebyInterpTable<7>",
+    //"UniformChebyInterpTable<1>",
+    //"UniformChebyInterpTable<2>",
+    //"UniformChebyInterpTable<3>",
+    //"UniformChebyInterpTable<4>",
+    //"UniformChebyInterpTable<5>",
+    //"UniformChebyInterpTable<6>",
+    //"UniformChebyInterpTable<7>",
     //"UniformCubicHermiteTable",
-    //"UniformEqSpaceInterpTable<1>",
-    //"UniformEqSpaceInterpTable<2>",
-    //"UniformEqSpaceInterpTable<3>",
+    "UniformEqSpaceInterpTable<1>",
+    "UniformEqSpaceInterpTable<2>",
+    "UniformEqSpaceInterpTable<3>",
     //"UniformLinearRawInterpTable",
     //"UniformTaylorTable<1>",
     //"UniformTaylorTable<2>",
@@ -80,17 +80,17 @@ int main(int argc, char* argv[]){
   };
 
   std::vector<std::string> nonuniformNames {
-    "NonUniformChebyInterpTable<1>",
-    "NonUniformChebyInterpTable<2>",
-    "NonUniformChebyInterpTable<3>",
-    "NonUniformChebyInterpTable<4>",
-    "NonUniformChebyInterpTable<5>",
+    //"NonUniformChebyInterpTable<1>",
+    //"NonUniformChebyInterpTable<2>",
+    //"NonUniformChebyInterpTable<3>",
+    //"NonUniformChebyInterpTable<4>",
+    //"NonUniformChebyInterpTable<5>",
     //"NonUniformChebyInterpTable<6>",
     //"NonUniformChebyInterpTable<7>",
     //"NonUniformCubicHermiteTable",
-    //"NonUniformEqSpaceInterpTable<1>",
-    //"NonUniformEqSpaceInterpTable<2>",
-    //"NonUniformEqSpaceInterpTable<3>",
+    "NonUniformEqSpaceInterpTable<1>",
+    "NonUniformEqSpaceInterpTable<2>",
+    "NonUniformEqSpaceInterpTable<3>",
     //"NonUniformTaylorTable<1>",
     //"NonUniformTaylorTable<2>",
     //"NonUniformTaylorTable<3>",
@@ -117,6 +117,9 @@ int main(int argc, char* argv[]){
   };
 
   LookupTableGenerator<TYPE> gen(func_container, tableMin, tableMax);
+  //LookupTableParameters<TYPE> par {tableMin, tableMax, 0.0};
+  //par.special_points = {{std::exp(7.7/13.0287), 0, 0.0}};
+  //LookupTableGenerator<TYPE> gen(func_container, par);
 
   impls.emplace_back(unique_ptr<LookupTable<TYPE>>(new DirectEvaluation<TYPE>(func_container,tableMin,tableMax)));
   for (auto itName : uniformNames) {

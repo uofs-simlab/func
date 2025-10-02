@@ -1,9 +1,3 @@
-/*
-  Class for comparing any class implementing LookupTables
-  TODO LookupTableComparator's constructor should accept any callable type
-
-  - takes ownership of the vector of implementations passed to it
-*/
 #pragma once
 #include "Timer.hpp"
 #include "RngInterface.hpp"
@@ -24,16 +18,18 @@ namespace func {
 template <typename TIN, typename TOUT>
 using ImplContainer = std::vector<std::unique_ptr<LookupTable<TIN,TOUT>>>;
 
+/**
+ \brief specify how a LookupTableComparator should sort its results.
+*/
 enum class Sorter {NONE, BEST, MEAN, WORST};
 
-/*
-  ImplTimer struct attaches additional data for timing an implementation
-  to the implementation
+/**
+ \brief Helper struct: takes a LookupTable and attaches a set of timings to it
 */
 template <typename TIN, typename TOUT>
 struct ImplTimer
 {
-  /* Note the the LookupTable can NOT be a reference here, because we
+  /* Note that the LookupTable can NOT be a reference here, because we
      want to be able to sort a container of these ImplTimers. sort
      requires operator=, and classes that have non-static reference
      members cannot implement this */
@@ -62,7 +58,22 @@ struct ImplTimer
   }
 };
 
-/* ------------------------------------------------------------------------ */
+/**
+  \brief Compare the average time taken to call the `operator()` of any
+  LookupTable implementation.
+
+  \ingroup Utils
+
+  For example usage, see any file in the examples directory.
+
+  \note This class takes ownership of the vector of LUT implementations it is
+  constructed with
+  \note Points are randomly sampled, and by default uses a
+   `std::uniform_real_distribution<TIN>` with the `std::mt19937` variant of the
+   `std::mersenne_twister_engine`. This can be changed by passing in a different `StdRng`
+
+  \todo `LookupTableComparator`'s constructor should accept any callable type
+*/
 template <typename TIN, typename TOUT = TIN>
 class LookupTableComparator
 {
@@ -78,11 +89,7 @@ private:
 
   std::unique_ptr<TOUT[]> m_evalHolder;
 
-  /*
-    RNG for evaluations
-    - By default uses a std::uniform_real_distribution<TIN>
-      with the std::mt19937 variant of the std::mersenne_twister_engine
-  */
+  /* RNG for evaluations */
   std::unique_ptr<RngInterface<TIN>> mp_sampler;
   std::unique_ptr<TIN[]>             mp_randomEvaluations;
   int                                m_nEvals;
@@ -92,13 +99,13 @@ private:
   //  double minTime, maxTime, meanTime;
   //} m_timingStatistics;
 
-  /* Fill mp_randomEvaluations with random points to be evaluated */
+  /** Fill mp_randomEvaluations with random points to be evaluated */
   void draw_new_sample_points() {
     for (int ii=0;ii<m_nEvals;++ii)
       mp_randomEvaluations[ii] = mp_sampler->get_point();
   }
 
-  /* Time implementation evaluations */
+  /** Time implementation evaluations */
   void run_all_single()
   {
     for (auto &itImplTimer : m_implTimers) {
@@ -113,11 +120,12 @@ private:
 
 public:
 
+  /** Prepare to run several timings for each LUT in the vector inImpl */
   LookupTableComparator(ImplContainer<TIN,TOUT> &inImpl, TIN minArg, TIN maxArg, unsigned int nEvals = 100000,
       unsigned int seed = 2017, std::unique_ptr<RngInterface<TIN>> inRng = nullptr);
   ~LookupTableComparator(){}
 
-  /* Run timings with different set of random arguments */
+  /** Run timings with different set of random arguments */
   void run_timings(int nRuns = 1)
   {
     for (int ii=0;ii<nRuns;++ii) {
@@ -126,24 +134,24 @@ public:
     }
   }
 
-  /* Compute fastest and slowest times */
+  /** Compute fastest and slowest times */
   void compute_statistics()
   {
     for (auto &itImplTimer : m_implTimers)
       itImplTimer.compute_timing_stats();
   }
 
-  /* Sort the vector of implementations (m_implTimers) based on their max, mean, or min times */
+  /** Sort the vector of implementations (m_implTimers) based on their max Sorter::WORST, mean Sorter::MEAN, or min Sorter::BEST times */
   void sort_timings(Sorter type = Sorter::MEAN);
 
-  /* Print out the computed statistics for each LookupTable (no raw timings are displayed) */
+  /** Print out the computed statistics for each LookupTable (no raw timings are displayed) */
   void print_summary(std::ostream&);
 
-  /* Print out the raw timings for each LookupTable */
+  /** Print out the raw timings for each LookupTable */
   void print_json(std::ostream&);
   void print_csv_header(std::ostream&);
-  /* space separated listing of timing results. Does not print a final newline if
-   * type != Sorter::NONE which is helpful for plotting timing results */
+  /** Output a space separated listing of timing results. Does not print a final newline if
+   * type != Sorter::NONE which is helpful for plotting timing results with external programs (e.g. Python) */
   void print_csv(std::ostream&, Sorter type = Sorter::NONE);
 
   std::vector<double> fastest_times()
@@ -200,7 +208,6 @@ inline LookupTableComparator<TIN,TOUT>::LookupTableComparator(
   mp_randomEvaluations = std::unique_ptr<TIN[]>(new TIN[m_nEvals]);
 }
 
-/* sort the vector of timings based on the min, max, or mean times */
 template <typename TIN, typename TOUT>
 inline void LookupTableComparator<TIN,TOUT>::sort_timings(Sorter type)
 {
@@ -231,7 +238,8 @@ inline void LookupTableComparator<TIN,TOUT>::sort_timings(Sorter type)
   }
 }
 
-/* Implementation of functions that print to an ostream */
+/* -- Implementation of functions that print to an ostream -- */
+
 template <typename TIN, typename TOUT>
 inline void LookupTableComparator<TIN,TOUT>::print_json(std::ostream &out)
 {
@@ -266,17 +274,17 @@ inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out, Sorter
   switch(type){
   case Sorter::BEST: {
     for (auto itImplTimer : m_implTimers)
-      out << itImplTimer.minTime << "s ";
+      out << std::scientific << itImplTimer.minTime << "s ";
     break;
   }
   case Sorter::MEAN: {
     for (auto itImplTimer : m_implTimers)
-      out << itImplTimer.meanTime << "s ";
+      out << std::scientific << itImplTimer.meanTime << "s ";
     break;
   }
   case Sorter::WORST: {
     for (auto itImplTimer : m_implTimers)
-      out << itImplTimer.maxTime << "s ";
+      out << std::scientific << itImplTimer.maxTime << "s ";
     break;
   }
   default: {
@@ -284,7 +292,7 @@ inline void LookupTableComparator<TIN,TOUT>::print_csv(std::ostream &out, Sorter
     int numTimes = (m_implTimers[0].evaluationTimes).size();
     for (int i = 0; i<numTimes; ++i) {
       for (auto itImplTimer : m_implTimers) {
-        out << itImplTimer.evaluationTimes[i] << " ";
+        out << std::scientific << itImplTimer.evaluationTimes[i] << " ";
       }
       out << "\n";
     }

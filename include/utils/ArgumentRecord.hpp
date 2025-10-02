@@ -1,37 +1,15 @@
-/* TODO USE BOOST HISTOGRAM INSTEAD
- *
- *
- *
-  Helper class which acts as an extension to any existing
-  EvaluationImplementation. Wraps a vector of unsigned
-  int which acts as a histogram for recording the
-  usage of a function's domain.
-
-  Notes:
-  - This class is only used in the current version 
-  of FunC if the -DFUNC_DEBUG flag is specified at compile time.
-  - Argument recording is threadsafe
-  - See DirectEvaluation.hpp and FailureProofTable.hpp for example usage.
-  - This is designed to be a private member variable of some class
-
-  TODO this class should support to_json & from_json
-*/
 #pragma once
 #include <string> // to_string()
-#include <memory>
-#include <fstream>
+#include <memory> // vector
+#include <fstream> // ostream
 #include <limits> // numeric_limits<TIN>::max() / lowest()
 #include <cmath> // pow, floor, ceil
 #include "json.hpp"
 
 namespace func {
-/* TODO 
-   The histogram will never have that many buckets so 
-   we could likely get away with just making every one of
-   this class's member variables threadprivate. */
 
-// can change FuncMutex if we decide to use std::mutex in
-// the case where openmp isn't available
+// We could change FuncMutex if we use std::mutex when openmp isn't available
+// (unlikely in real application)
 #ifdef _OPENMP // defined when -fopenmp is used at compile time
 #include <omp.h>
 class FuncMutex
@@ -78,42 +56,73 @@ public:
 };
 #endif // _OPENMP
 
+
+
+
+
+
+
 // macro used to decide where an arg should be placed in the histogram
 #define COMPUTE_INDEX(X) \
   (static_cast<unsigned int>(m_histSize*(X-m_minArg)/(m_maxArg+1.0-m_minArg))%m_histSize)
 
+
+/**
+  \brief A class used internally by FunC. Wraps a vector of unsigned int that
+  act as a histogram for recording the usage of a function's domain.
+   
+  When constructed with a std::ostream, this will print to that ostream when
+  the destructor is called. It is okay for provided arguments to be out of
+  bounds. In this case, the max or min arg recorded will be updated, but the
+  histogram's bounds will not grow dynamically.
+
+  \ingroup Utils
+
+  \note Code from this class is only included in FunC if the -DFUNC_DEBUG flag
+   is specified at compile time and DirectEvaluation and FailureProofTable are
+   the only classes that might use an ArgumentRecord.
+  \note An ArgumentRecord is designed to be a private member variable.
+  \note Recording arguments is threadsafe.
+
+  \todo Implement functions to_json & from_json
+  \todo The histogram will never have that many buckets so we could likely get
+   away with simply making every one of this class's member variables
+   threadprivate.
+  \todo Perhaps we should use boost histogram instead but that would add an
+   additional dependency
+*/
 template <typename TIN>
 class ArgumentRecord
 {
-  // Histogram used to record locations of function evaluations
-  // and other helper helper vars
-  std::vector<unsigned int> mv_histogram;
-  std::vector<FuncMutex>    mv_histogram_mutex;
+  std::vector<unsigned int> mv_histogram; //!< Histogram used to record locations of function evaluations
+  std::vector<FuncMutex>    mv_histogram_mutex; //!< Array of mutexes
   unsigned int              m_histSize;
 
-  // Set table bounds. Can be altered to result in nicer output
-  TIN m_minArg;
+  std::ostream* mp_streamer;
+
+  TIN m_minArg; //!< Set m_minArg and m_maxArg to be larger than the LUT's bounds to get nicer output
   TIN m_maxArg;
 
-  /* vars containing any statistics */
-  // the index of the bucket with the largest count
-  unsigned int m_peak_index;
 
-  // the number of elements outside the histogram's range
-  unsigned int m_num_out_of_bounds;
-
-  // Record the extreme args to help the user
-  // decide what bounds to use for their tables
-  TIN m_max_recorded;
-  TIN m_min_recorded;
+  /* variables containing any statistics */
+  unsigned int m_peak_index; //!< The index of the bucket with the largest count
+  unsigned int m_num_out_of_bounds; //!< the number of arguments sampled outside the histogram's bounds
+  TIN m_max_recorded; //!< Largest argument sampled during runtime
+  TIN m_min_recorded; //!< Smallest argument sampled during runtime
 
   public:
-    ArgumentRecord(TIN min, TIN max, unsigned int histSize) :
-      m_minArg(min), m_maxArg(max), m_histSize(histSize)
+
+    /** Arguments min and max determine histogram bounds, affecting the output
+     * in the printed histogram. histSize is the number of buckets. When
+     * provided an ostream != nullptr, this class will output *this to ostream
+     * when destructed */
+    ArgumentRecord(TIN min, TIN max, unsigned int histSize, std::ostream* streamer) :
+      m_minArg(min), m_maxArg(max), m_histSize(histSize), mp_streamer(streamer)
     {
-      /* variables needed for recording function arguments.
-         Init the entire histogram to 0 for easy incrementing */
+      /* Variables needed for recording function arguments.
+       * Init the entire histogram to 0 & increment later */
       mv_histogram = std::vector<unsigned int>(histSize, 0);
+      // make a mutex for each bucket in the histogram
       mv_histogram_mutex = std::vector<FuncMutex>(histSize);
 
       // naive initial member arg values
@@ -123,15 +132,12 @@ class ArgumentRecord
       m_min_recorded = std::numeric_limits<TIN>::max();
     }
 
-#ifdef FUNC_DEBUG
-    /* make the specific stream printed to depend on a printing function */
-    ~ArgumentRecord(){ std::cerr << *this;}
-#else
-    ~ArgumentRecord(){}
-#endif
+    /** Print to the optional argument mp_streamer if one was provided at the time of construction */
+    ~ArgumentRecord(){ if(mp_streamer != nullptr) *mp_streamer << *this; }
 
-    /* Rebuild our argument record
-       Note: Assuming the encapsulating LookupTable gave us a valid json object */
+    /** Rebuild our argument record
+       \note This assumes the encapsulating LookupTable provided a valid json object
+       \todo Maybe optionally provide an ostream? */
     ArgumentRecord(nlohmann::json jsonStats)
     {
       m_minArg = jsonStats["ArgumentRecord"]["minArg"].get<TIN>();
@@ -140,7 +146,7 @@ class ArgumentRecord
       m_histSize = jsonStats["ArgumentRecord"]["histogramSize"].get<unsigned int>();
       for(unsigned int i=0; i<m_histSize; i++)
         mv_histogram[i] = jsonStats["ArgumentRecord"]["histogram"][std::to_string(i)].get<unsigned int>();
-      // rebuild the histogram's thread safety
+      // reconstruct each of the histogram's mutexes
       mv_histogram_mutex = std::vector<FuncMutex>(m_histSize);
 
       m_peak_index   = jsonStats["ArgumentRecord"]["peak_index"].get<unsigned int>();
@@ -148,7 +154,7 @@ class ArgumentRecord
       m_min_recorded = jsonStats["ArgumentRecord"]["m_min_recorded"].get<TIN>();
     }
 
-    /* place x in the histogram. Mimic pipeline parallelism for any statistics with only one instance */
+    /** Place x in the histogram. Mimic pipeline parallelism for any statistics with only one instance */
     void record_arg(TIN x)
     {
       // Record x if it's within our histogram's limits
@@ -190,7 +196,8 @@ class ArgumentRecord
       // record more statistics here
     }
 
-    /* std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from this SO post
+
+    /** std::to_string(1e-7) == "0" which is unacceptable so we'll use this code from this SO post
      * https://stackoverflow.com/questions/16605967/set-precision-of-stdto-string-when-converting-floating-point-values
      * Default is the max possible precision by so users can choose how they'll round the answer on their own */
     template <typename T>
@@ -208,7 +215,7 @@ class ArgumentRecord
     }
 
 
-    // make a string representation of the histogram
+    /** Make a string representation of the histogram. */
     std::string to_string() const
     {
       // avoid division by zero by printing nothing if the histogram is empty
@@ -232,7 +239,7 @@ class ArgumentRecord
       return hist_str;
     }
 
-    // print each field in this class to the given ostream
+    /** Print each field in this class to the given ostream. */
     void print_json(nlohmann::json& jsonStats) const
     {
       jsonStats["ArgumentRecord"]["_comment"] = "Histogram of function evaluations.";
@@ -250,7 +257,7 @@ class ArgumentRecord
 
   TIN min_arg() const { return m_minArg; }
   TIN max_arg() const { return m_maxArg; }
-  /* TODO use a standard algorithm */
+
   unsigned int total_recorded() const {
     unsigned int t = 0;
     for(unsigned int i=0; i<m_histSize; i++)
@@ -258,14 +265,15 @@ class ArgumentRecord
     return t;
   }
   
-  /* the index of the bucket with the largest count */
+  /** Return the index of the bucket with the largest count. */
   unsigned int index_of_peak() const { return m_peak_index; }
+  /** Return the count from the bucket with the largest count. */
   unsigned int peak() const { return mv_histogram[m_peak_index]; }
 
-  /* the number of elements outside the histogram's range */
+  /** Return the number of elements outside the histogram's range. */
   unsigned int num_out_of_bounds() const { return m_num_out_of_bounds; }
 
-  /* Return the extreme args to help the user decide what bounds to use for their LUTs */
+  /** Return the extreme args to help the user decide what bounds to use for their LUTs. */
   TIN max_recorded() const { return m_max_recorded; }
   TIN min_recorded() const { return m_min_recorded; }
 };
@@ -287,8 +295,8 @@ std::ostream& operator<<(std::ostream& out, const ArgumentRecord<TIN>& arg_recor
   out << "Recorded args were sampled the most often from the subinterval "
       << arg_record.ith_interval(arg_record.index_of_peak()) << " with " << arg_record.peak() << " evaluations ("
       << 100.0*arg_record.peak()/static_cast<double>(complete_total) << "% of the total evaluations).\n";
-  /* iostream rounds to like 6 digits by default but the rounding can make the min/max args too large/small 
-   * which is annoying so we'll just print every digit of the output and let users round on their own */
+  /* iostream rounds to like 6 digits by default but the rounding doesn't ensure the interval is large enough
+   * (which is horrible). We print every digit of the output and let users round on their own */
   out << "The largest argument recorded was x=" << arg_record.to_string_with_precision(arg_record.max_recorded()) << "\n";
   out << "The lowest argument recorded was x=" << arg_record.to_string_with_precision(arg_record.min_recorded()) << std::endl;
   return out;

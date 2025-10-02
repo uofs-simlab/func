@@ -1,39 +1,3 @@
-/*
-  A TransferFunction transforms a uniformly spaced partition of $[a,b]$ into a nonuniform partition of $[a,b]$.
-  For efficiency, we require a Transfer function is simply an increasing cubic polynomial such that p(a)=0, p(b)=b/stepSize.
-  To help compete against uniform lookup tables, part of the operator() must be baked into those coefficients (hence the appearance of stepsize).
-  Can be constructed with a std::array<TIN,4> of polynomial coefficients.
-  For example, the identity transfer function which is the linear polynomial with coefs {-m_minArg/m_stepSize,1/m_stepSize,0,0}.
-
-  When given a FunctionContainer with a defined first derivative then this will construct a valid TransferFunction.
-  Let f be a function defined over [a,b]. Then, construct S: [a,b] -> [a,b] as
-    S(x) = a + \frac{b-a}{c}\int_a^x\frac{1}{\sqrt{1+[f'(t)]^2}} dt.
-  where c = \int_a^b\frac{1}{\sqrt{1+[f'(t)]^2}} dt. This way, S(a)=a, S(b)=b.
-  Computing S^{-1} has to be fast so we approximate is as a monotone Hermite
-  cubic polynomial and then rebuild S as (S^{-1})^{-1} using
-  Boost's newton_raphson_iterate.
-
-Notes:
-  - We need Boost version 1.71.0 or newer to generate a candidate transfer function.
-    Boost is not required if TransferFunction is given coefficients.
-  - We get better results if f' is largest near the endpoints [a,b].
-    If f' is largest near the middle of an interval (eg e^{-x^2} when a<-3 and b>3)
-    then the grid remains uniform. This is an issue with the way we approximate S!
-
-  TODO Currently, transfer functions are basically useless if $f'$ is not extreme near the endpoints of its domain.
-  (b/c we use cubic hermite interpolation at the endpoints).
-
-  We want to accurately approximate S anywhere f'(x) is extreme!
-  
-  Note that a cubic polynomial
-    p(x) = a_0 + a_1x + a_2x^2 + a_3x^3
-  is monotone over R if and only if a_2^2 < 3a_1a_3. Maybe we can compute a polynomial minimizing
-    int_a^b |f(t)-p(t)| dt
-  such that
-    p(a) = a, p(b) = b, and a_2^2 < 3a_1a_3.
-  That would be a much better general purpose solution.
- */
-
 #pragma once
 #include "config.hpp" // FUNC_USE_BOOST
 #include <cmath> // sqrt
@@ -52,30 +16,84 @@ Notes:
 
 namespace func {
 
+
+/**
+  \brief Transforms a uniformly spaced partition of \f$[a,b]\f$ into a nonuniform partition of \f$[a,b]\f$.
+
+  For efficiency, we require a Transfer function is simply an increasing cubic
+  polynomial such that \f$p(a)=0, p(b)=b/\mathrm{stepSize}\f$.  To help compete
+  against uniform lookup tables, part of the `operator()` must be baked into
+  those coefficients (explaining why stepSize appears in the formula above).
+
+  When given a FunctionContainer with a defined first derivative then this will construct a valid TransferFunction.
+  Let \f$f\f$ be a function defined over \f$[a,b]\f$. Then, construct \f$S: [a,b]\rightarrow[a,b]\f$ as
+    \f[S(x) = a + \frac{b-a}{c}\int_a^x\frac{1}{\sqrt{1+f'(t)^2}} dt,\f]
+  where \f$c = \int_a^b\frac{1}{\sqrt{1+f'(t)^2}} dt\f$. This way, \f$S(a)=a, S(b)=b\f$.
+  Computing \f$S^{-1}\f$ has to be fast so we approximate is as a monotone Hermite
+  cubic polynomial and then rebuild \f$S\f$ as \f$(S^{-1})^{-1}\f$ using
+  Boost's newton_raphson_iterate.
+
+  \note Can be constructed with a std::array<TIN,4> of polynomial coefficients.
+  \note An example: the identity transfer function which is the linear polynomial with coefs {-m_minArg/m_stepSize,1/m_stepSize,0,0}.
+
+  \note We need Boost version 1.71.0 or newer to generate a candidate transfer function.
+    Boost is not required if TransferFunction is given coefficients.
+  \note Resulting nonuniform LUT performs better if f' is largest near the endpoints [a,b].
+    If f' is largest near the middle of an interval (eg \f$e^{-x^2}\f$ when \f$a<-3\f$ and \f$b>3\f$)
+    then the grid remains uniform. This is an issue with the way we approximate S!
+
+  \todo Currently, transfer functions are basically useless if \f$f'\f$ is not
+  extreme near the endpoints of its domain. (b/c we use cubic hermite
+  interpolation at the endpoints).
+
+  We want to accurately approximate \f$S\f$ anywhere \f$f'(x)\f$ is extreme!
+  The best possible polynomial approximating \f$S\f$ might be promising...
+  
+  \note A cubic polynomial
+    \f$p(x) = a_0 + a_1x + a_2x^2 + a_3x^3\f$
+  is monotone over \f$\mathbb{R}\f$ if and only if \f$a_2^2 < 3a_1a_3\f$. Maybe
+  we can compute a polynomial minimizing
+    \f$\max_t |f(t)-p(t)| \f$
+  such that
+    \f$p(a) = a, p(b) = b\f$, and \f$a_2^2 < 3a_1a_3\f$.
+  That would be a much better general purpose solution. The search space is convex!
+ */
 template <typename TIN>
 class TransferFunction
 {
   TIN m_minArg, m_tableMaxArg, m_stepSize;
-  /* This class is a polynomial approximating g inverse.
+
+  /** This class is a polynomial approximating g inverse.
    * The identity transfer function is {-m_minArg/m_stepSize,1/m_stepSize,0,0} */
   __attribute__((aligned)) std::array<TIN,4> m_inverse_coefs = {{0,0,0,0}};
 public:
-  /* Set m_inverse_coefs equal to a vector that is (presumably) either the identity or came from a json file */
+  /* Set m_inverse_coefs equal to a vector that came from a json file (or TODO from a LookupTableParameters object) */
   TransferFunction(const std::array<TIN,4>& inv_coefs) { m_inverse_coefs = inv_coefs; }
+  //TransferFunction(const TransferFunction<TIN>& transferFunction) :
+  //  m_inverse_coefs(transferFunction.m_inverse_coefs), m_minArg(transferFunction.m_minArg),
+  //  m_tableMaxArg(transferFunction.m_tableMaxArg), m_stepSize(transferFunction.m_stepSize) {}
+  //
+  //TransferFunction<TIN>& operator=(TransferFunction<TIN> transferFunction){
+  //  m_inverse_coefs = transferFunction.m_inverse_coefs;
+  //  m_minArg = transferFunction.m_minArg;
+  //  m_tableMaxArg = transferFunction.m_tableMaxArg;
+  //  m_stepSize = transferFunction.m_stepSize;
+  //  return *this;
+  //}
 
   TransferFunction() = default;
 
-  /* Build the coefficients in g_inv 
-   * TODO can we use SFINAE to check if sqrt(TOUT) -> TIN is defined? */
+  /** Build the coefficients in g_inv */
   template<typename TOUT>
   TransferFunction(const FunctionContainer<TIN,TOUT>& fc, TIN minArg, TIN tableMaxArg, TIN stepSize) : 
     m_minArg(minArg), m_tableMaxArg(tableMaxArg), m_stepSize(stepSize) {
 #ifndef FUNC_USE_BOOST
-    /* cause a compile time error because this constructor should never be called without Boost available */
-    static_assert(sizeof(TIN) != sizeof(TIN), "Cannot generate a nonuniform grid without Boost verion 1.71.0 or higher");
+    throw std::invalid_argument("func::TransferFunction cannot generate a transfer function without boost installed.");
 #else
     using boost::math::quadrature::gauss_kronrod;
     using boost::math::differentiation::make_fvar;
+
+    /* TODO can we use SFINAE to check if sqrt(TOUT) -> TIN is defined? */
 
     auto fun = fc.autodiff1_fun;
     if(fun == nullptr)
@@ -128,7 +146,7 @@ public:
 #endif
   }
 
-  /* Horner's method */
+  /** Evaluate the inverse using Horner's method */
   TIN inverse(TIN x) const {
     TIN sum = static_cast<TIN>(0);
     for (int k=3; k>0; k--)
@@ -136,7 +154,7 @@ public:
     return sum + m_inverse_coefs[0];
   }
 
-  /* Horner's method */
+  /** Evaluate the derivative of the inverse using Horner's method */
   TIN inverse_diff(TIN x) const {
     TIN sum = static_cast<TIN>(0);
     for (int k=3; k>1; k--)
@@ -144,7 +162,7 @@ public:
     return sum + m_inverse_coefs[1];
   }
 
-  /* Use newton-raphson_iteration on p. Recall that each coef in
+  /** Use newton-raphson_iteration on p. Recall that each coef in
    * g was divided by h and we subtracted by m_minArg */
   TIN operator()(TIN x) const {
     // This will have at least 0.9*std::numeric_limits<TIN>::digits digits of accuracy
@@ -159,7 +177,7 @@ public:
   TIN max_arg() const { return m_tableMaxArg; }
 };
 
-/* print basic info about a TransferFunction */
+/** print basic info about a TransferFunction */
 template <typename TIN>
 std::ostream& operator<<(std::ostream& out, const TransferFunction<TIN>& F){
   auto coefs = F.get_coefs();
@@ -169,7 +187,7 @@ std::ostream& operator<<(std::ostream& out, const TransferFunction<TIN>& F){
   return out;
 }
 
-/* wraps operator<< */
+/** wraps operator<< */
 template <typename TIN>
 inline std::string to_string(const TransferFunction<TIN>& F) {
   std::ostringstream ss;
