@@ -62,6 +62,7 @@ mkdir build && cd build/
 cmake -DCMAKE_INSTALL_PREFIX=<install-dir> ..
 make install
 ```
+Running `make test` will run some tests to check your installation of FunC is good.
 
 After make install, linking to the library (outside of cmake build) requires:
 - `<install-dir>/lib` is in your `LD_LIBRARY_PATH` environment variable,

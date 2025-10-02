@@ -101,7 +101,7 @@ std::pair<T, T> bisect(F f, T min, T max, const T& fmin, const T& fmax, Tol tol,
 
   \note LookupTableGenerator is header only because it is templated on the
    error precision TERR. We MUST be able to cast TERR to TIN and vice versa.
-   Ideally TERR satisfies: \f$\sqrt(\epsilon_{\mathrm{TERR}}) <= \epsilon_{\mathrm{TOUT}}.
+   Ideally TERR satisfies: \f$\sqrt(\epsilon_{\mathrm{TERR}}) <= \epsilon_{\mathrm{TOUT}}\f$.
 
   \todo Newton's iterations are currently unused because sometimes it'll try
    building a LUT so large it'll kill mortal computers. There must be a way to
